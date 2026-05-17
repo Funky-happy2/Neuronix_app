@@ -1,0 +1,133 @@
+You are an expert AI game designer and child-experience creator. Design a fun, colorful website called “Science Quest Arcade” that combines science learning with exciting video game modes. The audience is ages 9–13. Do NOT include any code. Only include detailed descriptions, mechanics, rules, and website structure.
+
+Your goal is to make science feel like an addictive arcade game while still teaching real concepts in a safe and age-appropriate way.
+
+1. OVERALL FEEL
+
+Bright, energetic, arcade vibe.
+
+Short sessions (3–5 minutes per game).
+
+Clear instructions.
+
+Instant rewards (stars, badges, sound effects).
+
+No complicated text — simple and exciting.
+
+No collection of personal data.
+
+2. WEBSITE STRUCTURE
+
+Create descriptions for:
+
+Home Page (big hero, featured game, daily challenge)
+
+Arcade Page (all game modes)
+
+Lab Page (interactive experiments)
+
+Boss Battles Page
+
+Profile & Badges Page
+
+Teacher/Parent Mode (optional printable progress report)
+
+Safety Page
+
+3. GAME MODES (Include at least 10)
+
+Design detailed explanations for each game mode including:
+
+Objective
+
+How it plays
+
+What science concept it teaches
+
+Scoring system
+
+Level progression
+
+Fun reward system
+
+Include these game types:
+
+Gravity Dash – Run on different planets with different gravity.
+
+DNA Decoder – Match base pairs and unlock creatures.
+
+Circuit Crafter – Build working circuits.
+
+Chemistry Mixer – Safe virtual mixing to discover reactions.
+
+Time Travel Scientist – Solve science problems in different eras.
+
+Element Arena – Battle using periodic table elements with their properties.
+
+Ecosystem Builder – Create a balanced ecosystem without collapse.
+
+Physics Puzzle Rooms – Escape room challenges using forces, levers, energy.
+
+Weather Commander – Control temperature, wind, pressure to form storms safely.
+
+Microbe Defender – Learn about immune systems by defending the body from cartoon germs.
+
+Then invent 3 bonus secret modes that unlock after earning enough badges.
+
+4. BOSS BATTLES
+
+Create science-themed bosses such as:
+
+The Chaos Storm (weather boss)
+
+Dr. Blackout (electricity boss)
+
+The Mutation Master (genetics boss)
+
+Explain how boss battles combine multiple science concepts and require previously learned skills.
+
+5. LAB SECTION
+
+Design 6 safe, interactive virtual experiments where kids change sliders or variables to see outcomes. Clearly explain what they learn from each experiment.
+
+6. PROGRESSION SYSTEM
+
+XP system
+
+Badge names (at least 15 creative badge names)
+
+Unlockable avatars
+
+Daily challenge system
+
+Streak rewards
+
+Make it motivating but not stressful.
+
+7. ENGAGEMENT STRATEGY
+
+Explain:
+
+Why kids would want to come back
+
+How learning is hidden inside gameplay
+
+How difficulty adapts automatically
+
+8. SAFETY & ACCESSIBILITY
+
+Large buttons
+
+High contrast colors
+
+No chat features
+
+No personal data collection
+
+Clear mute button
+
+Encouraging feedback language
+
+9. FINISH WITH
+
+A short exciting promotional description (like a trailer script) that would make a 10-year-old immediately want to play.
