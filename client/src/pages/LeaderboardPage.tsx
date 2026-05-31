@@ -206,17 +206,29 @@ export default function LeaderboardPage() {
   const newlyGranted = leaderboardData?.newlyGranted || [];
 
   useEffect(() => {
-    if (newlyGranted.length > 0 && !notifiedRef.current) {
-      notifiedRef.current = true;
-      const itemNames = newlyGranted.map(id => CHAMPION_ITEM_LABELS[id] || id).join(", ");
-      toast({
-        title: "Champion Rewards Unlocked!",
-        description: `You earned: ${itemNames}. Equip them in the Shop!`,
-        duration: 8000,
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-    }
-  }, [newlyGranted]);
+    if (!user || notifiedRef.current) return;
+    if (newlyGranted.length === 0) return;
+    // Only show this toast for the actual #1 individual player.
+    if (leaders.length === 0 || leaders[0].id !== user.id) return;
+    // Persist per-user so the toast fires once across reloads, not on every visit.
+    const storageKey = `nx-champion-rewards-seen-${user.id}`;
+    let seen: string[] = [];
+    try { seen = JSON.parse(localStorage.getItem(storageKey) || "[]"); } catch {}
+    const fresh = newlyGranted.filter(id => !seen.includes(id));
+    if (fresh.length === 0) return;
+
+    notifiedRef.current = true;
+    const itemNames = fresh.map(id => CHAMPION_ITEM_LABELS[id] || id).join(", ");
+    toast({
+      title: "Champion Rewards Unlocked!",
+      description: `You earned: ${itemNames}. Equip them in the Shop!`,
+      duration: 8000,
+    });
+    try {
+      localStorage.setItem(storageKey, JSON.stringify([...seen, ...fresh]));
+    } catch {}
+    queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+  }, [newlyGranted, leaders, user, toast]);
 
   const { data: clansData = [], isLoading: clansLoading } = useQuery<ClanData[]>({
     queryKey: ["/api/clans"],

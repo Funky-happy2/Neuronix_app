@@ -331,6 +331,9 @@ export const newsPosts = pgTable("news_posts", {
   pinned: boolean("pinned").notNull().default(false),
   createdAt: text("created_at").notNull(),
   status: text("status").notNull().default("approved"),
+  pollQuestion: text("poll_question"),
+  pollOptions: text("poll_options").array(),
+  pollVotes: jsonb("poll_votes").notNull().default(sql`'{}'::jsonb`),
 });
 
 export const insertNewsPostSchema = createInsertSchema(newsPosts).omit({ id: true });

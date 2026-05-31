@@ -357,10 +357,10 @@ const SESSION_KEY = "nx_verified";
 function SessionGuard() {
   const { user, logoutMutation } = useAuth();
   useEffect(() => {
-    if (user && !sessionStorage.getItem(SESSION_KEY)) {
+    if (user && !sessionStorage.getItem(SESSION_KEY) && !logoutMutation.isPending) {
       logoutMutation.mutate();
     }
-  }, [user]);
+  }, [user, logoutMutation]);
   return null;
 }
 

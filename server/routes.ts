@@ -5193,14 +5193,31 @@ export async function registerRoutes(
     }
   });
 
+  function sanitizePoll(rawQuestion: unknown, rawOptions: unknown):
+    | { pollQuestion: string; pollOptions: string[] }
+    | null {
+    if (typeof rawQuestion !== "string") return null;
+    const q = rawQuestion.trim();
+    if (!q) return null;
+    if (!Array.isArray(rawOptions)) return null;
+    const opts = rawOptions
+      .filter((o): o is string => typeof o === "string")
+      .map((o) => o.trim())
+      .filter((o) => o.length > 0)
+      .slice(0, 6);
+    if (opts.length < 2) return null;
+    return { pollQuestion: q.slice(0, 200), pollOptions: opts.map((o) => o.slice(0, 80)) };
+  }
+
   app.post("/api/news", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const user = await storage.getUser(req.user!.id);
     if (!user) return res.sendStatus(401);
     try {
-      const { title, content, category, pinned } = req.body;
+      const { title, content, category, pinned, pollQuestion, pollOptions } = req.body;
       if (!title || !content) return res.status(400).json({ message: "Title and content are required" });
       const isAdmin = user.isAdmin;
+      const poll = sanitizePoll(pollQuestion, pollOptions);
       const post = await storage.createNewsPost({
         title,
         content,
@@ -5210,7 +5227,10 @@ export async function registerRoutes(
         pinned: isAdmin ? (pinned || false) : false,
         createdAt: new Date().toISOString(),
         status: isAdmin ? "approved" : "pending",
-      });
+        pollQuestion: poll?.pollQuestion ?? null,
+        pollOptions: poll?.pollOptions ?? null,
+        pollVotes: {},
+      } as any);
       res.json(post);
     } catch (error) {
       res.status(500).json({ message: "Failed to create news post" });
@@ -5235,17 +5255,57 @@ export async function registerRoutes(
     const user = await storage.getUser(req.user!.id);
     if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
     try {
-      const { title, content, category, pinned } = req.body;
-      const updated = await storage.updateNewsPost(Number(req.params.id), {
+      const { title, content, category, pinned, pollQuestion, pollOptions, removePoll } = req.body;
+      const updates: any = {
         ...(title !== undefined && { title }),
         ...(content !== undefined && { content }),
         ...(category !== undefined && { category }),
         ...(pinned !== undefined && { pinned }),
-      });
+      };
+      if (removePoll) {
+        updates.pollQuestion = null;
+        updates.pollOptions = null;
+        updates.pollVotes = {};
+      } else if (pollQuestion !== undefined || pollOptions !== undefined) {
+        const poll = sanitizePoll(pollQuestion, pollOptions);
+        if (poll) {
+          updates.pollQuestion = poll.pollQuestion;
+          updates.pollOptions = poll.pollOptions;
+          // Reset votes whenever the poll definition changes so options/votes stay aligned.
+          updates.pollVotes = {};
+        }
+      }
+      const updated = await storage.updateNewsPost(Number(req.params.id), updates);
       if (!updated) return res.status(404).json({ message: "Post not found" });
       res.json(updated);
     } catch (error) {
       res.status(500).json({ message: "Failed to update news post" });
+    }
+  });
+
+  app.post("/api/news/:id/poll-vote", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const user = await storage.getUser(req.user!.id);
+    if (!user) return res.sendStatus(401);
+    try {
+      const post = await storage.getNewsPost(Number(req.params.id));
+      if (!post) return res.status(404).json({ message: "Post not found" });
+      if (!post.pollQuestion || !Array.isArray(post.pollOptions) || post.pollOptions.length === 0) {
+        return res.status(400).json({ message: "This post has no poll" });
+      }
+      const optionIndex = Number(req.body?.optionIndex);
+      if (!Number.isInteger(optionIndex) || optionIndex < 0 || optionIndex >= post.pollOptions.length) {
+        return res.status(400).json({ message: "Invalid poll option" });
+      }
+      const votes = { ...((post.pollVotes as Record<string, number>) || {}) };
+      if (Object.prototype.hasOwnProperty.call(votes, String(user.id))) {
+        return res.status(400).json({ message: "You have already voted" });
+      }
+      votes[String(user.id)] = optionIndex;
+      const updated = await storage.updateNewsPost(post.id, { pollVotes: votes } as any);
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to record vote" });
     }
   });
 

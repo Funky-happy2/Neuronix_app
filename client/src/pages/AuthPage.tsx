@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -26,10 +26,11 @@ export default function AuthPage() {
   const [showCaptcha, setShowCaptcha] = useState(false);
   const honeypotRef = useRef<HTMLInputElement>(null);
 
-  if (user) {
-    setLocation("/");
-    return null;
-  }
+  useEffect(() => {
+    if (user) setLocation("/");
+  }, [user, setLocation]);
+
+  if (user) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

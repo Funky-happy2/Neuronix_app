@@ -29,8 +29,18 @@ export async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
+  let secret = process.env.SESSION_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("SESSION_SECRET must be set in production");
+    }
+    secret = randomBytes(32).toString("hex");
+    console.warn(
+      "SESSION_SECRET not set — generated an ephemeral dev secret. Sessions will not survive a restart.",
+    );
+  }
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET!,
+    secret,
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,
@@ -54,14 +64,18 @@ export function setupAuth(app: Express) {
 
   passport.serializeUser((user, done) => done(null, user.id));
   passport.deserializeUser(async (id: number, done) => {
-    const user = await storage.getUser(id);
-    done(null, user);
+    try {
+      const user = await storage.getUser(id);
+      done(null, user ?? false);
+    } catch (err) {
+      done(err as Error);
+    }
   });
 
   const ULTRA_ADMIN = "Funky_happy2";
 
   app.post("/api/register", async (req, res, next) => {
-    const { username, password, refCode, isTeacher, joinClassName, joinClassPassword } = req.body;
+    const { username, password, refCode, isTeacher } = req.body;
     const existingUser = await storage.getUserByUsername(username);
     if (existingUser) {
       return res.status(400).send("Username already exists");

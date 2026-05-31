@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Newspaper, Pin, Loader2, Megaphone, Sparkles, Wrench,
-  Calendar, Trash2, Edit, Plus, X, Check, User, MessageCircle, Send, Zap, Gem, Clock, CheckCircle
+  Calendar, Trash2, Edit, Plus, X, Check, User, MessageCircle, Send, Zap, Gem, Clock, CheckCircle,
+  BarChart3, Vote
 } from "lucide-react";
 import UserProfileModal from "@/components/UserProfileModal";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -29,6 +30,9 @@ interface NewsPost {
   pinned: boolean;
   createdAt: string;
   status: string;
+  pollQuestion?: string | null;
+  pollOptions?: string[] | null;
+  pollVotes?: Record<string, number> | null;
 }
 
 interface NewsComment {
@@ -76,6 +80,85 @@ function timeAgo(iso: string) {
   if (hrs < 24) return `${hrs}h ago`;
   const days = Math.floor(hrs / 24);
   return `${days}d ago`;
+}
+
+function PostPoll({ post }: { post: NewsPost }) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const currentUserId = (user as any)?.id;
+  const options = post.pollOptions ?? [];
+  const votes = post.pollVotes ?? {};
+  const myVote = currentUserId != null ? votes[String(currentUserId)] : undefined;
+  const hasVoted = myVote !== undefined;
+  const counts = options.map((_, i) => Object.values(votes).filter(v => v === i).length);
+  const total = counts.reduce((s, c) => s + c, 0);
+
+  const voteMutation = useMutation({
+    mutationFn: async (optionIndex: number) => {
+      const res = await apiRequest("POST", `/api/news/${post.id}/poll-vote`, { optionIndex });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/news"] });
+    },
+    onError: (e: any) => toast({ title: "Couldn't vote", description: e.message, variant: "destructive" }),
+  });
+
+  if (!post.pollQuestion || options.length === 0) return null;
+
+  return (
+    <div className="mt-3 p-3 rounded-lg border border-border bg-muted/30" data-testid={`poll-${post.id}`}>
+      <div className="flex items-center gap-2 mb-2">
+        <BarChart3 className="w-4 h-4 text-purple-500" />
+        <p className="font-bold text-sm">{post.pollQuestion}</p>
+      </div>
+      <div className="space-y-1.5">
+        {options.map((opt, i) => {
+          const count = counts[i];
+          const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+          const isMyChoice = myVote === i;
+          if (hasVoted || !user) {
+            return (
+              <div
+                key={i}
+                className={`relative overflow-hidden rounded-md border ${isMyChoice ? "border-purple-500/60 bg-purple-500/5" : "border-border bg-background/50"} px-3 py-1.5 text-xs font-semibold`}
+                data-testid={`poll-result-${post.id}-${i}`}
+              >
+                <div
+                  className={`absolute inset-y-0 left-0 ${isMyChoice ? "bg-purple-500/20" : "bg-muted"}`}
+                  style={{ width: `${pct}%` }}
+                />
+                <div className="relative flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-1.5 truncate">
+                    {isMyChoice && <Check className="w-3 h-3 text-purple-500 shrink-0" />}
+                    <span className="truncate">{opt}</span>
+                  </span>
+                  <span className="shrink-0 tabular-nums">{pct}% · {count}</span>
+                </div>
+              </div>
+            );
+          }
+          return (
+            <Button
+              key={i}
+              variant="outline"
+              size="sm"
+              className="w-full justify-start text-xs font-semibold h-8"
+              disabled={voteMutation.isPending}
+              onClick={() => voteMutation.mutate(i)}
+              data-testid={`poll-vote-${post.id}-${i}`}
+            >
+              <Vote className="w-3.5 h-3.5 mr-1.5 text-purple-500" />
+              {opt}
+            </Button>
+          );
+        })}
+      </div>
+      <p className="text-[10px] text-muted-foreground font-medium mt-2">
+        {total} vote{total === 1 ? "" : "s"}{!user ? " · Log in to vote" : hasVoted ? " · You voted" : ""}
+      </p>
+    </div>
+  );
 }
 
 function PostComments({ postId, isAdmin, authorId, onViewProfile }: { postId: number; isAdmin: boolean; authorId: number; onViewProfile?: (username: string) => void }) {
@@ -323,14 +406,25 @@ export default function NewsPage() {
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("update");
   const [pinned, setPinned] = useState(false);
+  const [includePoll, setIncludePoll] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState("");
+  const [pollOptions, setPollOptions] = useState<string[]>(["", ""]);
 
   const { data: posts = [], isLoading } = useQuery<NewsPost[]>({
     queryKey: ["/api/news"],
   });
 
+  function pollPayload() {
+    if (!includePoll) return {};
+    const q = pollQuestion.trim();
+    const opts = pollOptions.map(o => o.trim()).filter(o => o.length > 0);
+    if (!q || opts.length < 2) return {};
+    return { pollQuestion: q, pollOptions: opts };
+  }
+
   const createMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/news", { title, content, category, pinned });
+      const res = await apiRequest("POST", "/api/news", { title, content, category, pinned, ...pollPayload() });
       return res.json();
     },
     onSuccess: () => {
@@ -347,7 +441,14 @@ export default function NewsPage() {
 
   const updateMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await apiRequest("PATCH", `/api/news/${id}`, { title, content, category, pinned });
+      const payload: any = { title, content, category, pinned };
+      const poll = pollPayload();
+      if (includePoll && (poll as any).pollQuestion) {
+        Object.assign(payload, poll);
+      } else if (!includePoll) {
+        payload.removePoll = true;
+      }
+      const res = await apiRequest("PATCH", `/api/news/${id}`, payload);
       return res.json();
     },
     onSuccess: () => {
@@ -388,6 +489,9 @@ export default function NewsPage() {
     setContent("");
     setCategory("update");
     setPinned(false);
+    setIncludePoll(false);
+    setPollQuestion("");
+    setPollOptions(["", ""]);
   }
 
   function startEdit(post: NewsPost) {
@@ -396,6 +500,15 @@ export default function NewsPage() {
     setContent(post.content);
     setCategory(post.category);
     setPinned(post.pinned);
+    if (post.pollQuestion && post.pollOptions && post.pollOptions.length >= 2) {
+      setIncludePoll(true);
+      setPollQuestion(post.pollQuestion);
+      setPollOptions([...post.pollOptions]);
+    } else {
+      setIncludePoll(false);
+      setPollQuestion("");
+      setPollOptions(["", ""]);
+    }
     setComposing(true);
   }
 
@@ -456,6 +569,70 @@ export default function NewsPage() {
                 <cat.icon className="w-3.5 h-3.5" /> {cat.label}
               </Button>
             ))}
+          </div>
+          <div className="space-y-2 border-t border-border/60 pt-3">
+            <div className="flex items-center justify-between">
+              <p className="font-bold text-sm flex items-center gap-1.5">
+                <BarChart3 className="w-4 h-4 text-purple-500" /> Poll {includePoll && <span className="text-[10px] text-muted-foreground font-medium">(optional)</span>}
+              </p>
+              <Button
+                variant={includePoll ? "default" : "outline"}
+                size="sm"
+                onClick={() => setIncludePoll(!includePoll)}
+                className="gap-1.5 font-bold text-xs"
+                data-testid="button-toggle-poll"
+              >
+                {includePoll ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                {includePoll ? "Remove poll" : "Add poll"}
+              </Button>
+            </div>
+            {includePoll && (
+              <div className="space-y-2">
+                <Input
+                  value={pollQuestion}
+                  onChange={e => setPollQuestion(e.target.value)}
+                  placeholder="Poll question..."
+                  maxLength={200}
+                  className="text-sm"
+                  data-testid="input-poll-question"
+                />
+                {pollOptions.map((opt, i) => (
+                  <div key={i} className="flex gap-2">
+                    <Input
+                      value={opt}
+                      onChange={e => setPollOptions(prev => prev.map((p, idx) => idx === i ? e.target.value : p))}
+                      placeholder={`Option ${i + 1}`}
+                      maxLength={80}
+                      className="text-sm"
+                      data-testid={`input-poll-option-${i}`}
+                    />
+                    {pollOptions.length > 2 && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-9 w-9 shrink-0 text-red-500"
+                        onClick={() => setPollOptions(prev => prev.filter((_, idx) => idx !== i))}
+                        data-testid={`remove-poll-option-${i}`}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                {pollOptions.length < 6 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPollOptions(prev => [...prev, ""])}
+                    className="gap-1.5 font-bold text-xs"
+                    data-testid="button-add-poll-option"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Add option
+                  </Button>
+                )}
+                <p className="text-[10px] text-muted-foreground">2-6 options. Voters can pick one. Editing the poll resets votes.</p>
+              </div>
+            )}
           </div>
           <div className="flex items-center justify-between">
             {isAdmin ? (
@@ -601,6 +778,7 @@ export default function NewsPage() {
                       <div className="text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed">
                         {post.content}
                       </div>
+                      {!isPending && <PostPoll post={post} />}
                       {!isPending && <PostComments postId={post.id} isAdmin={isAdmin} authorId={post.authorId} onViewProfile={setProfileUsername} />}
                       {isMyPendingPost && (
                         <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-2">
