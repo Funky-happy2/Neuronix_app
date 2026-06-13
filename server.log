@@ -264,3 +264,5 @@ Seeded/updated 223 shop items
 8:18:44 PM [express] GET /api/user 401 in 1ms
 8:18:57 PM [express] GET /api/clan-battles 304 in 19ms :: []
 8:19:12 PM [express] GET /api/clan-battles 304 in 16ms :: []
+8:19:27 PM [express] GET /api/clan-battles 304 in 16ms :: []
+8:19:43 PM [express] GET /api/clan-battles 304 in 12ms :: []
