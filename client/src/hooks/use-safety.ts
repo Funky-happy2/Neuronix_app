@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 export const SAFETY_KEYS = [
   "hideLeaderboard",
   "disableMultiplayer",
+  "disableStreaming",
   "hideTrade",
   "hideCommunityPacks",
   "hideNews",
@@ -20,6 +21,10 @@ export const SAFETY_LABELS: Record<SafetyKey, { label: string; description: stri
   disableMultiplayer: {
     label: "Disable Multiplayer",
     description: "Turn off multiplayer lobby and 1v1 battles.",
+  },
+  disableStreaming: {
+    label: "Disable Streaming",
+    description: "Turn off live streaming — can't go live or watch others' streams.",
   },
   hideTrade: {
     label: "Disable Trading",
@@ -46,6 +51,7 @@ export const SAFETY_LABELS: Record<SafetyKey, { label: string; description: stri
 export const SAFETY_DEFAULTS: Record<SafetyKey, boolean> = {
   hideLeaderboard: false,
   disableMultiplayer: false,
+  disableStreaming: false,
   hideTrade: false,
   hideCommunityPacks: false,
   hideNews: false,
@@ -72,6 +78,7 @@ export function useSafety() {
   if (effective.focusMode) {
     effective.hideLeaderboard = true;
     effective.disableMultiplayer = true;
+    effective.disableStreaming = true;
     effective.hideTrade = true;
     effective.hideCommunityPacks = true;
     effective.hideNews = true;
@@ -82,7 +89,8 @@ export function useSafety() {
 
   const hiddenPaths = new Set<string>();
   if (effective.hideLeaderboard) hiddenPaths.add("/leaderboard");
-  if (effective.disableMultiplayer) { hiddenPaths.add("/lobby"); hiddenPaths.add("/pvp"); }
+  if (effective.disableMultiplayer) { hiddenPaths.add("/lobby"); hiddenPaths.add("/pvp"); hiddenPaths.add("/ranked"); hiddenPaths.add("/party"); }
+  if (effective.disableStreaming || effective.disableMultiplayer) { hiddenPaths.add("/stream"); }
   if (effective.hideTrade) hiddenPaths.add("/trade");
   if (effective.hideCommunityPacks) hiddenPaths.add("/community");
   if (effective.hideNews) hiddenPaths.add("/news");

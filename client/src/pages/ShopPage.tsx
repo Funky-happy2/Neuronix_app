@@ -132,6 +132,10 @@ const COSMETIC_UPGRADE_IDS = new Set([
   "upgrade-treasure-hunter",
   "upgrade-elite-border",
   "upgrade-science-star",
+  "upgrade-mega-xp",
+  "upgrade-mega-coins",
+  "upgrade-scholar",
+  "upgrade-jackpot",
 ]);
 
 const GEM_UPGRADES: { id: string; name: string; description: string; icon: string; price: number; rarity: string; requiredLevel?: number }[] = [
@@ -153,6 +157,10 @@ const GEM_UPGRADES: { id: string; name: string; description: string; icon: strin
   { id: "upgrade-treasure-hunter", name: "Treasure Hunter", description: "Find 5-15 bonus coins hidden in every game! (Permanent)", icon: "Search", price: 35, rarity: "epic", requiredLevel: 10 },
   { id: "upgrade-elite-border", name: "Elite Border", description: "An exclusive elite border for your profile! (Permanent)", icon: "Frame", price: 20, rarity: "epic", requiredLevel: 8 },
   { id: "upgrade-science-star", name: "Science Star", description: "Permanently earn +10% XP AND +10% coins from everything!", icon: "Star", price: 55, rarity: "legendary", requiredLevel: 30 },
+  { id: "upgrade-mega-xp", name: "Mega XP Core", description: "Permanently earn +25% XP from all games forever! Stacks with XP Mastery!", icon: "Zap", price: 70, rarity: "legendary", requiredLevel: 35 },
+  { id: "upgrade-mega-coins", name: "Mega Coin Core", description: "Permanently earn +25% coins from all games forever! Stacks with Coin Mastery!", icon: "Coins", price: 70, rarity: "legendary", requiredLevel: 35 },
+  { id: "upgrade-scholar", name: "Grand Scholar", description: "Permanently earn +20% XP AND +20% coins from everything!", icon: "TrendingUp", price: 90, rarity: "legendary", requiredLevel: 40 },
+  { id: "upgrade-jackpot", name: "Jackpot Core", description: "Each game has a 10% chance to TRIPLE all your XP and coins!", icon: "Sparkles", price: 100, rarity: "legendary", requiredLevel: 45 },
 ];
 
 const COIN_STYLE_COLORS: Record<string, { icon: string; text: string; anim: string }> = {

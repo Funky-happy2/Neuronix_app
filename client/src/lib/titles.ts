@@ -51,6 +51,8 @@ export const TITLE_DISPLAY: Record<string, string> = {
   "title-mastermind":         "🧠 Mastermind",
   "title-world-conqueror":    "🌎 World Conqueror",
   "title-leaderboard-1st":    "👑 #1 Player",
+  "title-elite-five":         "🌟 Elite Five",
+  "title-ranked-grandmaster": "👑 Ranked Grandmaster",
   "title-clan-1st":           "🛡️ #1 Clan Leader",
   "title-team-1st":           "⚔️ #1 Team Captain",
   "title-admins-favourite":   "❤️ Admin's Favourite",
@@ -65,6 +67,8 @@ export const TITLE_DISPLAY: Record<string, string> = {
 
 export const TITLE_ANIMATION_CLASSES: Record<string, string> = {
   "title-leaderboard-1st":   "animate-title-shimmer",
+  "title-elite-five":        "animate-title-gold",
+  "title-ranked-grandmaster":"animate-title-fire",
   "title-admins-favourite":  "animate-title-shimmer",
   "title-influencer":        "animate-title-shimmer",
   "reward-omega-title":      "animate-title-shimmer",

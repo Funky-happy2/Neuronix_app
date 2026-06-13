@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   Trophy, Users, Loader2, ArrowLeft, Zap, Coins, Clock, CheckCircle,
   Swords, Star, Medal, Timer, Play, ChevronRight, Crown, Lock, Gem,
-  User, Target, Shield, Flame, FlaskConical, Atom, Layers
+  User, Target, Shield, Flame, FlaskConical, Atom, Layers, Sparkles
 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -865,6 +865,55 @@ function TournamentPlay({ tournament, onFinish, userId, userYearLevel }: { tourn
   const timerRef = useRef<ReturnType<typeof setInterval>>();
   const startTimeRef = useRef(Date.now());
 
+  // Battle powerups (self-buffs) usable in tournaments.
+  const { data: bpData, refetch: refetchBp } = useQuery<{ owned: Record<string, number> }>({ queryKey: ["/api/battle-powerups"] });
+  const [bpCounts, setBpCounts] = useState<Record<string, number> | null>(null);
+  const bpOwned = bpCounts ?? bpData?.owned ?? {};
+  const [tMult, setTMult] = useState(1);
+  const [tFrozen, setTFrozen] = useState(false);
+  const tFrozenRef = useRef(false);
+  tFrozenRef.current = tFrozen;
+  const [tPowerupUsed, setTPowerupUsed] = useState(false);
+  const [tActivePowerup, setTActivePowerup] = useState<string | null>(null);
+  const TOURNEY_POWERUPS = [
+    { id: "bp-time-warp", name: "Time Warp" },
+    { id: "bp-mega-time", name: "Mega Time" },
+    { id: "bp-time-freeze", name: "Freeze" },
+    { id: "bp-double-damage", name: "2x Pts" },
+    { id: "bp-triple-points", name: "3x Pts" },
+    { id: "bp-clarity", name: "Clarity" },
+  ];
+
+  const useTournamentPowerup = async (id: string) => {
+    if (tPowerupUsed || answered !== null || finished) return;
+    if ((bpOwned[id] || 0) <= 0) return;
+    try {
+      await apiRequest("POST", "/api/battle-powerup/use", { powerupId: id });
+      setBpCounts({ ...(bpCounts ?? bpData?.owned ?? {}), [id]: (bpOwned[id] || 0) - 1 });
+      setTPowerupUsed(true);
+      setTActivePowerup(id);
+      if (id === "bp-time-warp") setTimeLeft((p) => p + 6);
+      if (id === "bp-mega-time") setTimeLeft((p) => p + 10);
+      if (id === "bp-time-freeze") setTFrozen(true);
+      if (id === "bp-double-damage") setTMult(2);
+      if (id === "bp-triple-points") setTMult(3);
+      if (id === "bp-clarity") {
+        const correctIdx = questions[currentQ].correctIndex;
+        const wrong = shuffledOptions
+          .map((opt, i) => ({ i, orig: opt.originalIndex }))
+          .filter((o) => o.orig !== correctIdx && !hiddenOptions.includes(o.i));
+        if (wrong.length > 1) {
+          const hide = wrong[Math.floor(Math.random() * wrong.length)].i;
+          setHiddenOptions((prev) => [...prev, hide]);
+        }
+      }
+      refetchBp();
+      toast({ title: "Powerup activated!", description: TOURNEY_POWERUPS.find((p) => p.id === id)?.name });
+    } catch {
+      toast({ title: "Error", description: "Couldn't use powerup", variant: "destructive" });
+    }
+  };
+
   const isSurvival = tournament.gameMode === "survival";
   const isBossRush = tournament.gameMode === "boss-rush";
   const isLabChallenge = tournament.gameMode === "lab-challenge";
@@ -886,6 +935,7 @@ function TournamentPlay({ tournament, onFinish, userId, userYearLevel }: { tourn
     startTimeRef.current = Date.now();
     timerRef.current = setInterval(() => {
       setTimeLeft(prev => {
+        if (tFrozenRef.current) return prev; // Freeze powerup pauses the timer
         if (prev <= 1) {
           handleTimeout();
           return maxTime;
@@ -973,7 +1023,8 @@ function TournamentPlay({ tournament, onFinish, userId, userYearLevel }: { tourn
       else if (isLabChallenge) basePoints = 15 + (hintsUsed === 0 ? 10 : 0);
 
       const comboMultiplier = isElementHunt ? combo * 8 : combo * 5;
-      const points = basePoints + comboMultiplier;
+      const points = Math.round((basePoints + comboMultiplier) * tMult);
+      setTMult(1); // multiplier is consumed on the next correct answer
       setScore(prev => prev + points);
       setCombo(prev => prev + 1);
       setStreakBonus(prev => prev + 1);
@@ -1019,6 +1070,10 @@ function TournamentPlay({ tournament, onFinish, userId, userYearLevel }: { tourn
   const nextQuestion = () => {
     setAnswered(null);
     setHintsUsed(0);
+    setTPowerupUsed(false);
+    setTFrozen(false);
+    setTActivePowerup(null);
+    setTMult(1);
     if (currentQ + 1 >= questions.length) {
       clearInterval(timerRef.current);
       const totalTimeTaken = Math.floor((Date.now() - startTimeRef.current) / 1000);
@@ -1110,6 +1165,29 @@ function TournamentPlay({ tournament, onFinish, userId, userYearLevel }: { tourn
             <Button size="sm" variant="outline" className="gap-1 text-xs text-green-600 dark:text-green-400 border-green-500/30" onClick={useHint} data-testid="button-use-hint">
               <FlaskConical className="w-3 h-3" /> Use Lab Hint (-5 pts)
             </Button>
+          </div>
+        )}
+        {Object.values(bpOwned).some((c) => c > 0) && (
+          <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+            {TOURNEY_POWERUPS.map((bp) => {
+              const count = bpOwned[bp.id] || 0;
+              const active = tActivePowerup === bp.id;
+              return (
+                <Button
+                  key={bp.id}
+                  size="sm"
+                  variant={active ? "default" : "outline"}
+                  className={`gap-1 text-xs font-bold ${active ? "bg-purple-500/30 border-purple-500" : ""}`}
+                  disabled={count <= 0 || tPowerupUsed || answered !== null}
+                  onClick={() => useTournamentPowerup(bp.id)}
+                  data-testid={`tourney-powerup-${bp.id}`}
+                >
+                  <Sparkles className="w-3 h-3 text-amber-400" /> {bp.name}
+                  <Badge variant="secondary" className="ml-0.5 text-[10px] px-1 py-0">{count}</Badge>
+                </Button>
+              );
+            })}
+            {tActivePowerup && <Badge className="bg-purple-500/20 text-purple-500 border-purple-500/30 text-[10px] animate-pulse">{TOURNEY_POWERUPS.find((p) => p.id === tActivePowerup)?.name} active</Badge>}
           </div>
         )}
         <h3 className="text-base font-bold mb-4 leading-relaxed">{q.question}</h3>

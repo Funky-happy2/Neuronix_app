@@ -9,7 +9,7 @@ import {
   Compass, Diamond, Zap, Lock, Atom, Snowflake, Orbit, Rocket, CloudRain,
   Waves, Flame, TreePine, Cpu, Skull, Globe
 } from "lucide-react";
-import { LAB_EXPERIMENTS, WORLDS } from "@/lib/gameData";
+import { LAB_EXPERIMENTS, WORLDS, LAB_INFO } from "@/lib/gameData";
 import type { LabExperiment } from "@shared/schema";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -1022,6 +1022,56 @@ export function ExperimentSimulator({ experiment, onComplete }: { experiment: La
           {getVisualization()}
         </Card>
       </div>
+
+      {LAB_INFO[experiment.id] && (() => {
+        const info = LAB_INFO[experiment.id];
+        return (
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mt-6">
+            <Card className="p-6 border-2 border-purple-500/20 bg-gradient-to-br from-purple-500/5 via-blue-500/5 to-emerald-500/5 overflow-hidden relative">
+              <div className="flex items-center gap-2 mb-5">
+                <span className="text-2xl">📓</span>
+                <h3 className="text-xl font-black">Science Notebook</h3>
+                <Badge variant="secondary" className="text-[10px] font-bold ml-1">{experiment.category}</Badge>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="rounded-2xl p-4 bg-purple-500/10 border border-purple-500/20">
+                  <p className="font-black text-sm mb-2 flex items-center gap-1.5">📚 What You'll Learn</p>
+                  <ul className="space-y-1.5">
+                    {info.learningGoals.map((g, i) => (
+                      <li key={i} className="text-sm flex items-start gap-2">
+                        <span className="text-purple-500 font-black mt-0.5">✓</span>
+                        <span>{g}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="rounded-2xl p-4 bg-blue-500/10 border border-blue-500/20">
+                  <p className="font-black text-sm mb-2 flex items-center gap-1.5">🔑 Key Science Words</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {info.keyConcepts.map((c) => (
+                      <span key={c} className="text-xs font-bold px-2.5 py-1 rounded-full bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30">
+                        {c}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl p-4 bg-emerald-500/10 border border-emerald-500/20">
+                  <p className="font-black text-sm mb-2 flex items-center gap-1.5">🌍 In the Real World</p>
+                  <p className="text-sm leading-relaxed">{info.realWorld}</p>
+                </div>
+
+                <div className="rounded-2xl p-4 bg-amber-500/10 border border-amber-500/20">
+                  <p className="font-black text-sm mb-2 flex items-center gap-1.5">✨ Fun Fact</p>
+                  <p className="text-sm leading-relaxed">{info.funFact}</p>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        );
+      })()}
 
       <AnimatePresence>
         {showResult && (

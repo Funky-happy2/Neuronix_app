@@ -1905,6 +1905,278 @@ export const LAB_EXPERIMENTS: LabExperiment[] = [
   },
 ];
 
+// PhET-style educational info for each lab — learning goals, key science words,
+// a real-world connection, and a fun fact. Shown in the lab "Science Notebook".
+export interface LabInfo {
+  learningGoals: string[];
+  keyConcepts: string[];
+  realWorld: string;
+  funFact: string;
+}
+
+export const LAB_INFO: Record<string, LabInfo> = {
+  "pendulum-lab": {
+    learningGoals: [
+      "Discover what makes a pendulum swing faster or slower",
+      "Show that the period depends on length and gravity, not on mass",
+      "Relate the swinging motion to energy changing form",
+    ],
+    keyConcepts: ["Period", "Amplitude", "Gravity", "Potential & Kinetic Energy"],
+    realWorld: "Grandfather clocks keep time using a pendulum's steady, predictable swing.",
+    funFact: "A pendulum on the Moon swings about 2.5× slower because the Moon's gravity is weaker!",
+  },
+  "plant-growth": {
+    learningGoals: [
+      "Identify what a plant needs to grow",
+      "Find the 'limiting factor' that slows growth when it runs low",
+      "Balance sunlight, water, and nutrients for the healthiest plant",
+    ],
+    keyConcepts: ["Photosynthesis", "Limiting factor", "Nutrients", "Chlorophyll"],
+    realWorld: "Farmers test soil and add just the right water and fertiliser to grow more food.",
+    funFact: "Too much water can actually drown a plant's roots by pushing out the air they breathe!",
+  },
+  "color-mixing": {
+    learningGoals: [
+      "Mix red, green, and blue light to make new colours",
+      "Explain additive colour mixing",
+      "Predict the colour you'll get from any RGB combination",
+    ],
+    keyConcepts: ["Additive colour", "RGB", "Wavelength", "White light"],
+    realWorld: "Every phone, TV, and computer screen makes its colours from tiny red, green, and blue lights.",
+    funFact: "Red + green light makes yellow — but mixing red and green PAINT makes muddy brown. Light and paint mix differently!",
+  },
+  "density-tower": {
+    learningGoals: [
+      "Stack liquids in layers by their density",
+      "Explain why some things float and others sink",
+      "Compare density = mass ÷ volume",
+    ],
+    keyConcepts: ["Density", "Mass", "Volume", "Buoyancy"],
+    realWorld: "Oil spills float on the ocean because oil is less dense than water.",
+    funFact: "A solid steel ship floats because its overall density (including air) is lower than water!",
+  },
+  "sound-waves": {
+    learningGoals: [
+      "Connect frequency to pitch and amplitude to loudness",
+      "See how sound travels as a wave",
+      "Explore why some sounds are too high or low for us to hear",
+    ],
+    keyConcepts: ["Frequency", "Amplitude", "Pitch", "Hertz (Hz)"],
+    realWorld: "Doctors use ultrasound (very high-frequency sound) to see babies before they're born.",
+    funFact: "Dogs hear up to 45,000 Hz — way past the 20,000 Hz limit of human ears!",
+  },
+  "volcano-sim": {
+    learningGoals: [
+      "Explain how trapped gas and pressure cause eruptions",
+      "Relate magma thickness to how explosive an eruption is",
+      "Identify what's happening beneath a volcano",
+    ],
+    keyConcepts: ["Magma", "Pressure", "Viscosity", "Eruption"],
+    realWorld: "Scientists monitor gas and ground bulging to warn people before volcanoes erupt.",
+    funFact: "The loudest sound in recorded history was the 1883 Krakatoa eruption — heard 4,800 km away!",
+  },
+  "magnetic-fields": {
+    learningGoals: [
+      "Map the invisible field around a magnet",
+      "Discover that like poles repel and opposite poles attract",
+      "Connect magnetism to electricity",
+    ],
+    keyConcepts: ["Magnetic field", "Poles", "Attraction & Repulsion", "Field lines"],
+    realWorld: "A compass works because Earth itself is a giant magnet pointing north.",
+    funFact: "Earth's magnetic poles flip every few hundred thousand years — and they're slowly moving right now!",
+  },
+  "crystal-growth": {
+    learningGoals: [
+      "Grow crystals by cooling or evaporating a solution",
+      "Explain how temperature affects how much can dissolve",
+      "Connect slow growth to bigger, neater crystals",
+    ],
+    keyConcepts: ["Solution", "Saturation", "Crystallisation", "Solubility"],
+    realWorld: "Gemstones like quartz and diamond are natural crystals grown deep inside the Earth.",
+    funFact: "The biggest natural crystals ever found (in Mexico's Cave of Crystals) are longer than a bus!",
+  },
+  "electric-circuits": {
+    learningGoals: [
+      "Build a circuit and light a bulb",
+      "Relate voltage, current, and resistance (Ohm's Law)",
+      "Predict how changing one value changes the others",
+    ],
+    keyConcepts: ["Voltage", "Current", "Resistance", "Ohm's Law (V = I × R)"],
+    realWorld: "Every light switch in your home opens or closes a circuit to control the flow of electricity.",
+    funFact: "Electricity in a wire travels near the speed of light, even though the electrons creep along slowly!",
+  },
+  "rocket-thrust": {
+    learningGoals: [
+      "Use Newton's Third Law to explain how rockets fly",
+      "Relate thrust and mass to acceleration",
+      "Find the trade-off between fuel and weight",
+    ],
+    keyConcepts: ["Thrust", "Newton's Third Law", "Mass", "Acceleration"],
+    realWorld: "Real rockets drop empty fuel stages mid-flight so they don't have to carry dead weight.",
+    funFact: "A rocket pushes gas down so the gas pushes the rocket up — it doesn't need anything to 'push against'!",
+  },
+  "photosynthesis-sim": {
+    learningGoals: [
+      "Write what goes in and comes out of photosynthesis",
+      "Test how light and CO₂ change the rate",
+      "Explain why plants are the start of most food chains",
+    ],
+    keyConcepts: ["Photosynthesis", "Carbon dioxide", "Glucose", "Oxygen", "Chlorophyll"],
+    realWorld: "The oxygen you're breathing right now was mostly made by plants and ocean algae.",
+    funFact: "Tiny ocean plankton produce more than half of all the oxygen on Earth!",
+  },
+  "acid-rain-sim": {
+    learningGoals: [
+      "Read the pH scale from acid to base",
+      "Connect pollution to acid rain",
+      "Predict how acidity harms plants, water, and buildings",
+    ],
+    keyConcepts: ["pH scale", "Acid", "Base", "Pollution"],
+    realWorld: "Power plants and cars release gases that mix with rain to slowly dissolve stone statues and harm lakes.",
+    funFact: "Normal rain is slightly acidic (pH ~5.6) — acid rain can be as sour as lemon juice!",
+  },
+  "gravity-well": {
+    learningGoals: [
+      "Show how mass bends the path of moving objects",
+      "Relate planet mass to orbit speed",
+      "Explain why planets orbit the Sun",
+    ],
+    keyConcepts: ["Gravity", "Orbit", "Mass", "Escape velocity"],
+    realWorld: "Engineers use a planet's gravity to 'slingshot' spacecraft faster across the solar system.",
+    funFact: "The Sun's gravity is so strong it holds planets in orbit from billions of kilometres away!",
+  },
+  "nuclear-fusion": {
+    learningGoals: [
+      "Explain how fusion joins small atoms to release energy",
+      "Relate heat and pressure to making fusion happen",
+      "Connect fusion to how stars shine",
+    ],
+    keyConcepts: ["Fusion", "Nucleus", "Plasma", "Energy"],
+    realWorld: "Scientists are building fusion reactors to one day make clean, almost limitless energy like the Sun's.",
+    funFact: "The Sun fuses 600 million tonnes of hydrogen every single second to make its light!",
+  },
+  "quantum-tunneling": {
+    learningGoals: [
+      "Discover that tiny particles can 'tunnel' through barriers",
+      "Relate barrier width to tunnelling chance",
+      "See how probability rules the quantum world",
+    ],
+    keyConcepts: ["Quantum tunnelling", "Probability", "Energy barrier", "Wavefunction"],
+    realWorld: "The Sun shines because of tunnelling — and flash-memory chips use it to store your photos.",
+    funFact: "Quantum tunnelling lets particles pass through walls they technically don't have enough energy to climb!",
+  },
+  "superconductor-lab": {
+    learningGoals: [
+      "Cool a material until its resistance drops to zero",
+      "Relate temperature to superconductivity",
+      "Explain how superconductors make magnets float",
+    ],
+    keyConcepts: ["Resistance", "Superconductor", "Critical temperature", "Magnetic levitation"],
+    realWorld: "Superconducting magnets power MRI machines in hospitals and floating maglev trains.",
+    funFact: "A superconductor can carry electricity forever with no energy lost — a current once flowed for over 2 years!",
+  },
+  "deep-pressure-lab": {
+    learningGoals: [
+      "Relate ocean depth to crushing water pressure",
+      "Explain why pressure increases as you go deeper",
+      "Predict what happens to air spaces under pressure",
+    ],
+    keyConcepts: ["Pressure", "Depth", "Density", "Atmosphere (unit)"],
+    realWorld: "Deep-sea submarines need super-thick hulls to survive pressure that would crush a normal boat.",
+    funFact: "At the bottom of the Mariana Trench, the pressure is like balancing 50 jumbo jets on your head!",
+  },
+  "lava-viscosity-lab": {
+    learningGoals: [
+      "Relate lava temperature and silica to how runny it is",
+      "Predict whether lava flows fast or piles up",
+      "Connect viscosity to volcano shape",
+    ],
+    keyConcepts: ["Viscosity", "Silica", "Temperature", "Lava flow"],
+    realWorld: "Hawaii's runny lava builds wide gentle volcanoes; thick sticky lava builds steep explosive ones.",
+    funFact: "Hot, runny lava can flow faster than a person can run — up to 60 km/h downhill!",
+  },
+  "ice-core-lab": {
+    learningGoals: [
+      "Read past climate from layers of ancient ice",
+      "Connect trapped air bubbles to old atmospheres",
+      "Explain how scientists study climate history",
+    ],
+    keyConcepts: ["Ice core", "Climate proxy", "CO₂ record", "Annual layers"],
+    realWorld: "Drilling deep into Antarctic ice lets scientists read the weather from 800,000 years ago.",
+    funFact: "Bubbles in old ice are tiny time capsules of real air that animals breathed long ago!",
+  },
+  "canopy-ecosystem-lab": {
+    learningGoals: [
+      "Explore the layers of a rainforest and who lives in each",
+      "Connect sunlight and shelter to biodiversity",
+      "Explain how a balanced ecosystem supports many species",
+    ],
+    keyConcepts: ["Canopy", "Biodiversity", "Ecosystem", "Habitat layers"],
+    realWorld: "Rainforests hold over half of Earth's land species, even though they cover only ~6% of the land.",
+    funFact: "A single rainforest tree can be home to more ant species than the whole of the British Isles!",
+  },
+  "zero-gravity-lab": {
+    learningGoals: [
+      "Explain why astronauts float (they're in free fall!)",
+      "Tell the difference between weight and mass",
+      "Predict how objects move with no gravity to stop them",
+    ],
+    keyConcepts: ["Microgravity", "Free fall", "Weight vs mass", "Inertia"],
+    realWorld: "Astronauts on the Space Station float because they're constantly falling around the Earth.",
+    funFact: "There IS gravity in space — astronauts float because they fall sideways so fast they keep missing the Earth!",
+  },
+  "crystal-growth-lab": {
+    learningGoals: [
+      "Grow a crystal lattice atom by atom",
+      "Relate cooling speed to crystal size",
+      "Explain how repeating patterns form solids",
+    ],
+    keyConcepts: ["Crystal lattice", "Nucleation", "Cooling rate", "Atomic pattern"],
+    realWorld: "Computer chips are sliced from single giant crystals of ultra-pure silicon.",
+    funFact: "Snowflakes are crystals — and every one has six sides because of how water molecules lock together!",
+  },
+  "lightning-generator-lab": {
+    learningGoals: [
+      "Build up static charge and release it as a spark",
+      "Relate charge difference to spark size",
+      "Explain how real lightning forms",
+    ],
+    keyConcepts: ["Static electricity", "Charge", "Discharge", "Voltage"],
+    realWorld: "Lightning rods give the huge charge from storm clouds a safe path into the ground.",
+    funFact: "A lightning bolt is about 5× hotter than the surface of the Sun!",
+  },
+  "logic-gate-lab": {
+    learningGoals: [
+      "Combine AND, OR, and NOT gates",
+      "Connect 1s and 0s to true and false",
+      "Build a circuit that 'makes a decision'",
+    ],
+    keyConcepts: ["Logic gate", "Binary", "AND / OR / NOT", "Boolean"],
+    realWorld: "Every computer and phone chip is built from billions of these tiny logic gates.",
+    funFact: "Just three gates (AND, OR, NOT) can be combined to do ANY calculation a computer can do!",
+  },
+  "fossil-dating-lab": {
+    learningGoals: [
+      "Use half-life to find a fossil's age",
+      "Explain how radioactive atoms decay at a steady rate",
+      "Connect decay to a natural 'clock'",
+    ],
+    keyConcepts: ["Radioactive decay", "Half-life", "Isotope", "Radiometric dating"],
+    realWorld: "Scientists date dinosaur bones and ancient rocks by measuring how much radioactive atoms have decayed.",
+    funFact: "Carbon-14 dating works on things up to ~50,000 years old — for dinosaurs, scientists use slower-decaying atoms!",
+  },
+  "wave-particle-lab": {
+    learningGoals: [
+      "See how light and electrons act as both waves and particles",
+      "Connect 'measuring' to the wave collapsing to a point",
+      "Explore the strange rules of quantum physics",
+    ],
+    keyConcepts: ["Wave-particle duality", "Photon", "Interference", "Observation"],
+    realWorld: "Solar panels rely on light behaving as particles (photons) knocking electrons loose to make electricity.",
+    funFact: "In the famous double-slit experiment, a single particle seems to go through two slits at once — until you look!",
+  },
+};
+
 export const GAME_BADGE_MAP: Record<string, string> = {
   "gravity-dash": "gravity-master",
   "dna-decoder": "gene-genius",

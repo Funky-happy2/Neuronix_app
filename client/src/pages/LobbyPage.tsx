@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -58,6 +59,20 @@ interface PvpResult {
   adminBeaterTitle?: string | null;
 }
 
+const RANK_TIERS: { min: number; name: string; emoji: string; color: string }[] = [
+  { min: 1900, name: "Singularity", emoji: "🕳️", color: "text-fuchsia-400" },
+  { min: 1700, name: "Mastermind", emoji: "🧠", color: "text-violet-400" },
+  { min: 1500, name: "Genius", emoji: "💎", color: "text-cyan-400" },
+  { min: 1300, name: "Prodigy", emoji: "🌟", color: "text-amber-400" },
+  { min: 1100, name: "Expert", emoji: "🧪", color: "text-emerald-400" },
+  { min: 900, name: "Specialist", emoji: "⚡", color: "text-yellow-400" },
+  { min: 750, name: "Apprentice", emoji: "⚗️", color: "text-sky-400" },
+  { min: 0, name: "Rookie", emoji: "🔬", color: "text-orange-400" },
+];
+function rankTier(elo: number) {
+  return RANK_TIERS.find(t => elo >= t.min) || RANK_TIERS[RANK_TIERS.length - 1];
+}
+
 interface ActiveRoom {
   id: string;
   type: "arcade" | "pvp";
@@ -76,7 +91,37 @@ interface SpectateData {
   totalQuestions: number;
 }
 
-type LobbyMode = "arcade" | "quiz-duel";
+type LobbyMode = "arcade" | "quiz-duel" | "team" | "ranked";
+type Difficulty = "easy" | "medium" | "hard";
+type RankedMode = "quiz" | "gravity";
+
+interface RankedResult {
+  mode: RankedMode;
+  result: "win" | "loss" | "draw";
+  before: number;
+  after: number;
+  delta: number;
+  placed: boolean;
+  justPlaced: boolean;
+  placementsPlayed: number;
+  placementsTotal: number;
+  placementWins: number;
+  rank: { name: string; emoji: string; elo: number };
+  winBonus: { xp: number; coins: number } | null;
+}
+
+interface TeamMatchInfo {
+  roomId: string;
+  gameId: string;
+  difficulty: Difficulty;
+  myTeam: number;
+  teams: { name: string; players: { id: number; username: string; isBot: boolean }[] }[];
+}
+
+interface TeamResults {
+  teams: { name: string; total: number; players: { id: number; username: string; score: number; isBot: boolean }[] }[];
+  winningTeam: number;
+}
 
 export default function LobbyPage() {
   const { user } = useAuth();
@@ -92,12 +137,28 @@ export default function LobbyPage() {
     return (g && GAME_MODES.find(gm => gm.id === g)) ? g : "gravity-dash";
   });
   const [challenge, setChallenge] = useState<ChallengeInfo | null>(null);
-  const [match, setMatch] = useState<{ roomId: string; gameId: string; opponent: { id: number; username: string }; isBot?: boolean } | null>(null);
+  const [match, setMatch] = useState<{ roomId: string; gameId: string; opponent: { id: number; username: string }; isBot?: boolean; difficulty?: Difficulty; gravityModifier?: string } | null>(null);
+  const [arcadeDifficulty, setArcadeDifficulty] = useState<Difficulty>("medium");
+  const [teamMatch, setTeamMatch] = useState<TeamMatchInfo | null>(null);
+  const [teamResults, setTeamResults] = useState<TeamResults | null>(null);
+  const [rankedResult, setRankedResult] = useState<RankedResult | null>(null);
+  const [rankedLocked, setRankedLocked] = useState<number | null>(null);
+  const [rankedDraft, setRankedDraft] = useState<{ draftId: string; pickKind: "topic" | "modifier"; picks: { key: string; name: string }[]; abilities: { id: string; name: string }[]; abilityBans: number; opponent: string } | null>(null);
+  const [draftBannedPick, setDraftBannedPick] = useState<string | null>(null);
+  const [draftBannedAbilities, setDraftBannedAbilities] = useState<string[]>([]);
+  const [gravityModifierName, setGravityModifierName] = useState<string>("");
+  const [draftLocked, setDraftLocked] = useState(false);
+  const [draftOpponentLocked, setDraftOpponentLocked] = useState(false);
+  const [draftTimer, setDraftTimer] = useState(25);
+  const [bannedAbilities, setBannedAbilities] = useState<string[]>([]);
+  const [rankedTopic, setRankedTopic] = useState<string>("");
   const [gameResults, setGameResults] = useState<{ players: { id: number; username: string; score: number }[] } | null>(null);
   const [playingGame, setPlayingGame] = useState<string | null>(null);
   const [botScore, setBotScore] = useState(0);
 
-  const [lobbyMode, setLobbyMode] = useState<LobbyMode>("arcade");
+  const [lobbyMode, setLobbyMode] = useState<LobbyMode>(
+    typeof window !== "undefined" && window.location.pathname.startsWith("/ranked") ? "ranked" : "arcade"
+  );
   const [wagerAmount, setWagerAmount] = useState(0);
   const [pvpChallenge, setPvpChallenge] = useState<PvpChallengeInfo | null>(null);
   const [pvpMatch, setPvpMatch] = useState<PvpMatch | null>(null);
@@ -123,6 +184,7 @@ export default function LobbyPage() {
   const [pvpSabotageActive, setPvpSabotageActive] = useState(false);
   const [pvpHiddenOption, setPvpHiddenOption] = useState<number | null>(null);
   const [pvpPowerupUsedThisQ, setPvpPowerupUsedThisQ] = useState(false);
+  const [pvpTriplePoints, setPvpTriplePoints] = useState(false);
 
   const PVP_POWERUP_LIST = [
     { id: "bp-shield-potion", name: "Shield", icon: Shield, color: "text-blue-400" },
@@ -130,6 +192,9 @@ export default function LobbyPage() {
     { id: "bp-double-damage", name: "2x Pts", icon: Swords, color: "text-red-400" },
     { id: "bp-answer-sabotage", name: "Sabotage", icon: EyeOff, color: "text-orange-400" },
     { id: "bp-time-drain", name: "Time Drain", icon: Hourglass, color: "text-rose-400" },
+    { id: "bp-time-warp", name: "Time Warp", icon: Zap, color: "text-emerald-400" },
+    { id: "bp-triple-points", name: "3x Pts", icon: Sparkles, color: "text-amber-400" },
+    { id: "bp-mega-time", name: "Mega Time", icon: Hourglass, color: "text-teal-400" },
   ];
 
   const usePvpPowerup = async (powerupId: string) => {
@@ -154,6 +219,15 @@ export default function LobbyPage() {
       }
       if (powerupId === "bp-time-drain") {
         setPvpTimer(prev => Math.max(0, prev - 5));
+      }
+      if (powerupId === "bp-time-warp") {
+        setPvpTimer(prev => prev + 6);
+      }
+      if (powerupId === "bp-mega-time") {
+        setPvpTimer(prev => prev + 10);
+      }
+      if (powerupId === "bp-triple-points") {
+        setPvpTriplePoints(true);
       }
       toast({ title: "Powerup activated!", description: PVP_POWERUP_LIST.find(p => p.id === powerupId)?.name || "Powerup" });
     } catch {
@@ -208,8 +282,72 @@ export default function LobbyPage() {
       if (msg.type === "match_found") {
         setMyStatus("in_game");
         setMatch(msg);
+        setGravityModifierName(msg.gravityModifierName || "");
         setPlayingGame(msg.gameId);
         setBotScore(0);
+      }
+
+      if (msg.type === "team_queued") {
+        setMyStatus("queued");
+      }
+
+      if (msg.type === "team_match_found") {
+        setMyStatus("in_game");
+        setTeamMatch({
+          roomId: msg.roomId,
+          gameId: msg.gameId,
+          difficulty: msg.difficulty,
+          myTeam: msg.myTeam,
+          teams: msg.teams,
+        });
+        setTeamResults(null);
+        setPlayingGame(msg.gameId);
+      }
+
+      if (msg.type === "team_results") {
+        setTeamResults({ teams: msg.teams, winningTeam: msg.winningTeam });
+        setPlayingGame(null);
+        setMyStatus("idle");
+      }
+
+      if (msg.type === "ranked_queued") {
+        setMyStatus("queued");
+      }
+
+      if (msg.type === "ranked_locked") {
+        setRankedLocked(msg.unlockLevel);
+        setMyStatus("idle");
+        toast({ title: "Ranked is locked", description: `Reach level ${msg.unlockLevel} to play Ranked!`, variant: "destructive" });
+      }
+
+      if (msg.type === "ranked_result") {
+        setRankedResult(msg);
+        queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      }
+
+      if (msg.type === "ranked_draft_start") {
+        setRankedDraft({ draftId: msg.draftId, pickKind: msg.pickKind, picks: msg.picks, abilities: msg.abilities || [], abilityBans: msg.abilityBans || 0, opponent: msg.opponent });
+        setDraftBannedPick(null);
+        setDraftBannedAbilities([]);
+        setDraftLocked(false);
+        setDraftOpponentLocked(false);
+        setDraftTimer(msg.banSeconds || 25);
+        setMyStatus("in_game");
+      }
+
+      if (msg.type === "ranked_draft_opponent_locked") {
+        setDraftOpponentLocked(true);
+      }
+
+      if (msg.type === "ranked_draft_cancel") {
+        setRankedDraft(null);
+        setMyStatus("idle");
+        toast({ title: "Draft cancelled", description: "Your opponent left the draft." });
+      }
+
+      if (msg.type === "win_bonus") {
+        toast({ title: "Win Bonus! 🏆", description: `+${msg.xp} XP, +${msg.coins} coins for winning!` });
+        queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       }
 
       if (msg.type === "bot_score_update") {
@@ -250,6 +388,9 @@ export default function LobbyPage() {
 
       if (msg.type === "pvp_start") {
         setMyStatus("in_game");
+        setRankedDraft(null);
+        setBannedAbilities(msg.bannedAbilities || []);
+        setRankedTopic(msg.topic || "");
         setPvpMatch({
           roomId: msg.roomId,
           opponent: msg.opponent,
@@ -268,6 +409,7 @@ export default function LobbyPage() {
         setPvpShieldActive(false);
         setPvpTimerFrozen(false);
         setPvpDoubleDamage(false);
+        setPvpTriplePoints(false);
         setPvpSabotageActive(false);
         setPvpHiddenOption(null);
         setPvpPowerupUsedThisQ(false);
@@ -284,6 +426,11 @@ export default function LobbyPage() {
           const basePoints = result.points || 0;
           result.points = basePoints * 2;
           result.totalScore = (result.totalScore || 0) + basePoints;
+        }
+        if (pvpTriplePoints && result.correct) {
+          const basePoints = result.points || 0;
+          result.points = basePoints * 3;
+          result.totalScore = (result.totalScore || 0) + basePoints * 2;
         }
         setPvpAnswerResult(result);
         setPvpMyScore(result.totalScore);
@@ -304,6 +451,7 @@ export default function LobbyPage() {
         setPvpShieldActive(false);
         setPvpTimerFrozen(false);
         setPvpDoubleDamage(false);
+        setPvpTriplePoints(false);
         setPvpSabotageActive(false);
         setPvpHiddenOption(null);
         setPvpPowerupUsedThisQ(false);
@@ -375,12 +523,72 @@ export default function LobbyPage() {
   }, [connect]);
 
   const joinQueue = () => {
-    wsRef.current?.send(JSON.stringify({ type: "queue", gameId: selectedGameId }));
+    wsRef.current?.send(JSON.stringify({ type: "queue", gameId: selectedGameId, difficulty: arcadeDifficulty }));
+    setMyStatus("queued");
+  };
+
+  const quickPlay = () => {
+    const pool = GAME_MODES.filter((g) => !g.isSecret);
+    const randomGame = pool[Math.floor(Math.random() * pool.length)].id;
+    wsRef.current?.send(JSON.stringify({ type: "queue", gameId: randomGame, difficulty: arcadeDifficulty }));
+    setSelectedGameId(randomGame);
     setMyStatus("queued");
   };
 
   const cancelQueue = () => {
     wsRef.current?.send(JSON.stringify({ type: "cancel_queue" }));
+    wsRef.current?.send(JSON.stringify({ type: "team_cancel_queue" }));
+    setMyStatus("idle");
+  };
+
+  const joinTeamQueue = () => {
+    wsRef.current?.send(JSON.stringify({ type: "team_queue", gameId: selectedGameId, difficulty: arcadeDifficulty }));
+    setMyStatus("queued");
+  };
+
+  const joinRankedQueue = (mode: RankedMode) => {
+    setRankedResult(null);
+    wsRef.current?.send(JSON.stringify({ type: "ranked_queue", mode }));
+    setMyStatus("queued");
+  };
+
+  const cancelRankedQueue = () => {
+    wsRef.current?.send(JSON.stringify({ type: "ranked_cancel_queue" }));
+    setMyStatus("idle");
+  };
+
+  const lockInDraft = () => {
+    if (!rankedDraft || draftLocked) return;
+    wsRef.current?.send(JSON.stringify({
+      type: "ranked_draft_pick",
+      draftId: rankedDraft.draftId,
+      bannedPick: draftBannedPick,
+      bannedAbilities: draftBannedAbilities,
+    }));
+    setDraftLocked(true);
+  };
+
+  const toggleDraftAbility = (id: string) => {
+    if (draftLocked || !rankedDraft) return;
+    setDraftBannedAbilities((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= rankedDraft.abilityBans) return prev; // max reached
+      return [...prev, id];
+    });
+  };
+
+  const submitTeamScore = (score: number) => {
+    if (teamMatch) {
+      wsRef.current?.send(JSON.stringify({ type: "team_game_score", roomId: teamMatch.roomId, score }));
+    }
+  };
+
+  const leaveTeamMatch = () => {
+    if (teamMatch) {
+      wsRef.current?.send(JSON.stringify({ type: "team_game_score", roomId: teamMatch.roomId, score: 0 }));
+    }
+    setTeamMatch(null);
+    setPlayingGame(null);
     setMyStatus("idle");
   };
 
@@ -481,12 +689,78 @@ export default function LobbyPage() {
     },
   });
 
+  // Ranked draft ban-phase countdown — auto-locks current picks at 0.
+  useEffect(() => {
+    if (!rankedDraft || draftLocked) return;
+    if (draftTimer <= 0) {
+      wsRef.current?.send(JSON.stringify({
+        type: "ranked_draft_pick",
+        draftId: rankedDraft.draftId,
+        bannedPick: draftBannedPick,
+        bannedAbilities: draftBannedAbilities,
+      }));
+      setDraftLocked(true);
+      return;
+    }
+    const t = setTimeout(() => setDraftTimer((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [rankedDraft, draftLocked, draftTimer, draftBannedPick, draftBannedAbilities]);
+
   const winStreak = (user as any)?.winStreak || 0;
   const winStreakPeak = (user as any)?.winStreakPeak || 0;
   const tournamentWinStreak = (user as any)?.tournamentWinStreak || 0;
   const tournamentWinStreakPeak = (user as any)?.tournamentWinStreakPeak || 0;
   const canRecoverWin = winStreakPeak > winStreak && winStreakPeak > 0;
   const canRecoverTournament = tournamentWinStreakPeak > tournamentWinStreak && tournamentWinStreakPeak > 0;
+
+  // Ranked
+  const isRankedPage = typeof window !== "undefined" && window.location.pathname.startsWith("/ranked");
+  const rankedStats = ((user as any)?.rankedStats || {}) as { elo?: number; placed?: boolean; placementsPlayed?: number; placementWins?: number; wins?: number; losses?: number; peakElo?: number };
+  const userLevel = (user as any)?.level || 1;
+  const RANKED_UNLOCK_LEVEL = 50;
+  const rankedUnlocked = userLevel >= RANKED_UNLOCK_LEVEL;
+  const myElo = rankedStats.elo ?? 1000;
+  const myPlaced = !!rankedStats.placed;
+  const myTier = rankTier(myElo);
+  const placementsPlayed = rankedStats.placementsPlayed || 0;
+
+  const rankedBanner = rankedResult ? (
+    <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
+      <Card className="p-4 mb-4 border-2 border-purple-500/40 bg-gradient-to-br from-purple-500/10 to-blue-500/10" data-testid="card-ranked-result">
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <Trophy className="w-5 h-5 text-purple-400" />
+          <span className="font-black text-sm uppercase tracking-wider">Ranked {rankedResult.mode === "quiz" ? "Quiz" : "Gravity Dash"}</span>
+        </div>
+        {!rankedResult.placed ? (
+          <div className="text-center">
+            <p className="text-sm font-bold mb-1">Placement {rankedResult.placementsPlayed}/{rankedResult.placementsTotal}</p>
+            <div className="flex items-center justify-center gap-1.5 mb-2">
+              {Array.from({ length: rankedResult.placementsTotal }).map((_, i) => (
+                <div key={i} className={`h-2 w-6 rounded-full ${i < rankedResult.placementsPlayed ? "bg-purple-500" : "bg-muted"}`} />
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">Win {rankedResult.placementWins} of {rankedResult.placementsPlayed} so far — finish placements to get your rank!</p>
+            {rankedResult.justPlaced && (
+              <p className="text-lg font-black mt-2">{rankTier(rankedResult.after).emoji} You placed {rankTier(rankedResult.after).name}! ({rankedResult.after} ELO)</p>
+            )}
+          </div>
+        ) : (
+          <div className="text-center">
+            <p className="text-3xl font-black">{rankTier(rankedResult.after).emoji} <span className={rankTier(rankedResult.after).color}>{rankTier(rankedResult.after).name}</span></p>
+            <p className="text-lg font-bold mt-1">
+              {rankedResult.after} ELO{" "}
+              <span className={rankedResult.delta >= 0 ? "text-green-500" : "text-red-500"}>
+                ({rankedResult.delta >= 0 ? "+" : ""}{rankedResult.delta})
+              </span>
+            </p>
+          </div>
+        )}
+        {rankedResult.winBonus && (
+          <p className="text-center text-xs text-green-500 font-bold mt-2">Win bonus: +{rankedResult.winBonus.xp} XP, +{rankedResult.winBonus.coins} coins 🎉</p>
+        )}
+      </Card>
+    </motion.div>
+  ) : null;
 
   const pvpAnsweredRef = useRef(pvpAnswered);
   pvpAnsweredRef.current = pvpAnswered;
@@ -673,6 +947,90 @@ export default function LobbyPage() {
     );
   }
 
+  if (rankedDraft) {
+    return (
+      <div className="min-h-screen max-w-2xl mx-auto px-4 py-6">
+        <Card className="p-4 mb-4 flex items-center justify-between gap-2 bg-gradient-to-r from-purple-600/15 to-red-600/15 border-purple-500/30 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Crown className="w-5 h-5 text-amber-500" />
+            <span className="font-black">Ranked Draft — Ban Phase</span>
+            <Badge variant="secondary" className="text-xs">VS {rankedDraft.opponent}</Badge>
+          </div>
+          <Badge variant={draftTimer <= 5 ? "destructive" : "outline"} className="font-bold gap-1">
+            <Timer className="w-3 h-3" /> {draftTimer}s
+          </Badge>
+        </Card>
+
+        <Card className="p-5 mb-4 border-border">
+          <h3 className="font-bold mb-1 flex items-center gap-2">
+            {rankedDraft.pickKind === "modifier" ? "🌀 Ban a Modifier" : "🚫 Ban a Topic"}
+          </h3>
+          <p className="text-xs text-muted-foreground mb-3">
+            {rankedDraft.pickKind === "modifier"
+              ? "Each player bans one. The surviving modifier changes the race for BOTH of you!"
+              : "Each player bans one. The surviving topic decides your questions!"}
+          </p>
+          <div className="grid sm:grid-cols-3 gap-2">
+            {rankedDraft.picks.map((t) => {
+              const banned = draftBannedPick === t.key;
+              return (
+                <button
+                  key={t.key}
+                  disabled={draftLocked}
+                  onClick={() => setDraftBannedPick(banned ? null : t.key)}
+                  className={`p-3 rounded-xl border-2 text-sm font-bold transition-all ${banned ? "border-red-500 bg-red-500/15 text-red-600 dark:text-red-400 line-through" : "border-border hover:border-purple-500 bg-background"} ${draftLocked ? "opacity-70 cursor-default" : ""}`}
+                  data-testid={`draft-pick-${t.key}`}
+                >
+                  {banned ? "🚫 " : ""}{t.name}
+                </button>
+              );
+            })}
+          </div>
+        </Card>
+
+        {rankedDraft.abilities.length > 0 && (
+          <Card className="p-5 mb-4 border-border">
+            <h3 className="font-bold mb-1 flex items-center gap-2">
+              🛡️ Ban {rankedDraft.abilityBans} Abilities
+              <Badge variant="secondary" className="text-[10px]">{draftBannedAbilities.length}/{rankedDraft.abilityBans}</Badge>
+            </h3>
+            <p className="text-xs text-muted-foreground mb-3">Block your opponent's powerups — but they're banning yours too!</p>
+            <div className="flex flex-wrap gap-2">
+              {rankedDraft.abilities.map((a) => {
+                const banned = draftBannedAbilities.includes(a.id);
+                const atMax = draftBannedAbilities.length >= rankedDraft.abilityBans && !banned;
+                return (
+                  <button
+                    key={a.id}
+                    disabled={draftLocked || atMax}
+                    onClick={() => toggleDraftAbility(a.id)}
+                    className={`px-3 py-2 rounded-lg border-2 text-xs font-bold transition-all ${banned ? "border-red-500 bg-red-500/15 text-red-600 dark:text-red-400 line-through" : atMax ? "border-border bg-background opacity-40" : "border-border hover:border-purple-500 bg-background"} ${draftLocked ? "opacity-70 cursor-default" : ""}`}
+                    data-testid={`draft-ability-${a.id}`}
+                  >
+                    {banned ? "🚫 " : ""}{a.name}
+                  </button>
+                );
+              })}
+            </div>
+          </Card>
+        )}
+
+        {draftLocked ? (
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-2 text-sm font-bold">
+              <CheckCircle className="w-4 h-4 text-emerald-500" /> Locked in!
+              {draftOpponentLocked ? " Starting match…" : " Waiting for opponent…"}
+            </div>
+          </div>
+        ) : (
+          <Button onClick={lockInDraft} className="w-full font-bold gap-2 h-12" data-testid="button-lock-draft">
+            <CheckCircle className="w-5 h-5" /> Lock In Bans
+          </Button>
+        )}
+      </div>
+    );
+  }
+
   if (pvpMatch && pvpQuestion && !pvpResult) {
     return (
       <div className="min-h-screen max-w-2xl mx-auto px-4 py-4">
@@ -680,6 +1038,7 @@ export default function LobbyPage() {
           <div className="flex items-center gap-2 flex-wrap">
             <Swords className="w-5 h-5 text-orange-500" />
             <span className="font-bold text-sm" data-testid="text-pvp-opponent">VS {pvpMatch.opponent.username}</span>
+            {rankedTopic && <Badge className="bg-purple-500/20 text-purple-600 dark:text-purple-300 border-purple-500/30 text-xs gap-1"><Crown className="w-3 h-3" /> {rankedTopic}</Badge>}
             {pvpMatch.isBot && <Badge variant="secondary" className="text-xs"><Bot className="w-3 h-3 mr-1" /> Bot</Badge>}
             {pvpMatch.wager > 0 && (
               <Badge variant="outline" className="text-xs gap-1">
@@ -707,7 +1066,7 @@ export default function LobbyPage() {
 
         {Object.values(pvpBpOwned).some(c => c > 0) && (
           <div className="flex items-center gap-2 mb-3 flex-wrap">
-            {PVP_POWERUP_LIST.map(bp => {
+            {PVP_POWERUP_LIST.filter(bp => !bannedAbilities.includes(bp.id)).map(bp => {
               const count = pvpBpOwned[bp.id] || 0;
               const isActive = pvpActivePowerup === bp.id;
               const BpIcon = bp.icon;
@@ -846,7 +1205,8 @@ export default function LobbyPage() {
             <h2 className="text-2xl font-black mb-2" data-testid="text-pvp-result-title">
               {won ? "You Won!" : isDraw ? "It's a Draw!" : "Good Fight!"}
             </h2>
-            <p className="text-sm text-muted-foreground mb-6">Quiz Duel Complete</p>
+            <p className="text-sm text-muted-foreground mb-4">Quiz Duel Complete</p>
+            {rankedBanner}
 
             <div className="grid grid-cols-2 gap-4 mb-6">
               {pvpResult.players.map((p) => (
@@ -925,6 +1285,76 @@ export default function LobbyPage() {
     );
   }
 
+  if (teamResults) {
+    const myTeamIdx = teamMatch?.myTeam ?? 0;
+    const won = teamResults.winningTeam === myTeamIdx;
+    const draw = teamResults.winningTeam === -1;
+    return (
+      <div className="min-h-screen max-w-4xl mx-auto px-4 py-8 flex items-center justify-center">
+        <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
+          <Card className="p-8 max-w-lg mx-auto text-center border-border">
+            {won ? <Crown className="w-16 h-16 text-yellow-500 mx-auto mb-4" /> :
+             draw ? <Users className="w-16 h-16 text-orange-500 mx-auto mb-4" /> :
+             <Users className="w-16 h-16 text-blue-500 mx-auto mb-4" />}
+            <h2 className="text-2xl font-black mb-6">
+              {won ? "Your Team Won! 🎉" : draw ? "It's a Tie!" : "Good Team Effort!"}
+            </h2>
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              {teamResults.teams.map((t, i) => (
+                <div key={i} className={`p-4 rounded-md ${i === myTeamIdx ? "bg-purple-500/10 border border-purple-500/30" : "bg-muted"}`}>
+                  <p className="font-bold text-sm mb-1">{t.name}{i === myTeamIdx ? " (You)" : ""}</p>
+                  <p className="text-3xl font-black text-purple-500">{t.total}</p>
+                  <div className="mt-2 space-y-0.5">
+                    {t.players.map((p) => (
+                      <p key={p.id} className="text-xs text-muted-foreground truncate">
+                        {p.username}{p.isBot ? " 🤖" : ""}: {p.score}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <Button onClick={() => { setTeamResults(null); setTeamMatch(null); }} className="font-bold gap-2" data-testid="button-team-back-lobby">
+              <ArrowLeft className="w-4 h-4" /> Back to Lobby
+            </Button>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (playingGame && teamMatch && !teamResults) {
+    const game = GAME_MODES.find((g) => g.id === playingGame);
+    const myTeam = teamMatch.teams[teamMatch.myTeam];
+    if (game) {
+      return (
+        <div className="min-h-screen">
+          <div className="max-w-4xl mx-auto px-4 py-2">
+            <Card className="p-3 mb-4 flex items-center justify-between gap-2 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/20 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Users className="w-5 h-5 text-blue-500" />
+                <span className="font-bold text-sm">{myTeam?.name} — play for your team!</span>
+                <Badge variant="secondary" className="text-xs capitalize">{teamMatch.difficulty}</Badge>
+                {myTeam?.players.map((p) => (
+                  <Badge key={p.id} variant="outline" className="text-[10px]">{p.username}{p.isBot ? " 🤖" : ""}</Badge>
+                ))}
+              </div>
+              <Button size="sm" variant="outline" onClick={leaveTeamMatch} data-testid="button-leave-team"><X className="w-4 h-4" /></Button>
+            </Card>
+          </div>
+          <GamePlayer
+            game={game}
+            onBack={leaveTeamMatch}
+            onComplete={(score) => submitTeamScore(score)}
+            yearLevel={(user as any)?.yearLevel || 7}
+            forcedDifficulty={teamMatch.difficulty}
+            skipRewardSubmit
+          />
+        </div>
+      );
+    }
+  }
+
   if (playingGame && match && !gameResults) {
     const game = GAME_MODES.find((g) => g.id === playingGame);
     if (game) {
@@ -936,6 +1366,7 @@ export default function LobbyPage() {
                 <Swords className="w-5 h-5 text-purple-500" />
                 <span className="font-bold text-sm">VS {match.opponent.username}</span>
                 {match.isBot && <Badge variant="secondary" className="text-xs"><Bot className="w-3 h-3 mr-1" /> Bot</Badge>}
+                {gravityModifierName && <Badge className="bg-purple-500/20 text-purple-600 dark:text-purple-300 border-purple-500/30 text-xs">{gravityModifierName}</Badge>}
               </div>
               {match.isBot && (
                 <Badge variant="outline" className="font-bold text-sm gap-1.5">
@@ -954,6 +1385,8 @@ export default function LobbyPage() {
             }}
             onComplete={(score, won) => submitScore(score, won)}
             yearLevel={(user as any)?.yearLevel || 7}
+            forcedDifficulty={match.difficulty}
+            gravityModifier={match.gravityModifier}
             skipRewardSubmit
           />
         </div>
@@ -971,7 +1404,9 @@ export default function LobbyPage() {
         <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
           <Card className="p-8 max-w-md mx-auto text-center border-border">
             {won ? <Crown className="w-16 h-16 text-yellow-500 mx-auto mb-4" /> : <Swords className="w-16 h-16 text-blue-500 mx-auto mb-4" />}
-            <h2 className="text-2xl font-black mb-6">{won ? "You Won!" : "Good Fight!"}</h2>
+            <h2 className="text-2xl font-black mb-4">{won ? "You Won!" : "Good Fight!"}</h2>
+
+            {rankedBanner}
 
             <div className="grid grid-cols-2 gap-4 mb-6">
               {gameResults.players.map((p) => (
@@ -1000,31 +1435,50 @@ export default function LobbyPage() {
     <div className="min-h-screen max-w-6xl mx-auto px-4 py-8">
       <div className="flex items-center gap-3 mb-6 flex-wrap">
         <h1 className="text-3xl font-black flex items-center gap-3">
-          <Users className="w-8 h-8 text-purple-500" /> Multiplayer Lobby
+          {isRankedPage
+            ? <><Crown className="w-8 h-8 text-amber-500" /> Ranked</>
+            : <><Users className="w-8 h-8 text-purple-500" /> Multiplayer Lobby</>}
         </h1>
         <Badge variant={connected ? "default" : "destructive"} className="font-bold">
           {connected ? <><Wifi className="w-3 h-3 mr-1" /> Online</> : <><WifiOff className="w-3 h-3 mr-1" /> Offline</>}
         </Badge>
+        {!isRankedPage && (
+          <Link href="/ranked">
+            <Button variant="outline" size="sm" className="font-bold gap-1 ml-auto" data-testid="button-goto-ranked">
+              <Crown className="w-4 h-4 text-amber-500" /> Ranked
+            </Button>
+          </Link>
+        )}
       </div>
 
-      <div className="flex gap-2 mb-6">
-        <Button
-          variant={lobbyMode === "arcade" ? "default" : "outline"}
-          onClick={() => setLobbyMode("arcade")}
-          className="font-bold gap-2"
-          data-testid="button-mode-arcade"
-        >
-          <Gamepad2 className="w-4 h-4" /> Arcade
-        </Button>
-        <Button
-          variant={lobbyMode === "quiz-duel" ? "default" : "outline"}
-          onClick={() => setLobbyMode("quiz-duel")}
-          className="font-bold gap-2"
-          data-testid="button-mode-quiz-duel"
-        >
-          <Swords className="w-4 h-4" /> Quiz Duel
-        </Button>
-      </div>
+      {!isRankedPage && (
+        <div className="flex gap-2 mb-6">
+          <Button
+            variant={lobbyMode === "arcade" ? "default" : "outline"}
+            onClick={() => setLobbyMode("arcade")}
+            className="font-bold gap-2"
+            data-testid="button-mode-arcade"
+          >
+            <Gamepad2 className="w-4 h-4" /> Arcade
+          </Button>
+          <Button
+            variant={lobbyMode === "team" ? "default" : "outline"}
+            onClick={() => setLobbyMode("team")}
+            className="font-bold gap-2"
+            data-testid="button-mode-team"
+          >
+            <Users className="w-4 h-4" /> Team Battle
+          </Button>
+          <Button
+            variant={lobbyMode === "quiz-duel" ? "default" : "outline"}
+            onClick={() => setLobbyMode("quiz-duel")}
+            className="font-bold gap-2"
+            data-testid="button-mode-quiz-duel"
+          >
+            <Swords className="w-4 h-4" /> Quiz Duel
+          </Button>
+        </div>
+      )}
 
       {(winStreak > 0 || canRecoverWin || tournamentWinStreak > 0 || canRecoverTournament) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
@@ -1132,12 +1586,77 @@ export default function LobbyPage() {
 
       <div className="grid md:grid-cols-3 gap-6">
         <div className="md:col-span-1">
-          {lobbyMode === "arcade" ? (
+          {lobbyMode === "ranked" ? (
             <Card className="p-5 border-border">
               <h3 className="font-bold mb-3 flex items-center gap-2">
-                <Gamepad2 className="w-4 h-4" /> Select Game
+                <Crown className="w-4 h-4 text-amber-500" /> Ranked
               </h3>
-              <div className="space-y-1 max-h-64 overflow-y-auto">
+              {!rankedUnlocked ? (
+                <div className="text-center py-4">
+                  <div className="text-4xl mb-2">🔒</div>
+                  <p className="font-bold mb-1">Unlocks at Level {RANKED_UNLOCK_LEVEL}</p>
+                  <p className="text-xs text-muted-foreground">You're Level {userLevel}. Keep playing to unlock Ranked and earn your rank!</p>
+                </div>
+              ) : (
+                <>
+                  <div className="rounded-xl p-4 mb-4 bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/20 text-center">
+                    {myPlaced ? (
+                      <>
+                        <p className="text-3xl font-black">{myTier.emoji} <span className={myTier.color}>{myTier.name}</span></p>
+                        <p className="text-sm font-bold text-muted-foreground mt-1">{myElo} ELO</p>
+                        <p className="text-[11px] text-muted-foreground mt-1">
+                          {rankedStats.wins || 0}W / {rankedStats.losses || 0}L · Peak {rankedStats.peakElo || myElo}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-xl font-black">❓ Unranked</p>
+                        <p className="text-xs text-muted-foreground mt-1">Placement {placementsPlayed}/5 — win games to set your starting rank!</p>
+                        <div className="flex items-center justify-center gap-1.5 mt-2">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <div key={i} className={`h-2 w-6 rounded-full ${i < placementsPlayed ? "bg-purple-500" : "bg-muted"}`} />
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {myStatus === "idle" ? (
+                    <div className="space-y-2">
+                      <p className="text-xs font-bold text-muted-foreground">Choose a ranked mode:</p>
+                      <Button onClick={() => joinRankedQueue("quiz")} className="w-full font-bold gap-2" data-testid="button-ranked-quiz">
+                        <Swords className="w-4 h-4" /> Ranked Quiz
+                      </Button>
+                      <Button onClick={() => joinRankedQueue("gravity")} variant="outline" className="w-full font-bold gap-2" data-testid="button-ranked-gravity">
+                        <Zap className="w-4 h-4" /> Ranked Gravity Dash
+                      </Button>
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        Win to climb ELO. Quiz = 10 questions head-to-head. Gravity Dash = highest score wins. Real players only — wait for a worthy opponent!
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span className="text-sm font-bold">Finding a ranked match...</span>
+                      </div>
+                      <Button variant="outline" onClick={cancelRankedQueue} className="font-bold text-sm" data-testid="button-cancel-ranked">Cancel</Button>
+                    </div>
+                  )}
+                </>
+              )}
+            </Card>
+          ) : (lobbyMode === "arcade" || lobbyMode === "team") ? (
+            <Card className="p-5 border-border">
+              <h3 className="font-bold mb-3 flex items-center gap-2">
+                {lobbyMode === "team" ? <><Users className="w-4 h-4" /> Team Battle (2v2)</> : <><Gamepad2 className="w-4 h-4" /> Select Game</>}
+              </h3>
+              {lobbyMode === "team" && (
+                <p className="text-xs text-muted-foreground mb-3">
+                  Team up with another player and combine your scores against the rival team! Bots fill empty slots.
+                </p>
+              )}
+              <div className="space-y-1 max-h-56 overflow-y-auto">
                 {GAME_MODES.filter((g) => !g.isSecret).map((game) => (
                   <button
                     key={game.id}
@@ -1152,10 +1671,41 @@ export default function LobbyPage() {
                 ))}
               </div>
 
+              <div className="mt-4">
+                <label className="text-xs font-bold text-muted-foreground mb-1.5 block">Difficulty</label>
+                <div className="flex gap-1.5">
+                  {(["easy", "medium", "hard"] as Difficulty[]).map((d) => (
+                    <Button
+                      key={d}
+                      size="sm"
+                      variant={arcadeDifficulty === d ? "default" : "outline"}
+                      className="flex-1 font-bold capitalize text-xs"
+                      onClick={() => setArcadeDifficulty(d)}
+                      data-testid={`button-queue-difficulty-${d}`}
+                    >
+                      {d}
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1.5">
+                  Matched with players on the same difficulty. Mixed match = random difficulty. Hard pays more!
+                </p>
+              </div>
+
               <div className="mt-4 space-y-2">
-                {myStatus === "idle" && (
-                  <Button onClick={joinQueue} className="w-full font-bold gap-2" data-testid="button-find-match">
-                    <Search className="w-4 h-4" /> Find Match
+                {myStatus === "idle" && lobbyMode === "arcade" && (
+                  <>
+                    <Button onClick={joinQueue} className="w-full font-bold gap-2" data-testid="button-find-match">
+                      <Search className="w-4 h-4" /> Find Match
+                    </Button>
+                    <Button onClick={quickPlay} variant="outline" className="w-full font-bold gap-2" data-testid="button-quick-play">
+                      <Zap className="w-4 h-4" /> Quick Play (Random Game)
+                    </Button>
+                  </>
+                )}
+                {myStatus === "idle" && lobbyMode === "team" && (
+                  <Button onClick={joinTeamQueue} className="w-full font-bold gap-2" data-testid="button-find-team">
+                    <Users className="w-4 h-4" /> Find Team Match
                   </Button>
                 )}
                 {myStatus === "queued" && (
@@ -1164,7 +1714,9 @@ export default function LobbyPage() {
                       <Loader2 className="w-4 h-4 animate-spin" />
                       <span className="text-sm font-bold">Searching...</span>
                     </div>
-                    <p className="text-xs text-muted-foreground mb-2">Bot fills in after 5 seconds</p>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      {lobbyMode === "team" ? "Bots fill empty team slots after 8s" : "Bot fills in after 5 seconds"}
+                    </p>
                     <Button variant="outline" onClick={cancelQueue} className="font-bold text-sm" data-testid="button-cancel-queue">
                       Cancel
                     </Button>
@@ -1230,6 +1782,7 @@ export default function LobbyPage() {
         </div>
 
         <div className="md:col-span-2">
+          {isRankedPage ? <RankedLeaderboard meId={user?.id} /> : (
           <Card className="p-5 border-border">
             <h3 className="font-bold mb-3 flex items-center gap-2">
               <Users className="w-4 h-4" /> Online Players ({players.length})
@@ -1260,7 +1813,7 @@ export default function LobbyPage() {
                         </Badge>
                       </div>
                     </div>
-                    {player.status === "idle" && (
+                    {player.status === "idle" && lobbyMode !== "team" && (
                       <div className="flex gap-2">
                         {lobbyMode === "arcade" ? (
                           <Button
@@ -1290,8 +1843,54 @@ export default function LobbyPage() {
               </div>
             )}
           </Card>
+          )}
         </div>
       </div>
     </div>
+  );
+}
+
+function RankedLeaderboard({ meId }: { meId?: number }) {
+  const { data, isLoading } = useQuery<{ leaders: { rank: number; id: number; username: string; elo: number; wins: number; losses: number; tier: { name: string; emoji: string } }[] }>({
+    queryKey: ["/api/leaderboard/ranked"],
+    refetchInterval: 30000,
+  });
+  const leaders = data?.leaders || [];
+  return (
+    <Card className="p-5 border-border">
+      <h3 className="font-bold mb-1 flex items-center gap-2">
+        <Crown className="w-4 h-4 text-amber-500" /> Ranked Leaderboard
+      </h3>
+      <p className="text-xs text-muted-foreground mb-4">The best players by ELO. #1 holds the 👑 Ranked Grandmaster title!</p>
+      {isLoading ? (
+        <div className="text-center py-8"><Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" /></div>
+      ) : leaders.length === 0 ? (
+        <div className="text-center py-8">
+          <Trophy className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+          <p className="text-muted-foreground font-medium">No ranked players yet</p>
+          <p className="text-sm text-muted-foreground mt-1">Finish your placement games to claim a spot!</p>
+        </div>
+      ) : (
+        <div className="space-y-1.5">
+          {leaders.map((p) => (
+            <div
+              key={p.id}
+              className={`flex items-center justify-between gap-2 p-2.5 rounded-md ${p.id === meId ? "bg-purple-500/15 border border-purple-500/30" : p.rank <= 3 ? "bg-amber-500/10" : "bg-muted"}`}
+              data-testid={`ranked-row-${p.rank}`}
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <span className={`font-black text-sm w-6 text-center ${p.rank === 1 ? "text-amber-500" : p.rank <= 3 ? "text-amber-400" : "text-muted-foreground"}`}>#{p.rank}</span>
+                <span className="text-lg">{p.tier.emoji}</span>
+                <div className="min-w-0">
+                  <p className="font-bold text-sm truncate">{p.username}{p.id === meId ? " (You)" : ""}</p>
+                  <p className="text-[11px] text-muted-foreground">{p.tier.name} · {p.wins}W/{p.losses}L</p>
+                </div>
+              </div>
+              <span className="font-black text-purple-500 text-sm shrink-0">{p.elo}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
   );
 }

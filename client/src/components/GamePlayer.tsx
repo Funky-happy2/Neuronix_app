@@ -37,9 +37,13 @@ interface GamePlayerProps {
   autoStart?: boolean;
   skipRewardSubmit?: boolean;
   isChallenge?: boolean;
+  forcedDifficulty?: 'easy' | 'medium' | 'hard';
+  onScoreChange?: (score: number) => void;
+  gravityModifier?: string;
+  autoLoop?: boolean;
 }
 
-export default function GamePlayer({ game, onBack, onComplete, yearLevel = 7, autoStart = false, skipRewardSubmit = false, isChallenge = false }: GamePlayerProps) {
+export default function GamePlayer({ game, onBack, onComplete, yearLevel = 7, autoStart = false, skipRewardSubmit = false, isChallenge = false, forcedDifficulty, onScoreChange, gravityModifier, autoLoop = false }: GamePlayerProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const gemUpgradesEnabled = localStorage.getItem("cosmetic-gem-upgrades") !== "false";
@@ -53,12 +57,12 @@ export default function GamePlayer({ game, onBack, onComplete, yearLevel = 7, au
   const hasLuckyAnswer = user?.inventory?.includes("powerup-lucky-answer") ?? false;
   const hasScienceScanner = user?.inventory?.includes("powerup-science-scanner") ?? false;
   const luckyAnswerLevel = hasLuckyAnswer ? (((user as any)?.itemLevels || {})["powerup-lucky-answer"] || 0) : 0;
-  const [phase, setPhase] = useState<"intro" | "playing" | "result">(autoStart ? "playing" : "intro");
+  const [phase, setPhase] = useState<"intro" | "playing" | "result">(autoStart || forcedDifficulty ? "playing" : "intro");
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(30);
   const [lives, setLives] = useState(3);
   const [gameOver, setGameOver] = useState(false);
-  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>(forcedDifficulty ?? 'medium');
   const [rewards, setRewards] = useState<GameRewards | null>(null);
   const [highScores, setHighScores] = useState<{ overall: number; easy: number; medium: number; hard: number } | null>(null);
   const [rewardsLoading, setRewardsLoading] = useState(false);
@@ -72,6 +76,61 @@ export default function GamePlayer({ game, onBack, onComplete, yearLevel = 7, au
       window.dispatchEvent(new CustomEvent("neuronix-game-music", { detail: null }));
     };
   }, [game.id, game.category]);
+
+  // Broadcast live score to any stream viewers (no-op when not streaming).
+  useEffect(() => { onScoreChange?.(score); }, [score, onScoreChange]);
+
+  // Live-stream mode: auto-restart after death so the broadcast never freezes.
+  useEffect(() => {
+    if (phase === "result" && autoLoop) {
+      const t = setTimeout(() => {
+        setScore(0);
+        setGameOver(false);
+        setRewards(null);
+        rewardsSubmittedRef.current = false;
+        setPhase("playing");
+      }, 1800);
+      return () => clearTimeout(t);
+    }
+  }, [phase, autoLoop]);
+
+  // Global anti-autoclicker watchdog — runs across every mini-game while playing.
+  // Inhumanly fast + perfectly uniform input patterns trigger an account suspension.
+  const autoFlaggedRef = useRef(false);
+  useEffect(() => {
+    if (phase !== "playing" || !user) return;
+    const stamps: number[] = [];
+    const onInput = () => {
+      const now = Date.now();
+      stamps.push(now);
+      if (stamps.length > 40) stamps.shift();
+      if (autoFlaggedRef.current || stamps.length < 16) return;
+      const recent = stamps.slice(-16);
+      const intervals = recent.slice(1).map((t, i) => t - recent[i]);
+      const mean = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+      const stdDev = Math.sqrt(intervals.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / intervals.length);
+      // Humans vary; bots are fast AND metronome-uniform.
+      if (mean < 95 && stdDev < 22) {
+        autoFlaggedRef.current = true;
+        apiRequest("POST", "/api/report/suspicious", {
+          reason: "autoclicker_detected",
+          details: `${game.id}: mean interval ${Math.round(mean)}ms, stdDev ${Math.round(stdDev)}ms over 16 inputs`,
+        }).then(() => queryClient.invalidateQueries({ queryKey: ["/api/user"] })).catch(() => {});
+        toast({
+          title: "Suspicious activity detected",
+          description: "Automated clicking was detected. Your account has been suspended for review.",
+          variant: "destructive",
+        });
+        handleGameEnd(0);
+      }
+    };
+    window.addEventListener("pointerdown", onInput);
+    window.addEventListener("keydown", onInput);
+    return () => {
+      window.removeEventListener("pointerdown", onInput);
+      window.removeEventListener("keydown", onInput);
+    };
+  }, [phase, user, game.id, toast]);
 
   const submitGameResult = useCallback((finalScore: number, won: boolean, diff: string) => {
     if (rewardsSubmittedRef.current) return;
@@ -441,6 +500,7 @@ export default function GamePlayer({ game, onBack, onComplete, yearLevel = 7, au
         hasLuckyAnswer={hasLuckyAnswer}
         hasScienceScanner={hasScienceScanner}
         luckyAnswerLevel={luckyAnswerLevel}
+        gravityModifier={gravityModifier}
       />
     </div>
   );
@@ -458,11 +518,12 @@ interface GameEngineProps {
   hasLuckyAnswer: boolean;
   hasScienceScanner: boolean;
   luckyAnswerLevel?: number;
+  gravityModifier?: string;
 }
 
-function GameEngine({ gameType, gameId, onScore, onEnd, score, yearLevel, difficulty, extraTime, hasLuckyAnswer, hasScienceScanner, luckyAnswerLevel = 0 }: GameEngineProps) {
+function GameEngine({ gameType, gameId, onScore, onEnd, score, yearLevel, difficulty, extraTime, hasLuckyAnswer, hasScienceScanner, luckyAnswerLevel = 0, gravityModifier }: GameEngineProps) {
   switch (gameType) {
-    case "runner": return <RunnerGame gameId={gameId} onScore={onScore} onEnd={onEnd} score={score} difficulty={difficulty} extraTime={extraTime} />;
+    case "runner": return <RunnerGame gameId={gameId} onScore={onScore} onEnd={onEnd} score={score} difficulty={difficulty} extraTime={extraTime} gravityModifier={gravityModifier} />;
     case "matching": return <MatchingGame gameId={gameId} onScore={onScore} onEnd={onEnd} score={score} difficulty={difficulty} extraTime={extraTime} />;
     case "pipe_puzzle": return <PipePuzzleGame gameId={gameId} onScore={onScore} onEnd={onEnd} score={score} difficulty={difficulty} extraTime={extraTime} />;
     case "mixing": return <MixingGame gameId={gameId} onScore={onScore} onEnd={onEnd} score={score} difficulty={difficulty} extraTime={extraTime} />;
@@ -501,9 +562,10 @@ interface MiniGameProps {
   score: number;
   difficulty: 'easy' | 'medium' | 'hard';
   extraTime: number;
+  gravityModifier?: string;
 }
 
-function RunnerGame({ gameId, onScore, onEnd, score, difficulty, extraTime }: MiniGameProps) {
+function RunnerGame({ gameId, onScore, onEnd, score, difficulty, extraTime, gravityModifier }: MiniGameProps) {
   const diffSettings = {
     easy: { speed: 2, obstacleInterval: 120 },
     medium: { speed: 3, obstacleInterval: 90 },
@@ -511,18 +573,27 @@ function RunnerGame({ gameId, onScore, onEnd, score, difficulty, extraTime }: Mi
   };
   const ds = diffSettings[difficulty];
   const isLavaEscape = gameId === "lava-escape";
+  // Ranked gravity modifiers tweak the race.
+  let mSpeed = ds.speed, mInterval = ds.obstacleInterval, mGravity = isLavaEscape ? 0 : 0.5;
+  const starInterval = gravityModifier === "star-rush" ? 30 : 60;
+  const playerR = gravityModifier === "tiny-player" ? 9 : 15;
+  if (gravityModifier === "hyperspeed") mSpeed = Math.round(mSpeed * 1.6 * 10) / 10;
+  if (gravityModifier === "low-gravity") mGravity *= 0.5;
+  if (gravityModifier === "spike-storm") mInterval = Math.max(35, Math.floor(mInterval * 0.6));
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef({
     playerY: isLavaEscape ? 170 : 200,
     playerVY: 0,
-    gravity: isLavaEscape ? 0 : 0.5,
+    gravity: mGravity,
     obstacles: [] as { x: number; y: number; w: number; h: number }[],
     stars: [] as { x: number; y: number; collected: boolean }[],
     frame: 0,
-    speed: ds.speed,
+    speed: mSpeed,
     alive: true,
     localScore: 0,
-    obstacleInterval: ds.obstacleInterval,
+    obstacleInterval: mInterval,
+    starInterval,
+    playerR,
   });
   const [isJumping, setIsJumping] = useState(false);
 
@@ -596,7 +667,7 @@ function RunnerGame({ gameId, onScore, onEnd, score, difficulty, extraTime }: Mi
           g.obstacles.push({ x: 600, y: 0, w: 25, h: ceilH });
         }
       }
-      if (g.frame % 60 === 0) {
+      if (g.frame % g.starInterval === 0) {
         g.stars.push({ x: 600, y: 50 + Math.random() * 250, collected: false });
       }
 
@@ -614,8 +685,9 @@ function RunnerGame({ gameId, onScore, onEnd, score, difficulty, extraTime }: Mi
         }
       }
 
+      const hw = g.playerR + 5;
       for (const o of g.obstacles) {
-        if (60 + 20 > o.x && 60 < o.x + o.w && g.playerY + 20 > o.y && g.playerY < o.y + o.h) {
+        if (60 + hw > o.x && 60 < o.x + o.w && g.playerY + hw > o.y && g.playerY < o.y + o.h) {
           g.alive = false;
           onEnd(g.localScore);
           return;
@@ -623,7 +695,7 @@ function RunnerGame({ gameId, onScore, onEnd, score, difficulty, extraTime }: Mi
       }
 
       if (g.frame % 300 === 0) g.speed += 0.3;
-      if (g.frame % 500 === 0 && !isLavaEscape) g.gravity = 0.3 + Math.random() * 0.5;
+      if (g.frame % 500 === 0 && !isLavaEscape) g.gravity = (0.3 + Math.random() * 0.5) * (gravityModifier === "low-gravity" ? 0.5 : 1);
 
       ctx.clearRect(0, 0, 600, 400);
 
@@ -638,7 +710,7 @@ function RunnerGame({ gameId, onScore, onEnd, score, difficulty, extraTime }: Mi
 
       ctx.fillStyle = rt?.playerColor || (isJumping ? "#60ff60" : "#4ade80");
       ctx.beginPath();
-      ctx.arc(60, g.playerY + 10, 15, 0, Math.PI * 2);
+      ctx.arc(60, g.playerY + 10, g.playerR, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = "#ffffff";
       ctx.beginPath();

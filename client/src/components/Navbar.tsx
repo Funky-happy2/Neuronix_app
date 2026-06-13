@@ -9,7 +9,7 @@ import {
   Zap, Rocket, Bot, Sparkles, Wand2, Flame, Bird, Diamond, Star, RefreshCw, Beaker, Medal,
   Snowflake, Orbit, Crown, ArrowLeftRight, Skull, Map,
   Telescope, Mountain, Wind, Hexagon, Footprints, Cpu, Waves, TreePine, Atom,
-  TrendingUp, GraduationCap, Calendar, Gift,
+  TrendingUp, GraduationCap, Calendar, Gift, Radio,
   type LucideIcon
 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -23,6 +23,9 @@ const NAV_ITEMS = [
   { path: "/arcade", label: "Arcade", tKey: "nav.arcade", icon: Gamepad2 },
   { path: "/worlds", label: "Worlds", tKey: "nav.worlds", icon: Map },
   { path: "/lobby", label: "Multiplayer", tKey: "nav.lobby", icon: Users },
+  { path: "/party", label: "Party", tKey: "", icon: UsersRound },
+  { path: "/ranked", label: "Ranked", tKey: "nav.ranked", icon: Crown },
+  { path: "/stream", label: "Live", tKey: "nav.live", icon: Radio },
   { path: "/lab", label: "Lab", tKey: "nav.lab", icon: FlaskConical },
   { path: "/bosses", label: "Bosses", tKey: "nav.bosses", icon: Swords },
   { path: "/community", label: "Community", tKey: "nav.community", icon: Globe },

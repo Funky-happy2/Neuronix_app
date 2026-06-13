@@ -2866,6 +2866,14 @@ function ReportsTab() {
     onSuccess: () => { toast({ title: "Report dismissed" }); queryClient.invalidateQueries({ queryKey: ["/api/admin/suspicious-reports"] }); },
   });
 
+  const unsuspendMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      const res = await apiRequest("POST", `/api/admin/users/${userId}/unsuspend`, {});
+      if (!res.ok) throw new Error("Failed");
+    },
+    onSuccess: () => { toast({ title: "Account unsuspended", description: "The player can play again." }); },
+  });
+
   const unreviewed = reports.filter(r => !r.reviewed);
   const reviewed = reports.filter(r => r.reviewed);
   const REASON_LABELS: Record<string, string> = { autoclicker_detected: "🤖 Auto-Clicker Detected" };
@@ -2907,6 +2915,11 @@ function ReportsTab() {
                     <p className="text-[10px] text-muted-foreground mt-1">{new Date(r.createdAt).toLocaleString()}</p>
                   </div>
                   <div className="flex gap-1.5 flex-shrink-0">
+                    {r.reason.startsWith("autoclicker") && (
+                      <Button size="sm" variant="outline" className="text-xs font-bold gap-1 text-blue-600 border-blue-500/30" onClick={() => unsuspendMutation.mutate(r.userId)} disabled={unsuspendMutation.isPending} data-testid={`button-unsuspend-${r.id}`}>
+                        <RefreshCw className="w-3 h-3" /> Unsuspend
+                      </Button>
+                    )}
                     <Button size="sm" variant="outline" className="text-xs font-bold gap-1 text-emerald-600 border-emerald-500/30" onClick={() => reviewMutation.mutate(r.id)} disabled={reviewMutation.isPending} data-testid={`button-review-${r.id}`}>
                       <CheckCircle className="w-3 h-3" /> Reviewed
                     </Button>

@@ -19,6 +19,8 @@ export const LANGUAGES: { code: Language; name: string; flag: string }[] = [
 
 const translations: Record<Language, Record<string, string>> = {
   en: {
+    "nav.ranked": "Ranked",
+    "nav.live": "Live",
     "nav.home": "Home",
     "nav.arcade": "Arcade",
     "nav.worlds": "Worlds",
@@ -127,6 +129,8 @@ const translations: Record<Language, Record<string, string>> = {
     "worlds.subtitle": "Journey through 10 themed worlds of science!",
   },
   es: {
+    "nav.ranked": "Clasificatoria",
+    "nav.live": "En vivo",
     "nav.home": "Inicio",
     "nav.arcade": "Arcade",
     "nav.worlds": "Mundos",
@@ -235,6 +239,8 @@ const translations: Record<Language, Record<string, string>> = {
     "worlds.subtitle": "¡Viaja por 10 mundos temáticos de ciencia!",
   },
   fr: {
+    "nav.ranked": "Classé",
+    "nav.live": "En direct",
     "nav.home": "Accueil",
     "nav.arcade": "Arcade",
     "nav.worlds": "Mondes",
@@ -343,6 +349,8 @@ const translations: Record<Language, Record<string, string>> = {
     "worlds.subtitle": "Voyagez à travers 10 mondes scientifiques !",
   },
   de: {
+    "nav.ranked": "Rangliste",
+    "nav.live": "Live",
     "nav.home": "Start",
     "nav.arcade": "Arcade",
     "nav.worlds": "Welten",
@@ -451,6 +459,8 @@ const translations: Record<Language, Record<string, string>> = {
     "worlds.subtitle": "Reise durch 10 thematische Wissenschaftswelten!",
   },
   pt: {
+    "nav.ranked": "Ranqueado",
+    "nav.live": "Ao vivo",
     "nav.home": "Início",
     "nav.arcade": "Arcade",
     "nav.worlds": "Mundos",
@@ -559,6 +569,8 @@ const translations: Record<Language, Record<string, string>> = {
     "worlds.subtitle": "Viaje por 10 mundos temáticos de ciência!",
   },
   it: {
+    "nav.ranked": "Classificata",
+    "nav.live": "Dal vivo",
     "nav.home": "Home", "nav.arcade": "Arcade", "nav.worlds": "Mondi", "nav.bosses": "Boss",
     "nav.lab": "Laboratorio", "nav.shop": "Negozio", "nav.profile": "Profilo", "nav.settings": "Impostazioni",
     "nav.badges": "Distintivi", "nav.clans": "Clan", "nav.teams": "Squadre", "nav.community": "Comunità",
@@ -603,6 +615,8 @@ const translations: Record<Language, Record<string, string>> = {
     "worlds.title": "Mappa del Mondo", "worlds.subtitle": "Viaggia in 10 mondi scientifici!",
   },
   ru: {
+    "nav.ranked": "Рейтинг",
+    "nav.live": "Прямой эфир",
     "nav.home": "Главная", "nav.arcade": "Аркада", "nav.worlds": "Миры", "nav.bosses": "Боссы",
     "nav.lab": "Лаборатория", "nav.shop": "Магазин", "nav.profile": "Профиль", "nav.settings": "Настройки",
     "nav.badges": "Значки", "nav.clans": "Кланы", "nav.teams": "Команды", "nav.community": "Сообщество",
@@ -647,6 +661,8 @@ const translations: Record<Language, Record<string, string>> = {
     "worlds.title": "Карта Мира", "worlds.subtitle": "Путешествуй по 10 научным мирам!",
   },
   zh: {
+    "nav.ranked": "排位赛",
+    "nav.live": "直播",
     "nav.home": "首页", "nav.arcade": "游戏厅", "nav.worlds": "世界", "nav.bosses": "Boss",
     "nav.lab": "实验室", "nav.shop": "商店", "nav.profile": "个人资料", "nav.settings": "设置",
     "nav.badges": "徽章", "nav.clans": "公会", "nav.teams": "战队", "nav.community": "社区",
@@ -691,6 +707,8 @@ const translations: Record<Language, Record<string, string>> = {
     "worlds.title": "世界地图", "worlds.subtitle": "穿越10个科学主题世界！",
   },
   ja: {
+    "nav.ranked": "ランク戦",
+    "nav.live": "ライブ",
     "nav.home": "ホーム", "nav.arcade": "アーケード", "nav.worlds": "ワールド", "nav.bosses": "ボス",
     "nav.lab": "ラボ", "nav.shop": "ショップ", "nav.profile": "プロフィール", "nav.settings": "設定",
     "nav.badges": "バッジ", "nav.clans": "クラン", "nav.teams": "チーム", "nav.community": "コミュニティ",
@@ -735,6 +753,8 @@ const translations: Record<Language, Record<string, string>> = {
     "worlds.title": "ワールドマップ", "worlds.subtitle": "10の科学テーマワールドを冒険しよう！",
   },
   ko: {
+    "nav.ranked": "랭크",
+    "nav.live": "라이브",
     "nav.home": "홈", "nav.arcade": "아케이드", "nav.worlds": "월드", "nav.bosses": "보스",
     "nav.lab": "실험실", "nav.shop": "상점", "nav.profile": "프로필", "nav.settings": "설정",
     "nav.badges": "배지", "nav.clans": "클랜", "nav.teams": "팀", "nav.community": "커뮤니티",
@@ -779,6 +799,8 @@ const translations: Record<Language, Record<string, string>> = {
     "worlds.title": "월드 맵", "worlds.subtitle": "10개의 과학 테마 월드를 여행하세요!",
   },
   ar: {
+    "nav.ranked": "مصنف",
+    "nav.live": "مباشر",
     "nav.home": "الرئيسية", "nav.arcade": "الألعاب", "nav.worlds": "العوالم", "nav.bosses": "الزعماء",
     "nav.lab": "المختبر", "nav.shop": "المتجر", "nav.profile": "الملف الشخصي", "nav.settings": "الإعدادات",
     "nav.badges": "الشارات", "nav.clans": "العشائر", "nav.teams": "الفرق", "nav.community": "المجتمع",
@@ -823,6 +845,8 @@ const translations: Record<Language, Record<string, string>> = {
     "worlds.title": "خريطة العالم", "worlds.subtitle": "!سافر عبر 10 عوالم علمية",
   },
   hi: {
+    "nav.ranked": "रैंक्ड",
+    "nav.live": "लाइव",
     "nav.home": "होम", "nav.arcade": "आर्केड", "nav.worlds": "दुनिया", "nav.bosses": "बॉस",
     "nav.lab": "प्रयोगशाला", "nav.shop": "दुकान", "nav.profile": "प्रोफ़ाइल", "nav.settings": "सेटिंग्स",
     "nav.badges": "बैज", "nav.clans": "कबीले", "nav.teams": "टीमें", "nav.community": "समुदाय",
@@ -877,9 +901,11 @@ export function setLanguage(lang: Language) {
   window.dispatchEvent(new Event("language-changed"));
 }
 
+// Text is rendered in English (the source language); the AutoTranslate engine
+// translates the whole DOM into the selected language so coverage is uniform
+// across every page, not just the keys wired into this dictionary.
 export function t(key: string): string {
-  const lang = getLanguage();
-  return translations[lang]?.[key] || translations.en[key] || key;
+  return translations.en[key] || key;
 }
 
 export function useTranslation() {
@@ -896,7 +922,8 @@ export function useTranslation() {
   }, []);
 
   const translate = useCallback((key: string): string => {
-    return translations[lang]?.[key] || translations.en[key] || key;
+    // English source — AutoTranslate handles the active language at the DOM level.
+    return translations.en[key] || key;
   }, [lang]);
 
   return { t: translate, lang, setLang: setLanguage };

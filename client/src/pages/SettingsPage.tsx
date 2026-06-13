@@ -88,7 +88,7 @@ export default function SettingsPage({ isMuted, onToggleMute }: SettingsPageProp
       <Card>
         <CardContent className="p-4 space-y-3">
           <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wide">{t("settings.language")}</h2>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between" data-no-translate>
             <div className="flex items-center gap-2">
               <Globe className="w-4 h-4 text-blue-500" />
               <span className="text-sm font-semibold">{LANGUAGES.find(l => l.code === lang)?.name || "English"}</span>

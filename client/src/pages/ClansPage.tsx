@@ -291,7 +291,7 @@ export default function ClansPage() {
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/clans"] });
       if (viewingClan) queryClient.invalidateQueries({ queryKey: ["/api/clans", viewingClan] });
-      toast({ title: "Kick vote", description: data.message || "Vote started" });
+      toast({ title: "Member kicked", description: data.message || "Member removed" });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -1339,7 +1339,7 @@ export default function ClansPage() {
                     </Button>
                   )}
                   {isOwner && m.id !== user?.id && !isMemberOwner && (
-                    <Button size="sm" variant="ghost" onClick={() => kickMutation.mutate({ clanId: clan.id, userId: m.id })} disabled={kickMutation.isPending || !!kickVote} className="text-red-500 hover:text-red-600 h-8" title="Start kick vote" data-testid={`button-kick-${m.id}`}>
+                    <Button size="sm" variant="ghost" onClick={() => kickMutation.mutate({ clanId: clan.id, userId: m.id })} disabled={kickMutation.isPending} className="text-red-500 hover:text-red-600 h-8" title="Kick member" data-testid={`button-kick-${m.id}`}>
                       <UserMinus className="w-4 h-4" />
                     </Button>
                   )}
@@ -1487,7 +1487,7 @@ export default function ClansPage() {
         <h1 className="text-3xl md:text-4xl font-black flex items-center gap-3">
           <Shield className="w-8 h-8 text-purple-500" /> Clans
         </h1>
-        {user && !(user as any).clanId && (
+        {user && (
           <Button onClick={() => setCreating(true)} className="gap-2 font-bold" data-testid="button-create-clan">
             <Plus className="w-4 h-4" /> Create Clan
           </Button>

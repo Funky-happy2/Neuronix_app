@@ -39,6 +39,9 @@ import TournamentRankingsPage from "@/pages/TournamentRankingsPage";
 import RedeemPage from "@/pages/RedeemPage";
 import InvitePage from "@/pages/InvitePage";
 import ClassesPage from "@/pages/ClassesPage";
+import StreamPage from "@/pages/StreamPage";
+import PartyPage from "@/pages/PartyPage";
+import { AutoTranslate } from "@/lib/autoTranslate";
 import { useLocalProgress } from "@/lib/useLocalProgress";
 import { useAuth } from "@/hooks/use-auth";
 import MouseFollower from "@/components/MouseFollower";
@@ -247,6 +250,7 @@ function Router() {
       <ScreenDecorations />
       <GlobalMusicController isMuted={progress.isMuted} />
       <Navbar isMuted={progress.isMuted} onToggleMute={toggleMute} />
+      <SuspendedOverlay />
       <div className="pt-14 md:pt-0 min-h-screen sidebar-content" id="main-content">
       <Switch>
         <Route path="/">
@@ -268,6 +272,9 @@ function Router() {
           />
         </Route>
         <Route path="/lobby" component={LobbyPage} />
+        <Route path="/ranked" component={LobbyPage} />
+        <Route path="/party" component={PartyPage} />
+        <Route path="/stream" component={StreamPage} />
         <Route path="/lab">
           <LabPage onAddXP={addXP} onEarnBadge={earnBadge} />
         </Route>
@@ -338,6 +345,30 @@ function Router() {
       </Switch>
       </div>
     </>
+  );
+}
+
+function SuspendedOverlay() {
+  const { user } = useAuth();
+  const safety = ((user as any)?.safetySettings || {}) as Record<string, any>;
+  if (!safety.suspended) return null;
+  return (
+    <div className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-card border-2 border-red-500/40 rounded-2xl p-7 text-center shadow-2xl">
+        <div className="text-5xl mb-3">⏸️</div>
+        <h2 className="text-2xl font-black mb-2">Account Paused</h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          Our anti-cheat noticed automated clicking on your account, so we've paused it for now.
+          A grown-up moderator will take a look soon. You didn't lose any of your progress! 💜
+        </p>
+        {safety.suspendedReason && (
+          <p className="text-xs font-semibold text-red-500 mb-4">Reason: {safety.suspendedReason}</p>
+        )}
+        <p className="text-xs text-muted-foreground">
+          If you think this was a mistake, an admin can lift the pause from the Admin panel.
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -417,6 +448,7 @@ function App() {
           <DarkModeInitializer />
           <SessionGuard />
           <ThemeApplier />
+          <AutoTranslate />
           <Router />
         </TooltipProvider>
       </AuthProvider>

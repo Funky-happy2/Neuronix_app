@@ -10,6 +10,7 @@ interface LobbyPlayer {
   ws: WebSocket;
   status: "idle" | "queued" | "in_game";
   gameId?: string;
+  difficulty?: string;
 }
 
 interface GameRoom {
@@ -20,6 +21,7 @@ interface GameRoom {
   currentQuestion: number;
   startTime?: number;
   spectators: { id: number; ws: WebSocket }[];
+  ranked?: RankedMode;
 }
 
 interface PvpRoom {
@@ -34,6 +36,7 @@ interface PvpRoom {
   botTimers?: ReturnType<typeof setTimeout>[];
   roundTimeout?: ReturnType<typeof setTimeout>;
   spectators: { id: number; ws: WebSocket }[];
+  ranked?: RankedMode;
 }
 
 const lobby = new Map<number, LobbyPlayer>();
@@ -43,6 +46,230 @@ const pvpRooms = new Map<string, PvpRoom>();
 const pvpQueue: { id: number; wager: number; queuedAt: number }[] = [];
 const lastActive = new Map<number, number>();
 const ONLINE_THRESHOLD_MS = 5 * 60 * 1000;
+
+// ─── Live streaming ──────────────────────────────────────────────────────────
+interface StreamChatMsg { from: string; fromId: number; text: string; ts: number; }
+interface LiveStream {
+  streamerId: number;
+  streamerName: string;
+  gameId: string;
+  gameName: string;
+  score: number;
+  startedAt: number;
+  viewers: Map<number, { id: number; username: string; ws: WebSocket }>;
+  chat: StreamChatMsg[];
+  boosters: Set<number>;     // viewers who have boosted (one each)
+  commenters: Set<number>;   // unique viewers who have chatted
+  peakViewers: number;
+  gemsEarned: number;        // gems paid out so far this stream
+}
+const streams = new Map<number, LiveStream>();
+
+const STREAM_BOOST_GEMS = 3;       // gems a streamer gets per viewer boost
+const STREAM_GEM_CAP = 60;         // max gems a single stream can pay out
+const STREAM_END_BONUS_CAP = 30;   // max gems from the streaming-time reward
+
+function streamSummary(s: LiveStream) {
+  return {
+    streamerId: s.streamerId,
+    streamerName: s.streamerName,
+    gameId: s.gameId,
+    gameName: s.gameName,
+    score: s.score,
+    viewerCount: s.viewers.size,
+    startedAt: s.startedAt,
+  };
+}
+
+function sendToStream(s: LiveStream, msg: object) {
+  const str = JSON.stringify(msg);
+  const streamer = lobby.get(s.streamerId);
+  if (streamer && streamer.ws.readyState === WebSocket.OPEN) streamer.ws.send(str);
+  s.viewers.forEach((v) => {
+    if (v.ws.readyState === WebSocket.OPEN) v.ws.send(str);
+  });
+}
+
+// Relay a message to one specific user (used for WebRTC signaling).
+function sendToUser(userId: number, msg: object) {
+  const target = lobby.get(userId);
+  if (target && target.ws.readyState === WebSocket.OPEN) target.ws.send(JSON.stringify(msg));
+}
+
+function broadcastStreamsList() {
+  const list = Array.from(streams.values()).map(streamSummary);
+  const msg = JSON.stringify({ type: "streams_list", streams: list });
+  lobby.forEach((p) => {
+    if (p.ws.readyState === WebSocket.OPEN) p.ws.send(msg);
+  });
+}
+
+// Walled-garden chat: strip anything URL-like and cap length (kid-safe).
+function sanitizeChat(text: string): string {
+  if (typeof text !== "string") return "";
+  return text
+    .replace(/https?:\/\/\S+/gi, "")
+    .replace(/www\.\S+/gi, "")
+    .replace(/\S+\.(com|net|org|io|gg|xyz|co)\S*/gi, "")
+    .slice(0, 140)
+    .trim();
+}
+
+// ─── Team multiplayer ────────────────────────────────────────────────────────
+interface TeamRoom {
+  id: string;
+  gameId: string;
+  difficulty: string;
+  teams: { name: string; players: { id: number; username: string; ws: WebSocket | null; score: number; done: boolean; isBot: boolean }[] }[];
+  state: "playing" | "finished";
+}
+const teamRooms = new Map<string, TeamRoom>();
+// queued solo players waiting to be grouped into teams, keyed by gameId
+const teamQueue = new Map<string, { id: number; difficulty: string; queuedAt: number }[]>();
+
+// ─── Parties (invite friends, play together) ─────────────────────────────────
+interface Party {
+  id: string;
+  hostId: number;
+  members: { id: number; username: string }[];
+  pendingInvites: number[];
+}
+const parties = new Map<string, Party>();
+const userParty = new Map<number, string>(); // userId -> partyId
+
+function partySummary(p: Party) {
+  return { id: p.id, hostId: p.hostId, members: p.members, pendingInvites: p.pendingInvites };
+}
+function broadcastParty(p: Party) {
+  const msg = JSON.stringify({ type: "party_update", party: partySummary(p) });
+  for (const m of p.members) {
+    const lp = lobby.get(m.id);
+    if (lp && lp.ws.readyState === WebSocket.OPEN) lp.ws.send(msg);
+  }
+}
+function disbandParty(p: Party, reason = "Party disbanded") {
+  for (const m of p.members) {
+    userParty.delete(m.id);
+    const lp = lobby.get(m.id);
+    if (lp && lp.ws.readyState === WebSocket.OPEN) lp.ws.send(JSON.stringify({ type: "party_disbanded", reason }));
+  }
+  parties.delete(p.id);
+}
+function removeFromParty(userId: number, kicked = false) {
+  const pid = userParty.get(userId);
+  if (!pid) return;
+  const p = parties.get(pid);
+  userParty.delete(userId);
+  if (!p) return;
+  p.members = p.members.filter((m) => m.id !== userId);
+  if (kicked) {
+    const lp = lobby.get(userId);
+    if (lp && lp.ws.readyState === WebSocket.OPEN) lp.ws.send(JSON.stringify({ type: "party_kicked" }));
+  }
+  if (p.members.length === 0) { parties.delete(p.id); return; }
+  if (p.hostId === userId) p.hostId = p.members[0].id; // host left → promote next member
+  broadcastParty(p);
+}
+
+// ─── Ranked mode ─────────────────────────────────────────────────────────────
+const RANKED_UNLOCK_LEVEL = 50;   // ranked unlocks at this account level
+const PLACEMENT_GAMES = 5;        // placement matches before you get a rank
+const rankedQueue: { quiz: number[]; gravity: number[] } = { quiz: [], gravity: [] };
+
+// Pre-game ban/draft. Quiz: 3 topics (ban 1) + battle powerups (ban 2 each).
+// Gravity: 3 modifiers (ban 1) that change the race; no abilities.
+const RANKED_BANNABLE_ABILITIES = [
+  { id: "bp-shield-potion", name: "Shield" },
+  { id: "bp-time-freeze", name: "Time Freeze" },
+  { id: "bp-double-damage", name: "Double Points" },
+  { id: "bp-answer-sabotage", name: "Sabotage" },
+  { id: "bp-time-drain", name: "Time Drain" },
+  { id: "bp-time-warp", name: "Time Warp" },
+  { id: "bp-triple-points", name: "Triple Points" },
+  { id: "bp-mega-time", name: "Mega Time" },
+];
+const RANKED_ABILITY_BANS = 2; // each player bans this many abilities
+const GRAVITY_MODIFIERS = [
+  { key: "low-gravity", name: "🌀 Low Gravity" },
+  { key: "hyperspeed", name: "⚡ Hyperspeed" },
+  { key: "spike-storm", name: "🔻 Spike Storm" },
+  { key: "tiny-player", name: "🔬 Tiny Pilot" },
+  { key: "star-rush", name: "✨ Star Rush" },
+];
+interface RankedDraft {
+  id: string;
+  mode: RankedMode;
+  pickKind: "topic" | "modifier";
+  picks: { key: string; name: string }[];      // topics (quiz) or modifiers (gravity)
+  abilities: { id: string; name: string }[];    // battle powerups (quiz only)
+  players: { id: number; username: string; ws: WebSocket; bannedPick: string | null; bannedAbilities: string[]; done: boolean }[];
+  timeout?: ReturnType<typeof setTimeout>;
+}
+const rankedDrafts = new Map<string, RankedDraft>();
+
+type RankedMode = "quiz" | "gravity";
+interface RankedStats {
+  elo: number; peakElo: number;
+  placementsPlayed: number; placementWins: number; placed: boolean;
+  wins: number; losses: number;
+}
+
+function normalizeRanked(raw: any): RankedStats {
+  const r = raw || {};
+  return {
+    elo: typeof r.elo === "number" ? r.elo : 1000,
+    peakElo: typeof r.peakElo === "number" ? r.peakElo : 0,
+    placementsPlayed: r.placementsPlayed || 0,
+    placementWins: r.placementWins || 0,
+    placed: !!r.placed,
+    wins: r.wins || 0,
+    losses: r.losses || 0,
+  };
+}
+
+const RANK_TIERS: { min: number; name: string; emoji: string }[] = [
+  { min: 1900, name: "Singularity", emoji: "🕳️" },
+  { min: 1700, name: "Mastermind", emoji: "🧠" },
+  { min: 1500, name: "Genius", emoji: "💎" },
+  { min: 1300, name: "Prodigy", emoji: "🌟" },
+  { min: 1100, name: "Expert", emoji: "🧪" },
+  { min: 900, name: "Specialist", emoji: "⚡" },
+  { min: 750, name: "Apprentice", emoji: "⚗️" },
+  { min: 0, name: "Rookie", emoji: "🔬" },
+];
+
+function rankFromElo(elo: number, placed: boolean): { name: string; emoji: string; elo: number } {
+  if (!placed) return { name: "Unranked", emoji: "❓", elo };
+  const tier = RANK_TIERS.find(t => elo >= t.min) || RANK_TIERS[RANK_TIERS.length - 1];
+  return { name: tier.name, emoji: tier.emoji, elo };
+}
+
+// ─── Auto-translation ────────────────────────────────────────────────────────
+// In-memory cache so each unique string is only translated once per language.
+const translateCache = new Map<string, string>(); // key `${target}:${text}`
+// MyMemory wants regional codes for some languages.
+const MYMEMORY_LANG: Record<string, string> = { zh: "zh-CN", pt: "pt-BR" };
+const SUPPORTED_LANGS = new Set(["es", "fr", "de", "pt", "zh", "ja", "ko", "ar", "hi", "it", "ru"]);
+
+async function translateOne(text: string, target: string): Promise<string> {
+  const key = `${target}:${text}`;
+  const cached = translateCache.get(key);
+  if (cached !== undefined) return cached;
+  try {
+    const pair = `en|${MYMEMORY_LANG[target] || target}`;
+    const email = process.env.MYMEMORY_EMAIL ? `&de=${encodeURIComponent(process.env.MYMEMORY_EMAIL)}` : "";
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${encodeURIComponent(pair)}${email}`;
+    const res = await fetch(url);
+    const data: any = await res.json();
+    const out = data?.responseData?.translatedText;
+    const result = (typeof out === "string" && out.trim() && !out.toUpperCase().includes("MYMEMORY WARNING") && !out.toUpperCase().includes("QUERY LENGTH LIMIT"))
+      ? out : text;
+    translateCache.set(key, result);
+    return result;
+  } catch {
+    return text;
+  }
+}
 
 function broadcastLobby() {
   const players = Array.from(lobby.values()).map((p) => ({
@@ -186,6 +413,8 @@ export async function registerRoutes(
           { id: "reward-quantum-glitch", name: "Quantum Glitch", description: "Reality glitches around your screen edges - from defeating The Quantum Computer", category: "decoration", price: 0, icon: "Cpu", rarity: "legendary", requiredLevel: 1, requiredRebirth: 0, requiredXp: 0, rewardSource: "boss:quantum-computer" },
           { id: "reward-all-bosses", name: "Boss Slayer Avatar", description: "The ultimate avatar awarded for defeating all 8 regular bosses", category: "avatar", price: 0, icon: "Trophy", rarity: "legendary", requiredLevel: 1, requiredRebirth: 0, requiredXp: 0, rewardSource: "boss:all-regular" },
           { id: "title-leaderboard-1st", name: "#1 Player", description: "You are the #1 ranked player on the leaderboard! This title is yours while you hold the top spot.", category: "title", price: 0, icon: "Crown", rarity: "legendary", requiredLevel: 1, requiredRebirth: 0, requiredXp: 0, rewardSource: "leaderboard:individual" },
+          { id: "title-elite-five", name: "Elite Five", description: "An exclusive rank for the Top 5 players on the leaderboard. Only five people in the whole game can hold this at once!", category: "title", price: 0, icon: "Star", rarity: "legendary", requiredLevel: 1, requiredRebirth: 0, requiredXp: 0, rewardSource: "leaderboard:top5" },
+          { id: "title-ranked-grandmaster", name: "Ranked Grandmaster", description: "The single best Ranked player by ELO. The rarest competitive title in the game — yours only while you sit at #1 on the Ranked ladder.", category: "title", price: 0, icon: "Crown", rarity: "legendary", requiredLevel: 1, requiredRebirth: 0, requiredXp: 0, rewardSource: "leaderboard:ranked1" },
           { id: "title-clan-1st", name: "#1 Clan Leader", description: "Your clan is ranked #1! This title is yours while your clan holds the top spot.", category: "title", price: 0, icon: "Globe", rarity: "legendary", requiredLevel: 1, requiredRebirth: 0, requiredXp: 0, rewardSource: "leaderboard:clan" },
           { id: "title-team-1st", name: "#1 Team Captain", description: "Your team is ranked #1! This title is yours while your team holds the top spot.", category: "title", price: 0, icon: "Star", rarity: "legendary", requiredLevel: 1, requiredRebirth: 0, requiredXp: 0, rewardSource: "leaderboard:team" },
           { id: "theme-clan-champion", name: "Clan Champion Theme", description: "A cool steel-blue theme exclusive to members of the #1 ranked clan. Yours only while your clan holds the top spot.", category: "theme", price: 0, icon: "Palette", rarity: "epic", requiredLevel: 1, requiredRebirth: 0, requiredXp: 0, rewardSource: "leaderboard:clan" },
@@ -504,8 +733,19 @@ export async function registerRoutes(
       const user = await storage.getUser(req.user!.id);
       if (!user) return res.status(404).json({ message: "User not found" });
 
+      // Suspended accounts (e.g. autoclicker detection) earn no rewards until reviewed.
+      if (((user as any).safetySettings || {}).suspended) {
+        return res.status(403).json({ message: "Account suspended pending review", suspended: true });
+      }
+
       let xpEarned = Math.floor(score / 5) + (won ? 25 : 10);
       let coinsEarned = Math.floor(score / 10) + (won ? 15 : 5);
+
+      // Harder difficulty rewards more — encourages players to challenge themselves.
+      const DIFFICULTY_REWARD_MULT: Record<string, number> = { easy: 0.8, medium: 1, hard: 1.5 };
+      const diffMult = DIFFICULTY_REWARD_MULT[diff] ?? 1;
+      xpEarned = Math.max(1, Math.round(xpEarned * diffMult));
+      coinsEarned = Math.max(1, Math.round(coinsEarned * diffMult));
 
       const activeUpgrades: string[] = [];
       if (!upgradesOff && isUpgradeActive(user, "upgrade-xp-boost")) {
@@ -526,6 +766,24 @@ export async function registerRoutes(
       if (user.inventory?.includes("upgrade-permanent-xp")) {
         xpEarned = Math.floor(xpEarned * 1.15);
         activeUpgrades.push("upgrade-permanent-xp");
+      }
+      if (user.inventory?.includes("upgrade-mega-xp")) {
+        xpEarned = Math.floor(xpEarned * 1.25);
+        activeUpgrades.push("upgrade-mega-xp");
+      }
+      if (user.inventory?.includes("upgrade-mega-coins")) {
+        coinsEarned = Math.floor(coinsEarned * 1.25);
+        activeUpgrades.push("upgrade-mega-coins");
+      }
+      if (user.inventory?.includes("upgrade-scholar")) {
+        xpEarned = Math.floor(xpEarned * 1.2);
+        coinsEarned = Math.floor(coinsEarned * 1.2);
+        activeUpgrades.push("upgrade-scholar");
+      }
+      if (user.inventory?.includes("upgrade-jackpot") && Math.random() < 0.1) {
+        xpEarned = Math.floor(xpEarned * 3);
+        coinsEarned = Math.floor(coinsEarned * 3);
+        activeUpgrades.push("upgrade-jackpot");
       }
       if (user.inventory?.includes("powerup-xp-surge")) {
         xpEarned = Math.floor(xpEarned * 1.2);
@@ -1579,6 +1837,23 @@ export async function registerRoutes(
             }
           }
         }
+
+        // Top 5 players share the exclusive "Elite Five" rank (revoked if they fall out).
+        const TOP5_TITLE = "title-elite-five";
+        const top5Ids = new Set(leaders.slice(0, 5).map(u => u.id));
+        const everyone = await storage.getLeaderboard(9999);
+        for (const u of everyone) {
+          const has = u.inventory.includes(TOP5_TITLE);
+          if (top5Ids.has(u.id) && !has) {
+            await storage.updateUser(u.id, { inventory: [...u.inventory, TOP5_TITLE] } as any);
+            if (u.id === currentUserId) newlyGranted.push(TOP5_TITLE);
+          } else if (!top5Ids.has(u.id) && has) {
+            const cos = (u.equippedCosmetics as any) || {};
+            const upd: any = { inventory: u.inventory.filter((x: string) => x !== TOP5_TITLE) };
+            if (cos.title === TOP5_TITLE) upd.equippedCosmetics = { ...cos, title: null };
+            await storage.updateUser(u.id, upd);
+          }
+        }
       }
       const allClans = await storage.getAllClans();
       if (allClans.length > 0) {
@@ -1788,7 +2063,13 @@ export async function registerRoutes(
 
       const user = await storage.getUser(req.user!.id);
       if (!user) return res.status(404).json({ message: "User not found" });
-      if (user.clanId) return res.status(400).json({ message: "You're already in a clan! Leave first." });
+      if (user.clanId) {
+        // Only block if the clan actually still exists — otherwise clear the
+        // orphaned reference (clan was deleted) so the player isn't stuck.
+        const currentClan = await storage.getClan(user.clanId);
+        if (currentClan) return res.status(400).json({ message: "You're already in a clan! Leave first." });
+        await storage.updateUser(user.id, { clanId: null } as any);
+      }
 
       const existing = await storage.getClanByName(name);
       if (existing) return res.status(400).json({ message: "A clan with that name already exists" });
@@ -1974,41 +2255,15 @@ export async function registerRoutes(
 
       const clan = await storage.getClan(clanId);
       if (!clan) return res.status(404).json({ message: "Clan not found" });
-      if (clan.leaderId !== requester.id) return res.status(403).json({ message: "Only the clan owner can start a kick vote" });
+      if (clan.leaderId !== requester.id) return res.status(403).json({ message: "Only the clan owner can kick members" });
       if (userId === clan.leaderId) return res.status(400).json({ message: "Cannot kick the clan owner" });
 
       const target = await storage.getUser(userId);
       if (!target || target.clanId !== clanId) return res.status(400).json({ message: "User is not in this clan" });
 
-      const existingVote = clan.election as any;
-      if (existingVote?.active) {
-        return res.status(400).json({ message: existingVote.type === "kick" ? "A kick vote is already running" : "A leader election is already running" });
-      }
-
-      const members = await storage.getClanMembers(clanId);
-      const eligibleVoters = members
-        .filter((m) => m.id !== clan.leaderId && m.id !== userId)
-        .map((m) => ({ id: m.id, username: m.username }));
-
-      if (eligibleVoters.length === 0) {
-        await removeClanMemberWithLiveTotals(clan, target);
-        return res.json({ message: `${target.username} was removed from the clan` });
-      }
-
-      const kickVote = {
-        type: "kick",
-        active: true,
-        targetId: userId,
-        targetName: target.username,
-        startedBy: requester.id,
-        startedAt: new Date().toISOString(),
-        eligibleVoters,
-        votes: {} as Record<string, boolean>,
-        requiredVotes: eligibleVoters.length,
-      };
-      await storage.updateClan(clanId, { election: kickVote } as any);
-
-      res.json({ message: `Kick vote started for ${target.username}. All other members must approve.`, vote: kickVote });
+      // Owner kicks directly — no vote required.
+      await removeClanMemberWithLiveTotals(clan, target);
+      res.json({ message: `${target.username} was removed from the clan by the owner.` });
     } catch (error) {
       res.status(500).json({ message: "Failed to kick member" });
     }
@@ -2158,7 +2413,11 @@ export async function registerRoutes(
 
       const user = await storage.getUser(req.user!.id);
       if (!user) return res.status(404).json({ message: "User not found" });
-      if (user.teamId) return res.status(400).json({ message: "You're already on a team! Leave first." });
+      if (user.teamId) {
+        const currentTeam = await storage.getTeam(user.teamId);
+        if (currentTeam) return res.status(400).json({ message: "You're already on a team! Leave first." });
+        await storage.updateUser(user.id, { teamId: null } as any);
+      }
 
       const inviteCode = generateInviteCode();
       const team = await storage.createTeam({
@@ -2293,41 +2552,15 @@ export async function registerRoutes(
 
       const team = await storage.getTeam(teamId);
       if (!team) return res.status(404).json({ message: "Team not found" });
-      if (team.leaderId !== requester.id) return res.status(403).json({ message: "Only the team owner can start a kick vote" });
+      if (team.leaderId !== requester.id) return res.status(403).json({ message: "Only the team owner can kick members" });
 
       const target = await storage.getUser(userId);
       if (!target || target.teamId !== teamId) return res.status(400).json({ message: "User is not on this team" });
       if (userId === team.leaderId) return res.status(400).json({ message: "Cannot kick the team owner" });
 
-      const existingVote = team.election as any;
-      if (existingVote?.active) {
-        return res.status(400).json({ message: existingVote.type === "kick" ? "A kick vote is already running" : "A leader election is already running" });
-      }
-
-      const members = await storage.getTeamMembers(teamId);
-      const eligibleVoters = members
-        .filter((m) => m.id !== team.leaderId && m.id !== userId)
-        .map((m) => ({ id: m.id, username: m.username }));
-
-      if (eligibleVoters.length === 0) {
-        await removeTeamMemberWithLiveTotals(team, target);
-        return res.json({ message: `${target.username} was removed from the team` });
-      }
-
-      const kickVote = {
-        type: "kick",
-        active: true,
-        targetId: userId,
-        targetName: target.username,
-        startedBy: requester.id,
-        startedAt: new Date().toISOString(),
-        eligibleVoters,
-        votes: {} as Record<string, boolean>,
-        requiredVotes: eligibleVoters.length,
-      };
-      await storage.updateTeam(teamId, { election: kickVote } as any);
-
-      res.json({ message: `Kick vote started for ${target.username}. All other members must approve.`, vote: kickVote });
+      // Owner kicks directly — no vote required.
+      await removeTeamMemberWithLiveTotals(team, target);
+      res.json({ message: `${target.username} was removed from the team by the owner.` });
     } catch (error) {
       res.status(500).json({ message: "Failed to kick member" });
     }
@@ -2640,7 +2873,301 @@ export async function registerRoutes(
       if (lp) lp.status = "idle";
     }
     relayToSpectators(room.spectators, { type: "spectate_ended" });
+    if (room.ranked) {
+      await emitRankedResult(room.players, winner?.id ?? null, room.ranked);
+    }
     pvpRooms.delete(room.id);
+    broadcastLobby();
+  }
+
+  // Apply ELO + placements for a finished ranked match and tell each human player.
+  async function emitRankedResult(
+    players: { id: number; username: string; ws: WebSocket | null; score: number }[],
+    winnerId: number | null,
+    mode: RankedMode,
+  ) {
+    const humans = players.filter(p => p.id > 0);
+    for (const me of humans) {
+      try {
+        const u = await storage.getUser(me.id);
+        if (!u) continue;
+        const rs = normalizeRanked((u as any).rankedStats);
+        const result: "win" | "loss" | "draw" =
+          winnerId === null ? "draw" : winnerId === me.id ? "win" : "loss";
+
+        // Opponent ELO (mirror the player's own rating for bots).
+        const opp = players.find(p => p.id !== me.id);
+        let oppElo = rs.elo || 1000;
+        if (opp && opp.id > 0) {
+          const ou = await storage.getUser(opp.id);
+          oppElo = normalizeRanked((ou as any)?.rankedStats).elo || 1000;
+        }
+
+        const before = rs.placed ? rs.elo : 0;
+        let delta = 0;
+        let justPlaced = false;
+
+        if (!rs.placed) {
+          // Placement matches: tally wins, then set a starting rating from them.
+          rs.placementsPlayed += 1;
+          if (result === "win") rs.placementWins += 1;
+          if (rs.placementsPlayed >= PLACEMENT_GAMES) {
+            rs.placed = true;
+            rs.elo = 700 + rs.placementWins * 130; // 0 wins → Bronze, 5 → Diamond
+            justPlaced = true;
+          }
+        } else {
+          const expected = 1 / (1 + Math.pow(10, (oppElo - rs.elo) / 400));
+          const sc = result === "win" ? 1 : result === "draw" ? 0.5 : 0;
+          delta = Math.round(40 * (sc - expected));
+          // Upset bonus: beating a higher-rated player gives extra ELO, scaled
+          // by how much stronger they were (the bigger the upset, the bigger the reward).
+          if (result === "win" && oppElo > rs.elo) {
+            delta += Math.min(20, Math.round((oppElo - rs.elo) / 35));
+          }
+          rs.elo = Math.max(0, rs.elo + delta);
+        }
+
+        if (result === "win") rs.wins += 1;
+        else if (result === "loss") rs.losses += 1;
+        rs.peakElo = Math.max(rs.peakElo || 0, rs.elo);
+
+        // Multiplayer win bonus, bigger for ranked wins.
+        const winBonus = result === "win" ? { xp: 60, coins: 40 } : null;
+        const updates: any = { rankedStats: rs };
+        if (winBonus) {
+          updates.xp = u.xp + winBonus.xp;
+          updates.coins = u.coins + winBonus.coins;
+          updates.level = computeLevel(u.xp + winBonus.xp);
+        }
+        await storage.updateUser(me.id, updates);
+
+        if (me.ws && me.ws.readyState === WebSocket.OPEN) {
+          me.ws.send(JSON.stringify({
+            type: "ranked_result",
+            mode, result, before, after: rs.elo, delta,
+            placed: rs.placed, justPlaced,
+            placementsPlayed: rs.placementsPlayed, placementsTotal: PLACEMENT_GAMES, placementWins: rs.placementWins,
+            rank: rankFromElo(rs.elo, rs.placed),
+            winBonus,
+          }));
+        }
+      } catch (e) {
+        console.error("emitRankedResult error:", e);
+      }
+    }
+  }
+
+  // End a live stream, pay the streamer their gem reward, and notify everyone.
+  async function finishStream(streamerId: number, endedByAdmin = false) {
+    const stream = streams.get(streamerId);
+    if (!stream) return;
+    const minutes = Math.floor((Date.now() - stream.startedAt) / 60000);
+    let bonus = Math.min(STREAM_END_BONUS_CAP, minutes + stream.peakViewers + stream.commenters.size);
+    bonus = Math.max(0, Math.min(bonus, STREAM_GEM_CAP - stream.gemsEarned));
+    if (bonus > 0) {
+      try {
+        const u = await storage.getUser(streamerId);
+        if (u) await storage.updateUser(streamerId, { gems: (u.gems || 0) + bonus } as any);
+      } catch (e) { console.error("stream reward error:", e); }
+    }
+    const streamer = lobby.get(streamerId);
+    if (streamer && streamer.ws.readyState === WebSocket.OPEN) {
+      streamer.ws.send(JSON.stringify({ type: "stream_reward", gems: bonus, endedByAdmin, minutes }));
+    }
+    sendToStream(stream, { type: "stream_ended", streamerId, endedByAdmin });
+    streams.delete(streamerId);
+    broadcastStreamsList();
+  }
+
+  // A viewer boosts a streamer → streamer earns gems (one boost per viewer).
+  async function boostStream(streamerId: number, boosterId: number) {
+    const stream = streams.get(streamerId);
+    if (!stream || boosterId === streamerId) return;
+    if (!stream.viewers.has(boosterId)) return;       // must be watching
+    if (stream.boosters.has(boosterId)) return;       // one boost each
+    if (stream.gemsEarned >= STREAM_GEM_CAP) return;  // capped
+    stream.boosters.add(boosterId);
+    const gain = Math.min(STREAM_BOOST_GEMS, STREAM_GEM_CAP - stream.gemsEarned);
+    stream.gemsEarned += gain;
+    try {
+      const u = await storage.getUser(streamerId);
+      if (u) await storage.updateUser(streamerId, { gems: (u.gems || 0) + gain } as any);
+    } catch (e) { console.error("boost gem error:", e); }
+    const booster = lobby.get(boosterId);
+    sendToStream(stream, {
+      type: "stream_boosted",
+      streamerId,
+      boosterName: booster?.username || "Someone",
+      gems: gain,
+      totalBoosts: stream.boosters.size,
+    });
+  }
+
+  // Flat win bonus for ordinary (non-ranked) multiplayer wins.
+  async function creditMultiplayerWin(winnerId: number, players: { id: number; ws: WebSocket | null }[]) {
+    if (winnerId <= 0) return;
+    try {
+      const u = await storage.getUser(winnerId);
+      if (!u) return;
+      const xp = 25, coins = 15;
+      await storage.updateUser(winnerId, { xp: u.xp + xp, coins: u.coins + coins, level: computeLevel(u.xp + xp) } as any);
+      const p = players.find(pp => pp.id === winnerId);
+      if (p?.ws && p.ws.readyState === WebSocket.OPEN) {
+        p.ws.send(JSON.stringify({ type: "win_bonus", xp, coins, ranked: false }));
+      }
+    } catch (e) {
+      console.error("creditMultiplayerWin error:", e);
+    }
+  }
+
+  // A party plays a co-op team match together (their whole party vs rival bots).
+  function startPartyMatch(party: Party, gameId: string, difficulty: string) {
+    const humans = party.members.map(m => lobby.get(m.id)).filter(Boolean) as LobbyPlayer[];
+    if (humans.length === 0) return;
+    const teamA = humans.map(h => ({ id: h.id, username: h.username, ws: h.ws, score: 0, done: false, isBot: false }));
+    const teamB = humans.map((_, i) => ({ id: -210 - i, username: `Rival Bot ${i + 1}`, ws: null as any, score: 60 + Math.floor(Math.random() * 130), done: true, isBot: true }));
+    const roomId = "team_" + Math.random().toString(36).substring(2, 8);
+    const room: TeamRoom = {
+      id: roomId, gameId, difficulty, state: "playing",
+      teams: [{ name: "Your Party", players: teamA }, { name: "Rivals", players: teamB }],
+    };
+    teamRooms.set(roomId, room);
+    humans.forEach(h => {
+      h.status = "in_game";
+      if (h.ws.readyState === WebSocket.OPEN) {
+        h.ws.send(JSON.stringify({
+          type: "team_match_found", roomId, gameId, difficulty, myTeam: 0,
+          teams: room.teams.map(t => ({ name: t.name, players: t.players.map(p => ({ id: p.id, username: p.username, isBot: p.isBot })) })),
+        }));
+      }
+    });
+    broadcastLobby();
+  }
+
+  function startRankedGravity(player: LobbyPlayer, opp: LobbyPlayer, modifier = "", modifierName = "") {
+    const roomId = generateRoomId();
+    const room: GameRoom = {
+      id: roomId, gameId: "gravity-dash", state: "playing", currentQuestion: 0, spectators: [], ranked: "gravity",
+      players: [
+        { id: player.id, username: player.username, ws: player.ws, score: 0, ready: false },
+        { id: opp.id, username: opp.username, ws: opp.ws, score: 0, ready: false },
+      ],
+    };
+    rooms.set(roomId, room);
+    player.status = "in_game";
+    opp.status = "in_game";
+    const base = { type: "match_found", roomId, gameId: "gravity-dash", difficulty: "hard", ranked: true, gravityModifier: modifier, gravityModifierName: modifierName };
+    player.ws.send(JSON.stringify({ ...base, opponent: { id: opp.id, username: opp.username } }));
+    opp.ws.send(JSON.stringify({ ...base, opponent: { id: player.id, username: player.username } }));
+    broadcastLobby();
+  }
+
+  // Build a ranked quiz from specific topic banks (after the draft picks a topic).
+  function buildTopicQuestions(topicKeys: string[], n = 10) {
+    const pool: any[] = [];
+    for (const k of topicKeys) {
+      const bank = TOPIC_QUESTION_BANKS[k];
+      if (bank) pool.push(...bank.questions);
+    }
+    for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+    const out = pool.slice(0, n);
+    let i = 0;
+    while (out.length < n && pool.length) { out.push(pool[i % pool.length]); i++; }
+    return out.map(q => ({ question: q.question, options: q.options, correctIndex: q.correctIndex, explanation: q.explanation || null }));
+  }
+
+  function startRankedDraft(p1: LobbyPlayer, p2: LobbyPlayer, mode: RankedMode) {
+    let picks: { key: string; name: string }[];
+    let pickKind: "topic" | "modifier";
+    let abilities: { id: string; name: string }[];
+    if (mode === "quiz") {
+      const keys = Object.keys(TOPIC_QUESTION_BANKS);
+      for (let i = keys.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [keys[i], keys[j]] = [keys[j], keys[i]]; }
+      picks = keys.slice(0, 3).map(k => ({ key: k, name: TOPIC_QUESTION_BANKS[k].topic }));
+      pickKind = "topic";
+      abilities = RANKED_BANNABLE_ABILITIES;
+    } else {
+      const mods = [...GRAVITY_MODIFIERS];
+      for (let i = mods.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [mods[i], mods[j]] = [mods[j], mods[i]]; }
+      picks = mods.slice(0, 3);
+      pickKind = "modifier";
+      abilities = [];
+    }
+    const id = "draft_" + Math.random().toString(36).substring(2, 8);
+    const draft: RankedDraft = {
+      id, mode, pickKind, picks, abilities,
+      players: [p1, p2].map(p => ({ id: p.id, username: p.username, ws: p.ws, bannedPick: null, bannedAbilities: [], done: false })),
+    };
+    rankedDrafts.set(id, draft);
+    p1.status = "in_game";
+    p2.status = "in_game";
+    const payload = (oppName: string) => JSON.stringify({
+      type: "ranked_draft_start", draftId: id, mode, pickKind, picks, abilities, abilityBans: RANKED_ABILITY_BANS, opponent: oppName, banSeconds: 25,
+    });
+    p1.ws.send(payload(p2.username));
+    p2.ws.send(payload(p1.username));
+    draft.timeout = setTimeout(() => { resolveDraft(id).catch(e => console.error("draft timeout:", e)); }, 28000);
+    broadcastLobby();
+  }
+
+  async function resolveDraft(id: string) {
+    const draft = rankedDrafts.get(id);
+    if (!draft) return;
+    if (draft.timeout) clearTimeout(draft.timeout);
+    rankedDrafts.delete(id);
+    // Random ban for anyone who didn't lock in.
+    for (const pl of draft.players) {
+      if (!pl.bannedPick) pl.bannedPick = draft.picks[Math.floor(Math.random() * draft.picks.length)].key;
+      while (draft.abilities.length && pl.bannedAbilities.length < RANKED_ABILITY_BANS) {
+        const pick = draft.abilities[Math.floor(Math.random() * draft.abilities.length)].id;
+        if (!pl.bannedAbilities.includes(pick)) pl.bannedAbilities.push(pick);
+        else if (pl.bannedAbilities.length >= draft.abilities.length) break;
+      }
+    }
+    const bannedPickKeys = new Set(draft.players.map(p => p.bannedPick).filter(Boolean) as string[]);
+    const remaining = draft.picks.filter(t => !bannedPickKeys.has(t.key));
+    const survivors = (remaining.length ? remaining : draft.picks);
+    const bannedAbilities = Array.from(new Set(draft.players.flatMap(p => p.bannedAbilities)));
+    const p1 = lobby.get(draft.players[0].id);
+    const p2 = lobby.get(draft.players[1].id);
+    if (!p1 || !p2) {
+      [p1, p2].forEach(p => { if (p) { p.status = "idle"; if (p.ws.readyState === WebSocket.OPEN) p.ws.send(JSON.stringify({ type: "ranked_draft_cancel" })); } });
+      broadcastLobby();
+      return;
+    }
+    if (draft.mode === "quiz") {
+      const questions = buildTopicQuestions(survivors.map(t => t.key), 10);
+      startRankedQuiz(p1, p2, questions, bannedAbilities, survivors.map(t => t.name));
+    } else {
+      startRankedGravity(p1, p2, survivors[0]?.key || "", survivors[0]?.name || "");
+    }
+  }
+
+  function startRankedQuiz(player: LobbyPlayer, opp: LobbyPlayer, questions: PvpRoom["questions"], bannedAbilities: string[] = [], topicNames: string[] = []) {
+    if (questions.length < 10) {
+      [player, opp].forEach(p => { p.ws.send(JSON.stringify({ type: "pvp_error", message: "Not enough ranked questions" })); p.status = "idle"; });
+      broadcastLobby();
+      return;
+    }
+    const roomId = generateRoomId();
+    const roomPlayers: PvpRoom["players"] = [
+      { id: player.id, username: player.username, ws: player.ws, score: 0, answered: 0 },
+      { id: opp.id, username: opp.username, ws: opp.ws, score: 0, answered: 0 },
+    ];
+    const pvpRoom: PvpRoom = {
+      id: roomId, players: roomPlayers, questions, currentQuestion: 0, state: "playing",
+      wager: 0, answeredThisRound: new Set(), questionStartTime: Date.now(),
+      spectators: [], ranked: "quiz",
+    };
+    pvpRooms.set(roomId, pvpRoom);
+    player.status = "in_game";
+    opp.status = "in_game";
+    const q = questions[0];
+    const startMsg = { type: "pvp_start", roomId, wager: 0, totalQuestions: 10, ranked: true, bannedAbilities, topic: topicNames.join(" & "), question: { text: q.question, options: q.options, index: 0 } };
+    player.ws.send(JSON.stringify({ ...startMsg, opponent: { id: opp.id, username: opp.username } }));
+    opp.ws.send(JSON.stringify({ ...startMsg, opponent: { id: player.id, username: player.username } }));
+    startPvpRoundTimeout(roomId);
     broadcastLobby();
   }
 
@@ -2665,23 +3192,379 @@ export async function registerRoutes(
           broadcastLobby();
         }
 
-        if (msg.type === "queue" && playerId) {
+        // ─── Live streaming ──────────────────────────────────────────────
+        if (msg.type === "start_stream" && playerId) {
+          const player = lobby.get(playerId);
+          if (player) {
+            const existing = streams.get(playerId);
+            const stream: LiveStream = existing || {
+              streamerId: playerId,
+              streamerName: player.username,
+              gameId: msg.gameId || "gravity-dash",
+              gameName: msg.gameName || msg.gameId || "Arcade",
+              score: 0,
+              startedAt: Date.now(),
+              viewers: new Map(),
+              chat: [],
+              boosters: new Set(),
+              commenters: new Set(),
+              peakViewers: 0,
+              gemsEarned: 0,
+            };
+            stream.gameId = msg.gameId || stream.gameId;
+            stream.gameName = msg.gameName || stream.gameName;
+            stream.score = 0;
+            streams.set(playerId, stream);
+            ws.send(JSON.stringify({ type: "stream_live", ...streamSummary(stream) }));
+            broadcastStreamsList();
+          }
+        }
+
+        if (msg.type === "stream_score" && playerId) {
+          const stream = streams.get(playerId);
+          if (stream) {
+            stream.score = typeof msg.score === "number" ? msg.score : stream.score;
+            sendToStream(stream, { type: "stream_update", streamerId: playerId, score: stream.score, viewerCount: stream.viewers.size });
+          }
+        }
+
+        if (msg.type === "stop_stream" && playerId) {
+          void finishStream(playerId);
+        }
+
+        if (msg.type === "stream_boost" && playerId && typeof msg.streamerId === "number") {
+          void boostStream(msg.streamerId, playerId);
+        }
+
+        // Admins (and ultra-admins) can shut down any live stream.
+        if (msg.type === "admin_end_stream" && playerId && typeof msg.streamerId === "number") {
+          (async () => {
+            const u = await storage.getUser(playerId!);
+            if (u && (u.isAdmin || (u as any).isUltraAdmin)) {
+              await finishStream(msg.streamerId, true);
+            }
+          })().catch(e => console.error("admin_end_stream:", e));
+        }
+
+        if (msg.type === "get_streams") {
+          ws.send(JSON.stringify({ type: "streams_list", streams: Array.from(streams.values()).map(streamSummary) }));
+        }
+
+        if (msg.type === "watch_stream" && playerId) {
+          const stream = streams.get(msg.streamerId);
+          const player = lobby.get(playerId);
+          if (stream && player && playerId !== stream.streamerId) {
+            stream.viewers.set(playerId, { id: playerId, username: player.username, ws });
+            stream.peakViewers = Math.max(stream.peakViewers, stream.viewers.size);
+            ws.send(JSON.stringify({
+              type: "stream_snapshot",
+              ...streamSummary(stream),
+              chat: stream.chat.slice(-50),
+            }));
+            // Tell the streamer a viewer is ready so it can open a WebRTC connection.
+            sendToUser(stream.streamerId, { type: "viewer_ready", viewerId: playerId, username: player.username });
+            sendToStream(stream, { type: "stream_update", streamerId: stream.streamerId, score: stream.score, viewerCount: stream.viewers.size });
+            broadcastStreamsList();
+          } else {
+            ws.send(JSON.stringify({ type: "stream_ended", streamerId: msg.streamerId }));
+          }
+        }
+
+        if (msg.type === "leave_stream" && playerId) {
+          const stream = streams.get(msg.streamerId);
+          if (stream && stream.viewers.delete(playerId)) {
+            sendToUser(stream.streamerId, { type: "viewer_gone", viewerId: playerId });
+            sendToStream(stream, { type: "stream_update", streamerId: stream.streamerId, score: stream.score, viewerCount: stream.viewers.size });
+            broadcastStreamsList();
+          }
+        }
+
+        // ─── WebRTC signaling relay (mic + screen share) ─────────────────
+        if (msg.type === "rtc_offer" && playerId && typeof msg.viewerId === "number") {
+          // streamer → specific viewer
+          sendToUser(msg.viewerId, { type: "rtc_offer", streamerId: playerId, sdp: msg.sdp });
+        }
+        if (msg.type === "rtc_answer" && playerId && typeof msg.streamerId === "number") {
+          // viewer → streamer
+          sendToUser(msg.streamerId, { type: "rtc_answer", viewerId: playerId, sdp: msg.sdp });
+        }
+        if (msg.type === "rtc_ice" && playerId && typeof msg.to === "number") {
+          sendToUser(msg.to, { type: "rtc_ice", from: playerId, candidate: msg.candidate });
+        }
+
+        if (msg.type === "stream_chat" && playerId) {
+          const stream = streams.get(msg.streamerId);
+          const player = lobby.get(playerId);
+          const text = sanitizeChat(msg.text);
+          if (stream && player && text) {
+            const isViewer = stream.viewers.has(playerId) || stream.streamerId === playerId;
+            if (isViewer) {
+              if (playerId !== stream.streamerId) stream.commenters.add(playerId);
+              const chatMsg: StreamChatMsg = { from: player.username, fromId: playerId, text, ts: Date.now() };
+              stream.chat.push(chatMsg);
+              if (stream.chat.length > 200) stream.chat.shift();
+              sendToStream(stream, { type: "stream_chat", streamerId: stream.streamerId, ...chatMsg });
+            }
+          }
+        }
+
+        // ─── Team multiplayer ────────────────────────────────────────────
+        if (msg.type === "team_queue" && playerId) {
           const gameId = msg.gameId || "gravity-dash";
+          const difficulty = ["easy", "medium", "hard"].includes(msg.difficulty) ? msg.difficulty : "medium";
+          const player = lobby.get(playerId);
+          if (player) {
+            player.status = "queued";
+            if (!teamQueue.has(gameId)) teamQueue.set(gameId, []);
+            const tq = teamQueue.get(gameId)!;
+            if (!tq.find((e) => e.id === playerId)) tq.push({ id: playerId, difficulty, queuedAt: Date.now() });
+            ws.send(JSON.stringify({ type: "team_queued", gameId }));
+            broadcastLobby();
+
+            // Need 4 humans for a full 2v2; otherwise bot-fill after a wait.
+            const tryFormTeamMatch = (allowBots: boolean) => {
+              const list = teamQueue.get(gameId);
+              if (!list) return;
+              const live = list.filter((e) => lobby.get(e.id)?.status === "queued");
+              if (!allowBots && live.length < 4) return;
+              if (allowBots && live.length < 1) return;
+              const chosen = live.slice(0, 4);
+              // Match difficulty: use the most common chosen difficulty, else random.
+              const counts: Record<string, number> = {};
+              chosen.forEach((c) => { counts[c.difficulty] = (counts[c.difficulty] || 0) + 1; });
+              let matchDiff = chosen[0].difficulty;
+              let best = 0;
+              for (const [d, n] of Object.entries(counts)) { if (n > best) { best = n; matchDiff = d; } }
+              const allSame = Object.keys(counts).length === 1;
+              if (!allSame) matchDiff = ["easy", "medium", "hard"][Math.floor(Math.random() * 3)];
+
+              teamQueue.set(gameId, list.filter((e) => !chosen.find((c) => c.id === e.id)));
+              const humans = chosen.map((c) => lobby.get(c.id)).filter(Boolean) as LobbyPlayer[];
+              const slots: { id: number; username: string; ws: WebSocket | null; score: number; done: boolean; isBot: boolean }[] =
+                humans.map((h) => ({ id: h.id, username: h.username, ws: h.ws, score: 0, done: false, isBot: false }));
+              while (slots.length < 4) {
+                const n = slots.length;
+                slots.push({ id: -100 - n, username: `TeamBot ${n}`, ws: null, score: 0, done: false, isBot: true });
+              }
+              const roomId = "team_" + Math.random().toString(36).substring(2, 8);
+              const room: TeamRoom = {
+                id: roomId,
+                gameId,
+                difficulty: matchDiff,
+                teams: [
+                  { name: "Blue Team", players: [slots[0], slots[2]] },
+                  { name: "Red Team", players: [slots[1], slots[3]] },
+                ],
+                state: "playing",
+              };
+              teamRooms.set(roomId, room);
+              // Simulate bot scores once.
+              room.teams.forEach((t) => t.players.forEach((p) => {
+                if (p.isBot) { p.score = 60 + Math.floor(Math.random() * 120); p.done = true; }
+              }));
+              humans.forEach((h) => {
+                h.status = "in_game";
+                const myTeamIdx = room.teams.findIndex((t) => t.players.some((p) => p.id === h.id));
+                if (h.ws.readyState === WebSocket.OPEN) {
+                  h.ws.send(JSON.stringify({
+                    type: "team_match_found",
+                    roomId,
+                    gameId,
+                    difficulty: matchDiff,
+                    myTeam: myTeamIdx,
+                    teams: room.teams.map((t) => ({ name: t.name, players: t.players.map((p) => ({ id: p.id, username: p.username, isBot: p.isBot })) })),
+                  }));
+                }
+              });
+              broadcastLobby();
+            };
+
+            tryFormTeamMatch(false);
+            setTimeout(() => tryFormTeamMatch(true), 8000);
+          }
+        }
+
+        if (msg.type === "team_cancel_queue" && playerId) {
+          teamQueue.forEach((list, gid) => {
+            teamQueue.set(gid, list.filter((e) => e.id !== playerId));
+          });
+          const player = lobby.get(playerId);
+          if (player) player.status = "idle";
+          broadcastLobby();
+        }
+
+        if (msg.type === "team_game_score" && playerId) {
+          const room = teamRooms.get(msg.roomId);
+          if (room) {
+            for (const t of room.teams) {
+              const p = t.players.find((pp) => pp.id === playerId);
+              if (p) { p.score = typeof msg.score === "number" ? msg.score : 0; p.done = true; }
+            }
+            const allDone = room.teams.every((t) => t.players.every((p) => p.done));
+            if (allDone) {
+              const totals = room.teams.map((t) => ({
+                name: t.name,
+                total: t.players.reduce((s, p) => s + p.score, 0),
+                players: t.players.map((p) => ({ id: p.id, username: p.username, score: p.score, isBot: p.isBot })),
+              }));
+              const winIdx = totals[0].total === totals[1].total ? -1 : (totals[0].total > totals[1].total ? 0 : 1);
+              const payload = JSON.stringify({ type: "team_results", teams: totals, winningTeam: winIdx });
+              room.teams.forEach((t) => t.players.forEach((p) => {
+                if (!p.isBot && p.ws && p.ws.readyState === WebSocket.OPEN) p.ws.send(payload);
+                const lp = lobby.get(p.id);
+                if (lp) lp.status = "idle";
+              }));
+              teamRooms.delete(room.id);
+              broadcastLobby();
+            }
+          }
+        }
+
+        // ─── Parties ──────────────────────────────────────────────────────
+        if (msg.type === "get_party" && playerId) {
+          const pid = userParty.get(playerId);
+          const p = pid ? parties.get(pid) : null;
+          ws.send(JSON.stringify({ type: "party_update", party: p ? partySummary(p) : null }));
+        }
+
+        if (msg.type === "party_invite" && playerId && typeof msg.targetId === "number") {
+          const host = lobby.get(playerId);
+          const target = lobby.get(msg.targetId);
+          if (!host || !target || msg.targetId === playerId) return;
+          let pid = userParty.get(playerId);
+          let p = pid ? parties.get(pid) : undefined;
+          if (!p) {
+            pid = "party_" + Math.random().toString(36).substring(2, 8);
+            p = { id: pid, hostId: playerId, members: [{ id: playerId, username: host.username }], pendingInvites: [] };
+            parties.set(pid, p);
+            userParty.set(playerId, pid);
+          }
+          if (p.hostId !== playerId) { ws.send(JSON.stringify({ type: "party_error", message: "Only the host can invite" })); return; }
+          if (p.members.length + p.pendingInvites.length >= 4) { ws.send(JSON.stringify({ type: "party_error", message: "Party is full (max 4)" })); return; }
+          if (p.members.some(m => m.id === msg.targetId) || p.pendingInvites.includes(msg.targetId)) return;
+          if (userParty.get(msg.targetId)) { ws.send(JSON.stringify({ type: "party_error", message: "That player is already in a party" })); return; }
+          p.pendingInvites.push(msg.targetId);
+          target.ws.send(JSON.stringify({ type: "party_invite_received", partyId: pid, from: host.username }));
+          broadcastParty(p);
+        }
+
+        if (msg.type === "party_accept" && playerId && typeof msg.partyId === "string") {
+          const p = parties.get(msg.partyId);
+          const me = lobby.get(playerId);
+          if (!p || !me || !p.pendingInvites.includes(playerId) || userParty.get(playerId) || p.members.length >= 4) return;
+          p.pendingInvites = p.pendingInvites.filter(id => id !== playerId);
+          p.members.push({ id: playerId, username: me.username });
+          userParty.set(playerId, p.id);
+          broadcastParty(p);
+        }
+
+        if (msg.type === "party_decline" && playerId && typeof msg.partyId === "string") {
+          const p = parties.get(msg.partyId);
+          if (p) { p.pendingInvites = p.pendingInvites.filter(id => id !== playerId); broadcastParty(p); }
+        }
+
+        if (msg.type === "party_leave" && playerId) {
+          removeFromParty(playerId);
+          ws.send(JSON.stringify({ type: "party_update", party: null }));
+        }
+
+        if (msg.type === "party_kick" && playerId && typeof msg.targetId === "number") {
+          const pid = userParty.get(playerId);
+          const p = pid ? parties.get(pid) : null;
+          if (p && p.hostId === playerId && msg.targetId !== playerId) removeFromParty(msg.targetId, true);
+        }
+
+        if (msg.type === "party_queue" && playerId) {
+          const pid = userParty.get(playerId);
+          const p = pid ? parties.get(pid) : null;
+          if (!p || p.hostId !== playerId) { ws.send(JSON.stringify({ type: "party_error", message: "Only the host can start" })); return; }
+          const gameId = msg.gameId || "gravity-dash";
+          const difficulty = ["easy", "medium", "hard"].includes(msg.difficulty) ? msg.difficulty : "medium";
+          startPartyMatch(p, gameId, difficulty);
+        }
+
+        // ─── Ranked matchmaking ──────────────────────────────────────────
+        if (msg.type === "ranked_queue" && playerId) {
+          const mode: RankedMode = msg.mode === "gravity" ? "gravity" : "quiz";
+          (async () => {
+            const u = await storage.getUser(playerId!);
+            if (!u) return;
+            if (computeLevel(u.xp) < RANKED_UNLOCK_LEVEL) {
+              ws.send(JSON.stringify({ type: "ranked_locked", unlockLevel: RANKED_UNLOCK_LEVEL }));
+              return;
+            }
+            const player = lobby.get(playerId!);
+            if (!player) return;
+            player.status = "queued";
+            const q = rankedQueue[mode];
+            const oppId = q.find(id => id !== playerId && lobby.get(id)?.status === "queued");
+            if (oppId !== undefined) {
+              rankedQueue[mode] = q.filter(id => id !== oppId && id !== playerId);
+              const opp = lobby.get(oppId);
+              if (opp) startRankedDraft(player, opp, mode);
+            } else {
+              if (!q.includes(playerId!)) q.push(playerId!);
+              ws.send(JSON.stringify({ type: "ranked_queued", mode }));
+              broadcastLobby();
+              // Ranked is real players only — no bot fill. Wait for an opponent.
+            }
+          })().catch(e => console.error("ranked_queue error:", e));
+        }
+
+        if (msg.type === "ranked_cancel_queue" && playerId) {
+          rankedQueue.quiz = rankedQueue.quiz.filter(id => id !== playerId);
+          rankedQueue.gravity = rankedQueue.gravity.filter(id => id !== playerId);
+          const player = lobby.get(playerId);
+          if (player) player.status = "idle";
+          broadcastLobby();
+        }
+
+        if (msg.type === "ranked_draft_pick" && playerId) {
+          const draft = rankedDrafts.get(msg.draftId);
+          if (!draft) return;
+          const pl = draft.players.find(p => p.id === playerId);
+          if (!pl || pl.done) return;
+          if (msg.bannedPick && draft.picks.some(t => t.key === msg.bannedPick)) pl.bannedPick = msg.bannedPick;
+          if (Array.isArray(msg.bannedAbilities)) {
+            pl.bannedAbilities = msg.bannedAbilities
+              .filter((id: any) => draft.abilities.some(a => a.id === id))
+              .slice(0, RANKED_ABILITY_BANS);
+          }
+          pl.done = true;
+          const opp = draft.players.find(p => p.id !== playerId);
+          if (opp?.ws && opp.ws.readyState === WebSocket.OPEN) opp.ws.send(JSON.stringify({ type: "ranked_draft_opponent_locked" }));
+          if (draft.players.every(p => p.done)) resolveDraft(msg.draftId).catch(e => console.error("resolveDraft:", e));
+        }
+
+        if (msg.type === "queue" && playerId) {
+          // "random" gameId = Quick Play: drop the player into any available game.
+          let gameId: string = msg.gameId || "gravity-dash";
+          const difficulty = ["easy", "medium", "hard"].includes(msg.difficulty) ? msg.difficulty : "medium";
           const player = lobby.get(playerId);
           if (!player) return;
           player.status = "queued";
           player.gameId = gameId;
+          player.difficulty = difficulty;
 
           if (!queue.has(gameId)) queue.set(gameId, []);
           const q = queue.get(gameId)!;
-          q.push(playerId);
+          if (!q.includes(playerId)) q.push(playerId);
 
-          if (q.length >= 2) {
-            const p1Id = q.shift()!;
-            const p2Id = q.shift()!;
-            const p1 = lobby.get(p1Id);
-            const p2 = lobby.get(p2Id);
+          // Find a partner — prefer the SAME difficulty; if the only partner
+          // picked a different difficulty, the match difficulty becomes random.
+          const others = q.filter((id) => id !== playerId && lobby.get(id)?.status === "queued");
+          const sameDiff = others.find((id) => lobby.get(id)?.difficulty === difficulty);
+          const partnerId = sameDiff ?? others[0];
+
+          if (partnerId !== undefined) {
+            const p1 = lobby.get(playerId);
+            const p2 = lobby.get(partnerId);
+            // remove both from queue
+            queue.set(gameId, q.filter((id) => id !== playerId && id !== partnerId));
             if (p1 && p2) {
+              const matchDiff = p1.difficulty === p2.difficulty
+                ? difficulty
+                : (["easy", "medium", "hard"][Math.floor(Math.random() * 3)]);
               const roomId = generateRoomId();
               const room: GameRoom = {
                 id: roomId,
@@ -2698,20 +3581,14 @@ export async function registerRoutes(
               p1.status = "in_game";
               p2.status = "in_game";
 
-              const matchMsg = JSON.stringify({
-                type: "match_found",
-                roomId,
-                gameId,
+              p1.ws.send(JSON.stringify({
+                type: "match_found", roomId, gameId, difficulty: matchDiff,
                 opponent: { id: p2.id, username: p2.username },
-              });
-              const matchMsg2 = JSON.stringify({
-                type: "match_found",
-                roomId,
-                gameId,
+              }));
+              p2.ws.send(JSON.stringify({
+                type: "match_found", roomId, gameId, difficulty: matchDiff,
                 opponent: { id: p1.id, username: p1.username },
-              });
-              p1.ws.send(matchMsg);
-              p2.ws.send(matchMsg2);
+              }));
               broadcastLobby();
             }
           } else {
@@ -2741,6 +3618,7 @@ export async function registerRoutes(
                     type: "match_found",
                     roomId,
                     gameId,
+                    difficulty: player.difficulty || "medium",
                     opponent: { id: -1, username: "SciBot 🤖" },
                     isBot: true,
                   }));
@@ -2875,6 +3753,18 @@ export async function registerRoutes(
                   }
                 }
                 relayToSpectators(room.spectators, { type: "spectate_ended" });
+
+                // Determine the winner (highest score; tie = no winner).
+                const ranking = [...room.players].sort((a, b) => b.score - a.score);
+                let winnerId: number | null = null;
+                if (ranking.length >= 2 && ranking[0].score !== ranking[1].score) winnerId = ranking[0].id;
+                else if (ranking.length === 1) winnerId = ranking[0].id;
+
+                if (room.ranked === "gravity") {
+                  emitRankedResult(room.players, winnerId, "gravity").catch(e => console.error("ranked gravity result:", e));
+                } else if (winnerId && winnerId > 0) {
+                  creditMultiplayerWin(winnerId, room.players).catch(e => console.error("win bonus:", e));
+                }
 
                 for (const p of room.players) {
                   const lobbyPlayer = lobby.get(p.id);
@@ -3283,6 +4173,44 @@ export async function registerRoutes(
         const pvpIdx = pvpQueue.findIndex(q => q.id === playerId);
         if (pvpIdx >= 0) pvpQueue.splice(pvpIdx, 1);
 
+        rankedQueue.quiz = rankedQueue.quiz.filter(id => id !== playerId);
+        rankedQueue.gravity = rankedQueue.gravity.filter(id => id !== playerId);
+
+        // Party cleanup — drop the player from their party (also clears pending invites).
+        if (userParty.has(playerId)) removeFromParty(playerId);
+        parties.forEach((p) => { p.pendingInvites = p.pendingInvites.filter(id => id !== playerId); });
+
+        // Cancel any ranked draft the player was in.
+        rankedDrafts.forEach((draft) => {
+          if (draft.players.some(p => p.id === playerId)) {
+            if (draft.timeout) clearTimeout(draft.timeout);
+            rankedDrafts.delete(draft.id);
+            draft.players.forEach(p => {
+              if (p.id !== playerId) {
+                const lp = lobby.get(p.id);
+                if (lp) { lp.status = "idle"; if (lp.ws.readyState === WebSocket.OPEN) lp.ws.send(JSON.stringify({ type: "ranked_draft_cancel" })); }
+              }
+            });
+          }
+        });
+
+        // Team queue cleanup
+        teamQueue.forEach((list, gid) => {
+          teamQueue.set(gid, list.filter((e) => e.id !== playerId));
+        });
+
+        // Streaming cleanup — end the player's own stream, drop them as a viewer.
+        if (streams.has(playerId)) {
+          void finishStream(playerId);
+        }
+        streams.forEach((s) => {
+          if (s.viewers.delete(playerId!)) {
+            sendToUser(s.streamerId, { type: "viewer_gone", viewerId: playerId! });
+            sendToStream(s, { type: "stream_update", streamerId: s.streamerId, score: s.score, viewerCount: s.viewers.size });
+            broadcastStreamsList();
+          }
+        });
+
         for (const [roomId, room] of rooms.entries()) {
           room.spectators = room.spectators.filter(s => s.id !== playerId);
           const inRoom = room.players.find((p) => p.id === playerId);
@@ -3333,6 +4261,10 @@ export async function registerRoutes(
     "bp-answer-sabotage": { name: "Answer Sabotage", price: 4, icon: "EyeOff", description: "Hides one correct answer from opponent (PvP)", rarity: "rare" },
     "bp-time-drain": { name: "Time Drain", price: 3, icon: "Hourglass", description: "Steals 5 seconds from opponent's timer (PvP)", rarity: "uncommon" },
     "bp-poison-strike": { name: "Poison Strike", price: 5, icon: "Skull", description: "Deals 15 damage to boss over 3 questions", rarity: "epic" },
+    "bp-time-warp": { name: "Time Warp", price: 4, icon: "Clock", description: "Adds 6 seconds to your own timer (PvP/Ranked)", rarity: "rare" },
+    "bp-triple-points": { name: "Triple Points", price: 6, icon: "Sparkles", description: "Your next correct answer is worth 3x points (PvP/Ranked)", rarity: "epic" },
+    "bp-mega-time": { name: "Mega Time", price: 5, icon: "Hourglass", description: "Adds 10 seconds to your own timer (PvP/Ranked/Tournaments)", rarity: "rare" },
+    "bp-clarity": { name: "Clarity", price: 4, icon: "Eye", description: "Removes one wrong answer from your question (Tournaments)", rarity: "uncommon" },
   };
 
   app.get("/api/battle-powerups", async (req, res) => {
@@ -3416,6 +4348,10 @@ export async function registerRoutes(
     "upgrade-treasure-hunter": 10,
     "upgrade-elite-border": 8,
     "upgrade-science-star": 30,
+    "upgrade-mega-xp": 35,
+    "upgrade-mega-coins": 35,
+    "upgrade-scholar": 40,
+    "upgrade-jackpot": 45,
   };
 
   const GEM_UPGRADE_CATALOG: Record<string, number> = {
@@ -3437,6 +4373,10 @@ export async function registerRoutes(
     "upgrade-treasure-hunter": 35,
     "upgrade-elite-border": 20,
     "upgrade-science-star": 55,
+    "upgrade-mega-xp": 70,
+    "upgrade-mega-coins": 70,
+    "upgrade-scholar": 90,
+    "upgrade-jackpot": 100,
   };
 
   const COSMETIC_UPGRADES = new Set([
@@ -3450,6 +4390,10 @@ export async function registerRoutes(
     "upgrade-treasure-hunter",
     "upgrade-elite-border",
     "upgrade-science-star",
+    "upgrade-mega-xp",
+    "upgrade-mega-coins",
+    "upgrade-scholar",
+    "upgrade-jackpot",
   ]);
 
   function isUpgradeActive(user: any, upgradeId: string): boolean {
@@ -6406,7 +7350,35 @@ export async function registerRoutes(
       const user = await storage.getUser(req.user!.id);
       if (!user) return res.sendStatus(404);
       await storage.createSuspiciousReport(user.id, user.username, reason, details || "");
-      res.json({ ok: true });
+
+      // Autoclicker / automation detection: immediately suspend the account and
+      // open an admin issue so a human reviews it before any further play.
+      let suspended = false;
+      if (typeof reason === "string" && reason.startsWith("autoclicker")) {
+        const safety = ((user as any).safetySettings || {}) as Record<string, any>;
+        if (!safety.suspended) {
+          const nowIso = new Date().toISOString();
+          safety.suspended = true;
+          safety.suspendedAt = nowIso;
+          safety.suspendedReason = "Automated input (autoclicker) detected";
+          await storage.updateUser(user.id, { safetySettings: safety } as any);
+          await storage.createAdminProposal({
+            createdAt: nowIso,
+            createdById: 0,
+            createdByName: "System (Anti-Cheat)",
+            type: "autoclicker_review",
+            targetId: user.id,
+            targetName: user.username,
+            actionData: { reason, details: details || "" },
+            description: `🤖 Autoclicker suspected for ${user.username}. Account suspended pending review. ${details || ""}`.trim(),
+            status: "pending",
+            isSmallIssue: false,
+            votes: {},
+          } as any);
+        }
+        suspended = true;
+      }
+      res.json({ ok: true, suspended });
     } catch { res.status(500).json({ message: "Failed" }); }
   });
 
@@ -6432,6 +7404,92 @@ export async function registerRoutes(
       await storage.deleteSuspiciousReport(parseInt(req.params.id));
       res.json({ ok: true });
     } catch { res.status(500).json({ message: "Failed" }); }
+  });
+
+  // Auto-translation for the whole UI. Takes a batch of English strings and a
+  // target language; returns translations (cached server-side). Public (UI text).
+  app.post("/api/translate", async (req, res) => {
+    try {
+      const { texts, target } = req.body || {};
+      if (!Array.isArray(texts) || typeof target !== "string") {
+        return res.status(400).json({ message: "texts[] and target required" });
+      }
+      if (target === "en" || !SUPPORTED_LANGS.has(target)) {
+        return res.json({ translations: texts });
+      }
+      const slice = texts.slice(0, 200).map((t: any) => String(t).slice(0, 500));
+      const out: string[] = new Array(slice.length);
+      let i = 0;
+      const CONCURRENCY = 5;
+      const worker = async () => {
+        while (i < slice.length) {
+          const idx = i++;
+          out[idx] = await translateOne(slice[idx], target);
+        }
+      };
+      await Promise.all(Array.from({ length: CONCURRENCY }, worker));
+      res.json({ translations: out });
+    } catch {
+      res.status(500).json({ message: "translate failed" });
+    }
+  });
+
+  // Lift an autoclicker/automation suspension after an admin reviews the issue.
+  app.post("/api/admin/users/:id/unsuspend", async (req, res) => {
+    if (!req.isAuthenticated() || !(req.user as any).isAdmin) return res.sendStatus(403);
+    try {
+      const target = await storage.getUser(parseInt(req.params.id));
+      if (!target) return res.sendStatus(404);
+      const safety = ((target as any).safetySettings || {}) as Record<string, any>;
+      delete safety.suspended;
+      delete safety.suspendedAt;
+      delete safety.suspendedReason;
+      await storage.updateUser(target.id, { safetySettings: safety } as any);
+      res.json({ ok: true });
+    } catch { res.status(500).json({ message: "Failed" }); }
+  });
+
+  // Ranked (ELO) leaderboard — also grants the #1 player the Grandmaster title.
+  app.get("/api/leaderboard/ranked", async (req, res) => {
+    try {
+      const all = await storage.getLeaderboard(9999);
+      const placed = all
+        .map(u => ({ u, rs: normalizeRanked((u as any).rankedStats) }))
+        .filter(x => x.rs.placed)
+        .sort((a, b) => b.rs.elo - a.rs.elo);
+
+      const GM_TITLE = "title-ranked-grandmaster";
+      const topId = placed[0]?.u.id ?? -1;
+      const currentUserId = req.isAuthenticated() ? req.user!.id : null;
+      const newlyGranted: string[] = [];
+      for (const u of all) {
+        const has = u.inventory.includes(GM_TITLE);
+        if (u.id === topId && !has) {
+          await storage.updateUser(u.id, { inventory: [...u.inventory, GM_TITLE] } as any);
+          if (u.id === currentUserId) newlyGranted.push(GM_TITLE);
+        } else if (u.id !== topId && has) {
+          const cos = (u.equippedCosmetics as any) || {};
+          const upd: any = { inventory: u.inventory.filter((x: string) => x !== GM_TITLE) };
+          if (cos.title === GM_TITLE) upd.equippedCosmetics = { ...cos, title: null };
+          await storage.updateUser(u.id, upd);
+        }
+      }
+
+      const leaders = placed.slice(0, 50).map((x, i) => ({
+        rank: i + 1,
+        id: x.u.id,
+        username: x.u.username,
+        elo: x.rs.elo,
+        wins: x.rs.wins,
+        losses: x.rs.losses,
+        tier: rankFromElo(x.rs.elo, true),
+        avatarId: (x.u as any).avatarId,
+      }));
+      res.json({ leaders, newlyGranted });
+    } catch (e) {
+      console.error("ranked leaderboard:", e);
+      res.status(500).json({ message: "Failed" });
+    }
   });
 
   // ─── Direct Messages ─────────────────────────────────────────────────────────

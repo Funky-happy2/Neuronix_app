@@ -226,7 +226,7 @@ export default function TeamsPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       if (viewingTeam) queryClient.invalidateQueries({ queryKey: ["/api/teams", viewingTeam] });
-      toast({ title: "Kick vote", description: data.message || "Vote started" });
+      toast({ title: "Member kicked", description: data.message || "Member removed" });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -451,7 +451,7 @@ export default function TeamsPage() {
                     <p className="text-[10px] text-muted-foreground">Lv.{m.level} · {m.xp.toLocaleString()} XP · {(m.badges || []).length} badges · {(m.coins || 0).toLocaleString()} coins</p>
                   </div>
                   {isLeader && m.id !== team.leaderId && (
-                    <Button size="sm" variant="ghost" className="h-7 px-2 text-red-500 text-xs" onClick={() => kickMutation.mutate({ teamId: team.id, userId: m.id })} disabled={kickMutation.isPending || !!kickVote} title="Start kick vote" data-testid={`button-kick-${m.id}`}>
+                    <Button size="sm" variant="ghost" className="h-7 px-2 text-red-500 text-xs" onClick={() => kickMutation.mutate({ teamId: team.id, userId: m.id })} disabled={kickMutation.isPending} title="Kick member" data-testid={`button-kick-${m.id}`}>
                       <UserMinus className="w-3 h-3" />
                     </Button>
                   )}

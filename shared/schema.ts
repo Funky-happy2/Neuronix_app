@@ -59,6 +59,7 @@ export const users = pgTable("users", {
   tournamentWinStreak: integer("tournament_win_streak").notNull().default(0),
   tournamentWinStreakPeak: integer("tournament_win_streak_peak").notNull().default(0),
   isVip: boolean("is_vip").default(false),
+  rankedStats: jsonb("ranked_stats").notNull().default(sql`'{}'::jsonb`),
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true });
@@ -235,6 +236,11 @@ export interface LabExperiment {
   learningOutcome: string;
   icon: string;
   color: string;
+  // PhET-style educational info (all optional)
+  learningGoals?: string[];
+  keyConcepts?: string[];
+  realWorld?: string;
+  funFact?: string;
   isSecret?: boolean;
   requiredRebirth?: number;
   requiredXp?: number;
