@@ -387,7 +387,7 @@ export default function ProfilePage({
             <div className="mt-3 p-3 rounded-lg bg-muted/50 text-left">
               <p className="text-xs font-bold text-muted-foreground mb-2">Year Level (Question Difficulty)</p>
               <div className="flex gap-1.5">
-                {[3, 4, 5, 6, 7, 8].map((yr) => (
+                {[3, 4, 5, 6, 7, 8, 9].map((yr) => (
                   <Button
                     key={yr}
                     size="sm"
@@ -720,7 +720,7 @@ export default function ProfilePage({
               {ownedCoinStyles.length > 0 && (
                 <Card className="p-4 border-border">
                   <h3 className="font-bold text-sm mb-2 flex items-center gap-1.5">
-                    <Coins className="w-4 h-4 text-yellow-500" /> Coin Style
+                    <Coins className="w-4 h-4 text-yellow-500" /> Neuro Style
                   </h3>
                   <div className="space-y-1.5">
                     {ownedCoinStyles.map(c => {
@@ -745,7 +745,7 @@ export default function ProfilePage({
               {ownedGemStyles.length > 0 && (
                 <Card className="p-4 border-border">
                   <h3 className="font-bold text-sm mb-2 flex items-center gap-1.5">
-                    <Gem className="w-4 h-4 text-purple-500" /> Gem Style
+                    <Gem className="w-4 h-4 text-purple-500" /> Spark Style
                   </h3>
                   <div className="space-y-1.5">
                     {ownedGemStyles.map(g => {

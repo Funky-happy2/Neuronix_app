@@ -164,14 +164,14 @@ export default function UserProfileModal({ username, onClose }: Props) {
               <div className="bg-muted/40 rounded-lg p-2 text-center">
                 <div className="flex items-center justify-center gap-1 mb-0.5">
                   <Coins className="w-3.5 h-3.5 text-yellow-500" />
-                  <span className="text-xs font-bold text-yellow-500">Coins</span>
+                  <span className="text-xs font-bold text-yellow-500">Neuros</span>
                 </div>
                 <p className="font-black text-sm">{(profile.coins || 0).toLocaleString()}</p>
               </div>
               <div className="bg-muted/40 rounded-lg p-2 text-center">
                 <div className="flex items-center justify-center gap-1 mb-0.5">
                   <Gem className="w-3.5 h-3.5 text-cyan-500" />
-                  <span className="text-xs font-bold text-cyan-500">Gems</span>
+                  <span className="text-xs font-bold text-cyan-500">Sparks</span>
                 </div>
                 <p className="font-black text-sm">{(profile.gems || 0).toLocaleString()}</p>
               </div>

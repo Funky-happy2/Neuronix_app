@@ -161,7 +161,7 @@ function FeedbackTab() {
     mutationFn: (id: number) => apiRequest("POST", `/api/admin/feedback/${id}/approve`, { xpReward: 50, coinReward: 25 }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/feedback"] });
-      toast({ title: "Feedback approved!", description: "User received +50 XP and +25 Coins as a reward." });
+      toast({ title: "Feedback approved!", description: "User received +50 XP and +25 Neuros as a reward." });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -893,11 +893,11 @@ function UsersTab() {
                   <Input type="number" value={editData.xp} onChange={e => setEditData(d => ({ ...d, xp: e.target.value }))} data-testid="input-edit-xp" />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-muted-foreground">Coins</label>
+                  <label className="text-xs font-bold text-muted-foreground">Neuros</label>
                   <Input type="number" value={editData.coins} onChange={e => setEditData(d => ({ ...d, coins: e.target.value }))} data-testid="input-edit-coins" />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-muted-foreground">Gems</label>
+                  <label className="text-xs font-bold text-muted-foreground">Sparks</label>
                   <Input type="number" value={editData.gems} onChange={e => setEditData(d => ({ ...d, gems: e.target.value }))} data-testid="input-edit-gems" />
                 </div>
                 <div>
@@ -1812,11 +1812,11 @@ function TournamentsTab() {
             <Input type="number" value={xpReward} onChange={e => setXpReward(e.target.value)} data-testid="input-xp-reward" />
           </div>
           <div>
-            <label className="text-xs font-bold text-muted-foreground flex items-center gap-1"><Coins className="w-3 h-3" /> Coin Reward</label>
+            <label className="text-xs font-bold text-muted-foreground flex items-center gap-1"><Coins className="w-3 h-3" /> Neuro Reward</label>
             <Input type="number" value={coinReward} onChange={e => setCoinReward(e.target.value)} data-testid="input-coin-reward" />
           </div>
           <div>
-            <label className="text-xs font-bold text-muted-foreground flex items-center gap-1"><Gem className="w-3 h-3" /> Gem Reward</label>
+            <label className="text-xs font-bold text-muted-foreground flex items-center gap-1"><Gem className="w-3 h-3" /> Spark Reward</label>
             <Input type="number" value={gemReward} onChange={e => setGemReward(e.target.value)} data-testid="input-gem-reward" />
           </div>
         </div>
@@ -2452,11 +2452,11 @@ function CodesTab() {
             <Input type="datetime-local" value={expiresAt} onChange={e => setExpiresAt(e.target.value)} data-testid="input-code-expiry" />
           </div>
           <div>
-            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Coin Reward</label>
+            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Neuro Reward</label>
             <Input type="number" min="0" value={coinReward} onChange={e => setCoinReward(e.target.value)} data-testid="input-code-coins" />
           </div>
           <div>
-            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Gem Reward</label>
+            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Spark Reward</label>
             <Input type="number" min="0" value={gemReward} onChange={e => setGemReward(e.target.value)} data-testid="input-code-gems" />
           </div>
           <div>

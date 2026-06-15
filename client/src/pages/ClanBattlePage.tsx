@@ -204,7 +204,7 @@ export default function ClanBattlePage() {
                 )}
                 {battle.gemReward > 0 && (
                   <Badge variant="secondary" className="gap-1" data-testid="badge-gem-reward">
-                    <Gem className="w-3 h-3" /> +{battle.gemReward} Gems
+                    <Gem className="w-3 h-3" /> +{battle.gemReward} Sparks
                   </Badge>
                 )}
               </div>

@@ -67,7 +67,7 @@ export default function RebirthPage() {
     ...(req.longestStreak > 0 ? [{ label: "Longest Streak", current: u.longestStreak || 0, required: req.longestStreak, icon: Flame }] : []),
     ...(req.xp > 0 ? [{ label: "Total XP", current: u.xp || 0, required: req.xp, icon: Zap }] : []),
     ...(req.dailyChallenges > 0 ? [{ label: "Daily Challenges", current: u.dailyChallengesCompleted || 0, required: req.dailyChallenges, icon: Calendar }] : []),
-    ...(req.totalCoins > 0 ? [{ label: "Coins", current: u.coins || 0, required: req.totalCoins, icon: Coins }] : []),
+    ...(req.totalCoins > 0 ? [{ label: "Neuros", current: u.coins || 0, required: req.totalCoins, icon: Coins }] : []),
   ];
 
   const allMet = checks.every(c => c.current >= c.required);
@@ -93,7 +93,7 @@ export default function RebirthPage() {
             Rebirth
           </h1>
           <p className="text-muted-foreground text-sm max-w-md mx-auto">
-            Reset your progress to earn a permanent XP and Coin multiplier. The further you go before rebirthing, the bigger the reward.
+            Reset your progress to earn a permanent XP and Neuro multiplier. The further you go before rebirthing, the bigger the reward.
           </p>
         </div>
 
@@ -137,7 +137,7 @@ export default function RebirthPage() {
             </div>
 
             <p className="text-xs text-center text-muted-foreground">
-              This multiplier applies to every XP and Coin reward you earn — from games, bosses, and daily challenges.
+              This multiplier applies to every XP and Neuro reward you earn — from games, bosses, and daily challenges.
             </p>
           </CardContent>
         </Card>
@@ -209,7 +209,7 @@ export default function RebirthPage() {
                     <span className="text-sm font-semibold text-red-300">Resets</span>
                   </div>
                   <ul className="text-xs text-muted-foreground space-y-1.5">
-                    <li className="flex items-start gap-1.5"><span className="text-red-400 mt-0.5">✕</span> All Coins</li>
+                    <li className="flex items-start gap-1.5"><span className="text-red-400 mt-0.5">✕</span> All Neuros</li>
                     <li className="flex items-start gap-1.5"><span className="text-red-400 mt-0.5">✕</span> Win Streak</li>
                     <li className="flex items-start gap-1.5"><span className="text-red-400 mt-0.5">✕</span> Games played & win count</li>
                     <li className="flex items-start gap-1.5"><span className="text-red-400 mt-0.5">✕</span> Tournament wins</li>
@@ -227,7 +227,7 @@ export default function RebirthPage() {
                     <span className="text-sm font-semibold text-green-300">Kept Forever</span>
                   </div>
                   <ul className="text-xs text-muted-foreground space-y-1.5">
-                    <li className="flex items-start gap-1.5"><span className="text-green-400 mt-0.5">✓</span> XP, Level & Gems</li>
+                    <li className="flex items-start gap-1.5"><span className="text-green-400 mt-0.5">✓</span> XP, Level & Sparks</li>
                     <li className="flex items-start gap-1.5"><span className="text-green-400 mt-0.5">✓</span> Game high scores</li>
                     <li className="flex items-start gap-1.5"><span className="text-green-400 mt-0.5">✓</span> All earned badges</li>
                     <li className="flex items-start gap-1.5"><span className="text-green-400 mt-0.5">✓</span> Rare, Epic & Legendary items</li>

@@ -44,10 +44,10 @@ const RARITY_COLORS: Record<string, string> = {
 const CATEGORIES = ["All", "daily", "mystery", "avatar", "decoration", "follower", "badge_style", "theme", "frame", "coin_style", "gem_style", "powerup", "battle_powerup", "title", "profile_animation", "name_animation", "reward", "upgrade"];
 const CATEGORY_LABELS: Record<string, string> = {
   All: "All", daily: "Daily Rewards", mystery: "Mystery Boxes", avatar: "Avatars", decoration: "Decorations", follower: "Mouse Followers",
-  badge_style: "Badge Styles", theme: "Themes", frame: "Frames", coin_style: "Coin Styles",
-  gem_style: "Gem Styles", powerup: "Power-ups", battle_powerup: "Battle Powerups", title: "Titles",
+  badge_style: "Badge Styles", theme: "Themes", frame: "Frames", coin_style: "Neuro Styles",
+  gem_style: "Spark Styles", powerup: "Power-ups", battle_powerup: "Battle Powerups", title: "Titles",
   profile_animation: "Profile Animations", name_animation: "Name Animations",
-  reward: "Rewards", upgrade: "Upgrades (Gems)",
+  reward: "Rewards", upgrade: "Upgrades (Sparks)",
 };
 const CATEGORY_ICONS: Record<string, any> = {
   All: ShoppingBag, daily: Calendar, mystery: Package, avatar: Bot, decoration: Sparkles, follower: Rocket,
@@ -140,25 +140,25 @@ const COSMETIC_UPGRADE_IDS = new Set([
 
 const GEM_UPGRADES: { id: string; name: string; description: string; icon: string; price: number; rarity: string; requiredLevel?: number }[] = [
   { id: "upgrade-xp-boost", name: "XP Boost", description: "Earn 2x XP from all games! (1 use per game)", icon: "Zap", price: 10, rarity: "epic" },
-  { id: "upgrade-coin-magnet", name: "Coin Magnet", description: "Earn +25% coins from boss battles! (1 use per game)", icon: "Coins", price: 8, rarity: "rare" },
+  { id: "upgrade-coin-magnet", name: "Neuro Magnet", description: "Earn +25% coins from boss battles! (1 use per game)", icon: "Neuros", price: 8, rarity: "rare" },
   { id: "upgrade-extra-time", name: "Time Extender", description: "+10 seconds on all timed games! (1 use per game)", icon: "Shield", price: 5, rarity: "uncommon" },
   { id: "upgrade-golden-profile", name: "Golden Profile", description: "Your profile shines with a golden border! (Permanent while owned)", icon: "Crown", price: 15, rarity: "legendary" },
   { id: "upgrade-streak-shield", name: "Streak Shield", description: "Protects your daily streak once if you miss a day! (1 use)", icon: "Shield", price: 6, rarity: "rare" },
   { id: "upgrade-boss-insight", name: "Boss Insight", description: "See a hint during boss battles! (1 use per fight)", icon: "Atom", price: 12, rarity: "epic" },
-  { id: "upgrade-double-coins", name: "Double Coins", description: "Earn 2x coins from all games! (1 use per game)", icon: "Coins", price: 20, rarity: "legendary", requiredLevel: 15 },
+  { id: "upgrade-double-coins", name: "Double Neuros", description: "Earn 2x coins from all games! (1 use per game)", icon: "Neuros", price: 20, rarity: "legendary", requiredLevel: 15 },
   { id: "upgrade-boss-rush", name: "Boss Rush Mode", description: "Earn 1.5x XP and coins from all boss battles! (1 use per fight)", icon: "Swords", price: 25, rarity: "legendary", requiredLevel: 20 },
   { id: "upgrade-lab-mastery", name: "Lab Mastery", description: "Earn 3x XP and coins from all lab experiments! (1 use per lab)", icon: "FlaskConical", price: 30, rarity: "legendary", requiredLevel: 25 },
   { id: "upgrade-diamond-profile", name: "Diamond Profile", description: "Your profile sparkles with a stunning diamond border! (Permanent)", icon: "Diamond", price: 35, rarity: "legendary", requiredLevel: 10 },
   { id: "upgrade-permanent-xp", name: "XP Mastery", description: "Permanently earn +15% XP from all games forever!", icon: "TrendingUp", price: 40, rarity: "legendary", requiredLevel: 15 },
-  { id: "upgrade-permanent-coins", name: "Coin Mastery", description: "Permanently earn +15% coins from all games forever!", icon: "Wallet", price: 45, rarity: "legendary", requiredLevel: 15 },
-  { id: "upgrade-daily-gems", name: "Daily Gems", description: "Earn +2 bonus gems every time you claim daily rewards! (Permanent)", icon: "Gift", price: 50, rarity: "legendary", requiredLevel: 20 },
+  { id: "upgrade-permanent-coins", name: "Neuro Mastery", description: "Permanently earn +15% coins from all games forever!", icon: "Wallet", price: 45, rarity: "legendary", requiredLevel: 15 },
+  { id: "upgrade-daily-gems", name: "Daily Sparks", description: "Earn +2 bonus gems every time you claim daily rewards! (Permanent)", icon: "Gift", price: 50, rarity: "legendary", requiredLevel: 20 },
   { id: "upgrade-rainbow-name", name: "Rainbow Name", description: "Your username shimmers with rainbow colours everywhere! (Permanent)", icon: "Palette", price: 30, rarity: "legendary", requiredLevel: 15 },
   { id: "upgrade-auto-streak", name: "Auto Streak Protector", description: "Never lose your daily streak again — permanent protection!", icon: "ShieldCheck", price: 60, rarity: "legendary", requiredLevel: 25 },
   { id: "upgrade-treasure-hunter", name: "Treasure Hunter", description: "Find 5-15 bonus coins hidden in every game! (Permanent)", icon: "Search", price: 35, rarity: "epic", requiredLevel: 10 },
   { id: "upgrade-elite-border", name: "Elite Border", description: "An exclusive elite border for your profile! (Permanent)", icon: "Frame", price: 20, rarity: "epic", requiredLevel: 8 },
   { id: "upgrade-science-star", name: "Science Star", description: "Permanently earn +10% XP AND +10% coins from everything!", icon: "Star", price: 55, rarity: "legendary", requiredLevel: 30 },
   { id: "upgrade-mega-xp", name: "Mega XP Core", description: "Permanently earn +25% XP from all games forever! Stacks with XP Mastery!", icon: "Zap", price: 70, rarity: "legendary", requiredLevel: 35 },
-  { id: "upgrade-mega-coins", name: "Mega Coin Core", description: "Permanently earn +25% coins from all games forever! Stacks with Coin Mastery!", icon: "Coins", price: 70, rarity: "legendary", requiredLevel: 35 },
+  { id: "upgrade-mega-coins", name: "Mega Neuro Core", description: "Permanently earn +25% coins from all games forever! Stacks with Neuro Mastery!", icon: "Neuros", price: 70, rarity: "legendary", requiredLevel: 35 },
   { id: "upgrade-scholar", name: "Grand Scholar", description: "Permanently earn +20% XP AND +20% coins from everything!", icon: "TrendingUp", price: 90, rarity: "legendary", requiredLevel: 40 },
   { id: "upgrade-jackpot", name: "Jackpot Core", description: "Each game has a 10% chance to TRIPLE all your XP and coins!", icon: "Sparkles", price: 100, rarity: "legendary", requiredLevel: 45 },
 ];
@@ -608,8 +608,8 @@ export default function ShopPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       queryClient.invalidateQueries({ queryKey: ["/api/shop/daily-reward"] });
       const r = data.reward;
-      let desc = `+${r.coins} Coins, +${r.xp} XP`;
-      if (r.gems) desc += `, +${r.gems} Gems`;
+      let desc = `+${r.coins} Neuros, +${r.xp} XP`;
+      if (r.gems) desc += `, +${r.gems} Sparks`;
       toast({ title: "Daily Reward Claimed!", description: desc });
     },
     onError: (err: any) => {
@@ -772,10 +772,10 @@ export default function ShopPage() {
             return (
               <>
                 <Badge variant="secondary" className={`text-lg font-bold px-4 py-2 gap-2 ${coinTextClass} ${coinAnim}`}>
-                  <Coins className={`w-5 h-5 ${coinIconClass}`} /> {userCoins.toLocaleString()} Coins
+                  <Coins className={`w-5 h-5 ${coinIconClass}`} /> {userCoins.toLocaleString()} Neuros
                 </Badge>
                 <Badge variant="secondary" className={`text-lg font-bold px-4 py-2 gap-2 bg-orange-500/10 border-orange-500/30 ${gemTextClass} ${gemAnim}`}>
-                  <Gem className={`w-5 h-5 ${gemIconClass}`} /> {userGems.toLocaleString()} Gems
+                  <Gem className={`w-5 h-5 ${gemIconClass}`} /> {userGems.toLocaleString()} Sparks
                 </Badge>
               </>
             );
@@ -836,7 +836,7 @@ export default function ShopPage() {
               </div>
               {userInventory.includes("upgrade-daily-gems") && (
                 <div className="mb-3 flex items-center gap-2 text-xs font-semibold text-cyan-600 dark:text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 rounded-lg px-3 py-2">
-                  <Gem className="w-3.5 h-3.5 shrink-0" /> Daily Gem Upgrade active — you earn +2 bonus gems every single day!
+                  <Gem className="w-3.5 h-3.5 shrink-0" /> Daily Spark Upgrade active — you earn +2 bonus gems every single day!
                 </div>
               )}
               <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
@@ -967,8 +967,8 @@ export default function ShopPage() {
                           decoration: "Screen Effect",
                           follower: "Mouse Follower",
                           frame: "Profile Frame",
-                          coin_style: "Coin Style",
-                          gem_style: "Gem Style",
+                          coin_style: "Neuro Style",
+                          gem_style: "Spark Style",
                           badge_style: "Badge Style",
                           title: "Title",
                           powerup: "Power-Up",
@@ -984,8 +984,8 @@ export default function ShopPage() {
                           decoration: "Decorations",
                           follower: "Mouse Followers",
                           frame: "Frames",
-                          coin_style: "Coin Styles",
-                          gem_style: "Gem Styles",
+                          coin_style: "Neuro Styles",
+                          gem_style: "Spark Styles",
                           badge_style: "Badge Styles",
                           title: "Titles",
                           powerup: "Power-Ups",
@@ -1176,7 +1176,7 @@ export default function ShopPage() {
                         onClick={() => buyBattlePowerupMutation.mutate({ powerupId: bp.id, quantity: qty })}
                         data-testid={`button-buy-bp-${bp.id}`}
                       >
-                        {buyBattlePowerupMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <><Gem className="w-3 h-3" /> {totalCost} Gems</>}
+                        {buyBattlePowerupMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <><Gem className="w-3 h-3" /> {totalCost} Sparks</>}
                       </Button>
                     </div>
                   </Card>
@@ -1227,7 +1227,7 @@ export default function ShopPage() {
       {showUpgrades && (
         <div className="mt-8">
           <h2 className="text-2xl font-black flex items-center gap-2 mb-4">
-            <Gem className="w-6 h-6 text-orange-400" /> Gem Upgrades
+            <Gem className="w-6 h-6 text-orange-400" /> Spark Upgrades
           </h2>
           <p className="text-sm text-muted-foreground mb-4 font-medium">
             Spend gems earned from boosting community packs on powerful upgrades!

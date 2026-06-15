@@ -296,6 +296,20 @@ export default function ClansPage() {
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  const adminDeleteMutation = useMutation({
+    mutationFn: async (clanId: number) => {
+      const res = await apiRequest("POST", `/api/admin/clans/${clanId}/delete`);
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clans"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      setViewingClan(null);
+      toast({ title: "Clan deleted", description: data.message || "Clan removed" });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
   const voteKickMutation = useMutation({
     mutationFn: async (clanId: number) => {
       const res = await apiRequest("POST", `/api/clans/${clanId}/kick/vote`, {});
@@ -504,9 +518,23 @@ export default function ClansPage() {
 
     return (
       <div className="min-h-screen max-w-4xl mx-auto px-4 py-8">
-        <Button variant="ghost" size="sm" onClick={() => { setViewingClan(null); setEditingCover(false); }} className="gap-2 mb-4" data-testid="button-back-clans">
-          <ArrowLeft className="w-4 h-4" /> Back to Clans
-        </Button>
+        <div className="flex items-center justify-between mb-4">
+          <Button variant="ghost" size="sm" onClick={() => { setViewingClan(null); setEditingCover(false); }} className="gap-2" data-testid="button-back-clans">
+            <ArrowLeft className="w-4 h-4" /> Back to Clans
+          </Button>
+          {(user as any)?.isAdmin && (
+            <Button
+              variant="destructive"
+              size="sm"
+              className="gap-1"
+              disabled={adminDeleteMutation.isPending}
+              onClick={() => { if (window.confirm(`Delete the clan "${clan.name}"? This removes every member and cannot be undone.`)) adminDeleteMutation.mutate(clan.id); }}
+              data-testid="button-admin-delete-clan"
+            >
+              <Trash2 className="w-4 h-4" /> Delete Clan (Admin)
+            </Button>
+          )}
+        </div>
 
         <div className="rounded-2xl overflow-hidden mb-6 relative" style={{ background: clan.color }}>
           <div className="absolute inset-0 bg-black/30" />
@@ -722,12 +750,12 @@ export default function ClansPage() {
             <div className="text-center p-2 bg-muted/50 rounded-lg">
               <Coins className="w-4 h-4 mx-auto mb-1 text-amber-600 dark:text-amber-400" />
               <p className="font-black text-lg">{clan.totalCoins.toLocaleString()}</p>
-              <p className="text-[10px] text-muted-foreground">Total Coins</p>
+              <p className="text-[10px] text-muted-foreground">Total Neuros</p>
             </div>
             <div className="text-center p-2 bg-muted/50 rounded-lg">
               <Gem className="w-4 h-4 mx-auto mb-1 text-green-500" />
               <p className="font-black text-lg">{clan.totalGems}</p>
-              <p className="text-[10px] text-muted-foreground">Total Gems</p>
+              <p className="text-[10px] text-muted-foreground">Total Sparks</p>
             </div>
             <div className="text-center p-2 bg-muted/50 rounded-lg">
               <Award className="w-4 h-4 mx-auto mb-1 text-purple-500" />
@@ -1253,7 +1281,7 @@ export default function ClansPage() {
                               <p className="text-[10px] font-bold text-muted-foreground mb-1.5 flex items-center gap-1"><Award className="w-3 h-3" /> Rewards for winning clan</p>
                               <div className="flex items-center gap-3">
                                 <div className="flex items-center gap-1 text-xs font-bold">
-                                  <Gem className="w-3.5 h-3.5 text-purple-500" /> {battle.gemReward} Gems
+                                  <Gem className="w-3.5 h-3.5 text-purple-500" /> {battle.gemReward} Sparks
                                 </div>
                                 <div className="flex items-center gap-1 text-xs font-bold">
                                   <Star className="w-3.5 h-3.5 text-amber-500" /> {battle.xpReward} XP
@@ -1271,7 +1299,7 @@ export default function ClansPage() {
                                     <Crown className={`w-4 h-4 ${won ? "text-amber-500" : "text-muted-foreground"}`} />
                                     <span className={won ? "text-green-600 dark:text-green-400" : lost ? "text-red-600 dark:text-red-400" : ""}>{battle.winnerName}</span> wins!
                                   </p>
-                                  <p className="text-[10px] text-muted-foreground mt-0.5">+{battle.gemReward} Gems, +{battle.xpReward} XP awarded to all members</p>
+                                  <p className="text-[10px] text-muted-foreground mt-0.5">+{battle.gemReward} Sparks, +{battle.xpReward} XP awarded to all members</p>
                                 </>
                               ) : (
                                 <p className="text-sm font-bold text-muted-foreground">Draw - no winner</p>

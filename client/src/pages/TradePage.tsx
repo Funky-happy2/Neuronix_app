@@ -350,7 +350,7 @@ export default function TradePage() {
                 </div>
               </div>
               <div>
-                <label className="text-sm font-semibold text-muted-foreground mb-1 block">Coins to offer</label>
+                <label className="text-sm font-semibold text-muted-foreground mb-1 block">Neuros to offer</label>
                 <div className="flex items-center gap-2">
                   <Coins className="w-4 h-4 text-yellow-500" />
                   <Input
@@ -366,7 +366,7 @@ export default function TradePage() {
                 </div>
               </div>
               <div>
-                <label className="text-sm font-semibold text-muted-foreground mb-1 block">Gems to offer</label>
+                <label className="text-sm font-semibold text-muted-foreground mb-1 block">Sparks to offer</label>
                 <div className="flex items-center gap-2">
                   <Gem className="w-4 h-4 text-cyan-500" />
                   <Input
@@ -488,7 +488,7 @@ export default function TradePage() {
                 )}
               </div>
               <div>
-                <label className="text-sm font-semibold text-muted-foreground mb-1 block">Coins you want</label>
+                <label className="text-sm font-semibold text-muted-foreground mb-1 block">Neuros you want</label>
                 <div className="flex items-center gap-2">
                   <Coins className="w-4 h-4 text-yellow-500" />
                   <Input
@@ -502,7 +502,7 @@ export default function TradePage() {
                 </div>
               </div>
               <div>
-                <label className="text-sm font-semibold text-muted-foreground mb-1 block">Gems you want</label>
+                <label className="text-sm font-semibold text-muted-foreground mb-1 block">Sparks you want</label>
                 <div className="flex items-center gap-2">
                   <Gem className="w-4 h-4 text-cyan-500" />
                   <Input
@@ -622,7 +622,7 @@ export default function TradePage() {
             </div>
 
             <div>
-              <label className="text-sm font-semibold mb-1 block">Coins to Gift</label>
+              <label className="text-sm font-semibold mb-1 block">Neuros to Gift</label>
               <div className="flex items-center gap-2">
                 <Coins className="w-4 h-4 text-yellow-500" />
                 <Input
@@ -639,7 +639,7 @@ export default function TradePage() {
             </div>
 
             <div>
-              <label className="text-sm font-semibold mb-1 block">Gems to Gift</label>
+              <label className="text-sm font-semibold mb-1 block">Sparks to Gift</label>
               <div className="flex items-center gap-2">
                 <Gem className="w-4 h-4 text-cyan-500" />
                 <Input

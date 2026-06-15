@@ -404,7 +404,7 @@ export default function TeamsPage() {
             <div className="bg-muted/50 rounded-lg p-2 text-center">
               <Coins className="w-4 h-4 mx-auto text-yellow-500 mb-0.5" />
               <p className="text-sm font-bold">{team.totalCoins.toLocaleString()}</p>
-              <p className="text-[10px] text-muted-foreground">Team Coins</p>
+              <p className="text-[10px] text-muted-foreground">Team Neuros</p>
             </div>
             <div className="bg-muted/50 rounded-lg p-2 text-center">
               <Award className="w-4 h-4 mx-auto text-emerald-500 mb-0.5" />

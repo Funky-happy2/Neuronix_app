@@ -1734,7 +1734,7 @@ export default function LobbyPage() {
               </p>
 
               <div className="mb-4">
-                <label className="text-xs font-bold text-muted-foreground mb-1 block">Coin Wager (optional)</label>
+                <label className="text-xs font-bold text-muted-foreground mb-1 block">Neuro Wager (optional)</label>
                 <Input
                   type="number"
                   min={0}

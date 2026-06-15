@@ -55,7 +55,7 @@ const TOPIC_CATEGORIES: { id: BadgeTopic | "all"; label: string; icon: any }[] =
   { id: "games", label: "Games", icon: Gamepad2 },
   { id: "bosses", label: "Bosses", icon: Swords },
   { id: "progression", label: "Progression", icon: Trophy },
-  { id: "coins", label: "Coins", icon: Coins },
+  { id: "coins", label: "Neuros", icon: Coins },
   { id: "collection", label: "Collection", icon: GraduationCap },
   { id: "competitive", label: "Competitive", icon: Shield },
   { id: "social", label: "Social", icon: Heart },

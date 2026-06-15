@@ -19,6 +19,7 @@ import {
   LAUNCHER_THEMES, MAZE_THEMES, GRAVITY_MAZE_THEMES,
 } from "@/lib/worldGameThemes";
 import { WORLDS } from "@/lib/gameData";
+import { getQuizExplanation } from "@/lib/quizExplanations";
 
 interface GameRewards {
   xp: number;
@@ -152,8 +153,8 @@ export default function GamePlayer({ game, onBack, onComplete, yearLevel = 7, au
       if (r) {
         const parts = [];
         if (r.xp) parts.push(`+${r.xp} XP`);
-        if (r.coins) parts.push(`+${r.coins} Coins`);
-        if (r.dailyBonus) parts.push(`Daily Bonus: +${r.dailyBonus.xp} XP, +${r.dailyBonus.coins} Coins`);
+        if (r.coins) parts.push(`+${r.coins} Neuros`);
+        if (r.dailyBonus) parts.push(`Daily Bonus: +${r.dailyBonus.xp} XP, +${r.dailyBonus.coins} Neuros`);
         if (r.badgesEarned?.length > 0) parts.push(`${r.badgesEarned.length} badge${r.badgesEarned.length > 1 ? 's' : ''} earned!`);
         toast({
           title: won ? "Awesome Job!" : "Good Try!",
@@ -421,7 +422,7 @@ export default function GamePlayer({ game, onBack, onComplete, yearLevel = 7, au
                   </div>
                   <div className="flex items-center gap-1.5 bg-yellow-500/15 text-yellow-400 px-3 py-1.5 rounded-full" data-testid="text-coins-earned">
                     <Coins className="w-4 h-4" />
-                    <span className="font-bold">+{rewards.coins} Coins</span>
+                    <span className="font-bold">+{rewards.coins} Neuros</span>
                   </div>
                 </div>
 
@@ -434,7 +435,7 @@ export default function GamePlayer({ game, onBack, onComplete, yearLevel = 7, au
                     data-testid="text-daily-bonus"
                   >
                     <TrendingUp className="w-3.5 h-3.5" />
-                    <span className="font-bold">Daily Bonus: +{rewards.dailyBonus.xp} XP, +{rewards.dailyBonus.coins} Coins</span>
+                    <span className="font-bold">Daily Bonus: +{rewards.dailyBonus.xp} XP, +{rewards.dailyBonus.coins} Neuros</span>
                   </motion.div>
                 )}
 
@@ -2343,6 +2344,11 @@ function SpeedQuizGame({ gameId, onScore, onEnd, score, yearLevel = 7, difficult
       { q: "Which season is the hottest?", a: "Summer", opts: ["Winter", "Summer", "Autumn", "Spring"] },
       { q: "What do caterpillars turn into?", a: "Butterflies", opts: ["Spiders", "Butterflies", "Beetles", "Ants"] },
       { q: "Where does the Sun go at night?", a: "It doesn't move, Earth spins", opts: ["It sleeps", "It disappears", "It doesn't move, Earth spins", "It goes behind the Moon"] },
+      { q: "What do we call frozen water?", a: "Ice", opts: ["Steam", "Ice", "Mud", "Cloud"] },
+      { q: "Which animal can fly?", a: "Bird", opts: ["Fish", "Bird", "Cow", "Snake"] },
+      { q: "Which sense do we use our nose for?", a: "Smell", opts: ["Seeing", "Hearing", "Smell", "Tasting"] },
+      { q: "What do cows give us to drink?", a: "Milk", opts: ["Eggs", "Milk", "Honey", "Juice"] },
+      { q: "How many legs does an insect have?", a: "6", opts: ["4", "6", "8", "2"] },
     ],
     4: [
       { q: "What planet do we live on?", a: "Earth", opts: ["Mars", "Earth", "Venus", "Jupiter"] },
@@ -2355,6 +2361,11 @@ function SpeedQuizGame({ gameId, onScore, onEnd, score, yearLevel = 7, difficult
       { q: "What do we call a baby frog?", a: "Tadpole", opts: ["Cub", "Tadpole", "Kitten", "Chick"] },
       { q: "Which material is magnetic?", a: "Iron", opts: ["Wood", "Iron", "Plastic", "Paper"] },
       { q: "What is the Sun?", a: "A star", opts: ["A planet", "A star", "A moon", "A comet"] },
+      { q: "What do we call animals that eat only plants?", a: "Herbivores", opts: ["Carnivores", "Herbivores", "Omnivores", "Predators"] },
+      { q: "Which planet is famous for its rings?", a: "Saturn", opts: ["Mars", "Saturn", "Mercury", "Venus"] },
+      { q: "What gas do we need to breathe in?", a: "Oxygen", opts: ["Carbon dioxide", "Oxygen", "Helium", "Hydrogen"] },
+      { q: "Which part of a plant makes seeds?", a: "Flower", opts: ["Root", "Stem", "Flower", "Leaf"] },
+      { q: "What is the closest star to Earth?", a: "The Sun", opts: ["The Moon", "The Sun", "Mars", "Sirius"] },
     ],
     5: [
       { q: "What gas do plants breathe in?", a: "Carbon dioxide", opts: ["Oxygen", "Carbon dioxide", "Nitrogen", "Helium"] },
@@ -2367,6 +2378,11 @@ function SpeedQuizGame({ gameId, onScore, onEnd, score, yearLevel = 7, difficult
       { q: "What is the hardest natural material?", a: "Diamond", opts: ["Gold", "Diamond", "Iron", "Glass"] },
       { q: "Which part of the body controls thinking?", a: "Brain", opts: ["Heart", "Brain", "Lungs", "Bones"] },
       { q: "What causes day and night?", a: "Earth spinning", opts: ["The Moon", "Earth spinning", "Clouds", "The Sun moving"] },
+      { q: "What do we call animals with a backbone?", a: "Vertebrates", opts: ["Invertebrates", "Vertebrates", "Mammals", "Insects"] },
+      { q: "Which force slows down a sliding object?", a: "Friction", opts: ["Gravity", "Friction", "Magnetism", "Thrust"] },
+      { q: "How long does Earth take to orbit the Sun?", a: "1 year", opts: ["1 day", "1 month", "1 year", "10 years"] },
+      { q: "What do we call water turning into a gas?", a: "Evaporation", opts: ["Condensation", "Evaporation", "Freezing", "Melting"] },
+      { q: "Which organ do fish use to breathe?", a: "Gills", opts: ["Lungs", "Gills", "Skin", "Fins"] },
     ],
     6: [
       { q: "What is the boiling point of water?", a: "100°C", opts: ["50°C", "100°C", "200°C", "0°C"] },
@@ -2379,6 +2395,11 @@ function SpeedQuizGame({ gameId, onScore, onEnd, score, yearLevel = 7, difficult
       { q: "What gives plants their green colour?", a: "Chlorophyll", opts: ["Cellulose", "Chlorophyll", "Carbon", "Calcium"] },
       { q: "What is the freezing point of water?", a: "0°C", opts: ["-10°C", "0°C", "10°C", "32°C"] },
       { q: "Which planet is known as the Red Planet?", a: "Mars", opts: ["Venus", "Mars", "Jupiter", "Saturn"] },
+      { q: "What do we call molten rock under the ground?", a: "Magma", opts: ["Lava", "Magma", "Ash", "Crystal"] },
+      { q: "Which blood cells fight infection?", a: "White blood cells", opts: ["Red blood cells", "White blood cells", "Platelets", "Plasma"] },
+      { q: "Which planet is the largest?", a: "Jupiter", opts: ["Saturn", "Jupiter", "Neptune", "Earth"] },
+      { q: "What is a group of the same atoms called?", a: "Element", opts: ["Mixture", "Element", "Compound", "Solution"] },
+      { q: "What do we call the path a planet takes around the Sun?", a: "Orbit", opts: ["Axis", "Orbit", "Rotation", "Gravity"] },
     ],
     7: [
       { q: "Symbol 'Fe' is which element?", a: "Iron", opts: ["Iron", "Fluorine", "Fermium", "Francium"] },
@@ -2391,6 +2412,11 @@ function SpeedQuizGame({ gameId, onScore, onEnd, score, yearLevel = 7, difficult
       { q: "Lightest element?", a: "Hydrogen", opts: ["Helium", "Hydrogen", "Lithium", "Carbon"] },
       { q: "What is photosynthesis?", a: "Plants making food from sunlight", opts: ["Plants making food from sunlight", "Animals breathing", "Rocks forming", "Water evaporating"] },
       { q: "What particle has a negative charge?", a: "Electron", opts: ["Proton", "Electron", "Neutron", "Photon"] },
+      { q: "What is the charge of a neutron?", a: "Neutral", opts: ["Positive", "Negative", "Neutral", "Changing"] },
+      { q: "Which organ filters waste from your blood?", a: "Kidney", opts: ["Liver", "Kidney", "Lung", "Heart"] },
+      { q: "What type of energy does a moving object have?", a: "Kinetic", opts: ["Potential", "Kinetic", "Chemical", "Thermal"] },
+      { q: "Which planet appears to spin on its side?", a: "Uranus", opts: ["Neptune", "Uranus", "Saturn", "Mars"] },
+      { q: "What is the chemical formula for table salt?", a: "NaCl", opts: ["NaCl", "KCl", "HCl", "NaOH"] },
     ],
     8: [
       { q: "What is the pH of a neutral solution?", a: "7", opts: ["0", "7", "14", "1"] },
@@ -2403,6 +2429,23 @@ function SpeedQuizGame({ gameId, onScore, onEnd, score, yearLevel = 7, difficult
       { q: "DNA stands for?", a: "Deoxyribonucleic acid", opts: ["Deoxyribonucleic acid", "Dynamic nuclear acid", "Dual nitrogen acid", "Direct nucleic acid"] },
       { q: "What is the unit of force?", a: "Newton", opts: ["Joule", "Newton", "Watt", "Pascal"] },
       { q: "Which gas makes up most of our atmosphere?", a: "Nitrogen", opts: ["Oxygen", "Nitrogen", "Carbon dioxide", "Argon"] },
+      { q: "What is the SI unit of energy?", a: "Joule", opts: ["Newton", "Joule", "Watt", "Pascal"] },
+      { q: "Which subatomic particle decides which element an atom is?", a: "Protons", opts: ["Electrons", "Protons", "Neutrons", "Photons"] },
+      { q: "What is Newton's second law?", a: "F = ma", opts: ["E = mc²", "F = ma", "V = IR", "PV = nRT"] },
+      { q: "How do plants lose water through their leaves?", a: "Transpiration", opts: ["Respiration", "Transpiration", "Digestion", "Condensation"] },
+      { q: "What does Ohm's law state?", a: "V = IR", opts: ["V = IR", "F = ma", "E = mc²", "P = IV"] },
+    ],
+    9: [
+      { q: "What is the acceleration due to gravity on Earth?", a: "9.8 m/s²", opts: ["1.6 m/s²", "9.8 m/s²", "100 m/s²", "3.7 m/s²"] },
+      { q: "What pH range do acids have?", a: "Below 7", opts: ["Below 7", "Exactly 7", "Above 7", "Above 14"] },
+      { q: "What is the chemical formula for carbon dioxide?", a: "CO₂", opts: ["CO", "CO₂", "C₂O", "CaCO₃"] },
+      { q: "Which molecule stores energy for use in cells?", a: "ATP", opts: ["DNA", "ATP", "RNA", "NaCl"] },
+      { q: "Which law says energy cannot be created or destroyed?", a: "Conservation of energy", opts: ["Newton's first law", "Conservation of energy", "Ohm's law", "Boyle's law"] },
+      { q: "What is the unit of frequency?", a: "Hertz", opts: ["Decibel", "Hertz", "Watt", "Joule"] },
+      { q: "What kind of reaction releases heat?", a: "Exothermic", opts: ["Endothermic", "Exothermic", "Neutral", "Catalytic"] },
+      { q: "Which group contains the most reactive metals?", a: "Alkali metals", opts: ["Noble gases", "Alkali metals", "Halogens", "Transition metals"] },
+      { q: "What force holds the nucleus of an atom together?", a: "Strong nuclear force", opts: ["Gravity", "Strong nuclear force", "Friction", "Magnetism"] },
+      { q: "What is the speed of light in a vacuum?", a: "300,000 km/s", opts: ["300 km/s", "30,000 km/s", "300,000 km/s", "3,000 km/s"] },
     ],
   };
 
@@ -2410,9 +2453,9 @@ function SpeedQuizGame({ gameId, onScore, onEnd, score, yearLevel = 7, difficult
   const elementQuestions = (questionsByYear[yr] || questionsByYear[7]);
 
   const quizSettings = {
-    easy: { time: 45, correctBonus: 5, wrongPenalty: 2 },
-    medium: { time: 30, correctBonus: 3, wrongPenalty: 3 },
-    hard: { time: 20, correctBonus: 2, wrongPenalty: 5 },
+    easy: { time: 45, correctBonus: 5, wrongPenalty: 1 },
+    medium: { time: 30, correctBonus: 3, wrongPenalty: 2 },
+    hard: { time: 20, correctBonus: 2, wrongPenalty: 3 },
   };
   const qs = quizSettings[difficulty];
   const [questions] = useState(() =>
@@ -2423,7 +2466,9 @@ function SpeedQuizGame({ gameId, onScore, onEnd, score, yearLevel = 7, difficult
   const [current, setCurrent] = useState(0);
   const [timeLeft, setTimeLeft] = useState(qs.time + extraTime);
   const [combo, setCombo] = useState(0);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const [review, setReview] = useState<{ chosen: string; correct: boolean; exp: string } | null>(null);
+  const reviewRef = useRef(false);
+  reviewRef.current = !!review;
   const [luckyUsesLeft, setLuckyUsesLeft] = useState(() => hasLuckyAnswer ? (1 + luckyAnswerLevel) : 0);
   const scoreRef = useRef(score);
   scoreRef.current = score;
@@ -2488,6 +2533,9 @@ function SpeedQuizGame({ gameId, onScore, onEnd, score, yearLevel = 7, difficult
 
   useEffect(() => {
     const timer = setInterval(() => {
+      // Pause the countdown while the player is reading the explanation —
+      // reviewing what you got wrong should never cost you time.
+      if (reviewRef.current) return;
       setTimeLeft((t) => {
         if (t <= 0) { clearInterval(timer); onEnd(scoreRef.current); return 0; }
         return t - 1;
@@ -2497,22 +2545,26 @@ function SpeedQuizGame({ gameId, onScore, onEnd, score, yearLevel = 7, difficult
   }, []);
 
   const answer = (choice: string) => {
+    if (review) return; // already answered this question — waiting for "Next"
     if (current >= questions.length) { onEnd(scoreRef.current); return; }
     const q = questions[current];
-    if (choice === q.a) {
+    const isCorrect = choice === q.a;
+    if (isCorrect) {
       const pts = 15 + combo * 5;
       onScore(pts);
       setCombo((c) => c + 1);
       setTimeLeft((t) => Math.min(t + qs.correctBonus, 60));
-      setFeedback(`Correct! +${qs.correctBonus}s`);
     } else {
       setCombo(0);
       setTimeLeft((t) => Math.max(t - qs.wrongPenalty, 0));
-      setFeedback(`Wrong! -${qs.wrongPenalty}s`);
     }
-    setTimeout(() => setFeedback(null), 500);
+    setReview({ chosen: choice, correct: isCorrect, exp: getQuizExplanation(q.q, q.a) });
+  };
+
+  const nextQuestion = () => {
+    setReview(null);
     if (current + 1 >= questions.length) {
-      setTimeout(() => onEnd(scoreRef.current), 600);
+      onEnd(scoreRef.current);
     } else {
       const nextQ = questions[current + 1];
       setFilteredOpts(nextQ.opts);
@@ -2538,8 +2590,8 @@ function SpeedQuizGame({ gameId, onScore, onEnd, score, yearLevel = 7, difficult
   return (
     <Card className="p-6 max-w-md mx-auto border-border">
       <div className="flex justify-between items-center mb-4">
-        <Badge variant={timeLeft < 10 ? "destructive" : "secondary"} className="font-bold">
-          <Timer className="w-3 h-3 mr-1" /> {timeLeft}s
+        <Badge variant={review ? "outline" : timeLeft < 10 ? "destructive" : "secondary"} className="font-bold">
+          <Timer className="w-3 h-3 mr-1" /> {review ? "paused" : `${timeLeft}s`}
         </Badge>
         <div className="flex gap-2 items-center">
           {hasLuckyAnswer && (
@@ -2571,19 +2623,44 @@ function SpeedQuizGame({ gameId, onScore, onEnd, score, yearLevel = 7, difficult
         <h3 className="text-lg font-bold">{q.q}</h3>
       </div>
 
-      {feedback && (
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`text-center font-bold mb-3 ${feedback.includes("Correct") ? "text-green-500" : "text-red-500"}`}>
-          {feedback}
-        </motion.p>
-      )}
-
       <div className="grid grid-cols-2 gap-2">
-        {filteredOpts.map((opt) => (
-          <Button key={opt} variant="outline" className="h-14 font-bold text-sm" onClick={() => answer(opt)} data-testid={`button-answer-${opt}`}>
-            {opt}
-          </Button>
-        ))}
+        {filteredOpts.map((opt) => {
+          const isAnswer = opt === q.a;
+          const isChosen = review?.chosen === opt;
+          let stateClass = "";
+          if (review) {
+            if (isAnswer) stateClass = "bg-green-500 text-white border-green-500 hover:bg-green-500";
+            else if (isChosen) stateClass = "bg-red-500 text-white border-red-500 hover:bg-red-500";
+            else stateClass = "opacity-50";
+          }
+          return (
+            <Button
+              key={opt}
+              variant="outline"
+              className={`h-14 font-bold text-sm ${stateClass}`}
+              disabled={!!review}
+              onClick={() => answer(opt)}
+              data-testid={`button-answer-${opt}`}
+            >
+              {opt}
+            </Button>
+          );
+        })}
       </div>
+
+      {review && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4">
+          <div className={`rounded-xl p-3 text-sm ${review.correct ? "bg-green-500/10 text-green-700 dark:text-green-300" : "bg-amber-500/10 text-amber-700 dark:text-amber-300"}`}>
+            <p className="font-bold mb-1" data-testid="text-quiz-verdict">
+              {review.correct ? "✅ Correct!" : `Not quite — the answer is "${q.a}"`}
+            </p>
+            <p className="opacity-90"><span className="font-semibold">Why? </span>{review.exp}</p>
+          </div>
+          <Button className="w-full mt-3 font-bold" onClick={nextQuestion} data-testid="button-quiz-next">
+            {current + 1 >= questions.length ? "Finish" : "Next →"}
+          </Button>
+        </motion.div>
+      )}
     </Card>
   );
 }

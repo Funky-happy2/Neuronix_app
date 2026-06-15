@@ -218,7 +218,7 @@ export default function TournamentsPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       toast({
         title: "Score Submitted!",
-        description: `+${data.rewards?.xp || 0} XP, +${data.rewards?.coins || 0} Coins`,
+        description: `+${data.rewards?.xp || 0} XP, +${data.rewards?.coins || 0} Neuros`,
       });
     },
     onError: (e: any) => toast({ title: "Error submitting score", description: e.message, variant: "destructive" }),

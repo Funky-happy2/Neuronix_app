@@ -132,23 +132,23 @@ type Tab = "individual" | "clans" | "teams" | "streaks" | "tournaments";
 
 const SORT_OPTIONS: { key: SortKey; label: string; icon: LucideIcon }[] = [
   { key: "xp", label: "XP", icon: Star },
-  { key: "coins", label: "Coins", icon: Coins },
-  { key: "gems", label: "Gems", icon: Gem },
+  { key: "coins", label: "Neuros", icon: Coins },
+  { key: "gems", label: "Sparks", icon: Gem },
   { key: "badges", label: "Badges", icon: Award },
   { key: "inventory", label: "Items", icon: Diamond },
 ];
 
 const CLAN_SORT_OPTIONS: { key: string; label: string; icon: LucideIcon }[] = [
   { key: "totalXP", label: "XP", icon: Star },
-  { key: "totalCoins", label: "Coins", icon: Coins },
-  { key: "totalGems", label: "Gems", icon: Gem },
+  { key: "totalCoins", label: "Neuros", icon: Coins },
+  { key: "totalGems", label: "Sparks", icon: Gem },
   { key: "totalBadges", label: "Badges", icon: Award },
   { key: "memberCount", label: "Members", icon: Users },
 ];
 
 const TEAM_SORT_OPTIONS: { key: string; label: string; icon: LucideIcon }[] = [
   { key: "totalXP", label: "XP", icon: Star },
-  { key: "totalCoins", label: "Coins", icon: Coins },
+  { key: "totalCoins", label: "Neuros", icon: Coins },
   { key: "totalBadges", label: "Badges", icon: Award },
   { key: "memberCount", label: "Members", icon: Users },
 ];
@@ -167,8 +167,8 @@ const CHAMPION_ITEM_LABELS: Record<string, string> = {
   "frame-supreme-champion": "Supreme Champion Frame",
   "follower-supreme-champion": "Supreme Champion Follower",
   "badge-style-supreme-champion": "Supreme Champion Badge Style",
-  "coin-style-supreme-champion": "Supreme Champion Coin Style",
-  "gem-style-supreme-champion": "Supreme Champion Gem Style",
+  "coin-style-supreme-champion": "Supreme Champion Neuro Style",
+  "gem-style-supreme-champion": "Supreme Champion Spark Style",
   "title-clan-1st": "Clan Champion Title",
   "theme-clan-champion": "Clan Champion Theme",
   "avatar-clan-champion": "Clan Champion Avatar",
@@ -176,8 +176,8 @@ const CHAMPION_ITEM_LABELS: Record<string, string> = {
   "frame-clan-champion": "Clan Champion Frame",
   "follower-clan-champion": "Clan Champion Follower",
   "badge-style-clan-champion": "Clan Champion Badge Style",
-  "coin-style-clan-champion": "Clan Champion Coin Style",
-  "gem-style-clan-champion": "Clan Champion Gem Style",
+  "coin-style-clan-champion": "Clan Champion Neuro Style",
+  "gem-style-clan-champion": "Clan Champion Spark Style",
   "title-team-1st": "Team Champion Title",
   "theme-team-champion": "Team Champion Theme",
   "avatar-team-champion": "Team Champion Avatar",
@@ -185,8 +185,8 @@ const CHAMPION_ITEM_LABELS: Record<string, string> = {
   "frame-team-champion": "Team Champion Frame",
   "follower-team-champion": "Team Champion Follower",
   "badge-style-team-champion": "Team Champion Badge Style",
-  "coin-style-team-champion": "Team Champion Coin Style",
-  "gem-style-team-champion": "Team Champion Gem Style",
+  "coin-style-team-champion": "Team Champion Neuro Style",
+  "gem-style-team-champion": "Team Champion Spark Style",
 };
 
 export default function LeaderboardPage() {

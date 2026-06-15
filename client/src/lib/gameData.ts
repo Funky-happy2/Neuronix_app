@@ -752,7 +752,7 @@ export const GAME_MODES: GameMode[] = [
   },
   {
     id: "gem-cutter",
-    name: "Gem Cutter",
+    name: "Spark Cutter",
     description: "Rotate crystal facets to align light paths through the gem! Cut the perfect gemstone by connecting all light beams!",
     scienceConcept: "Light refraction, crystal geometry, optical properties of minerals",
     category: "Physics",
@@ -762,7 +762,7 @@ export const GAME_MODES: GameMode[] = [
     howToPlay: "Click tiles to rotate crystal facets. Create a connected light path through the gem before time runs out!",
     scoring: "50 pts per solved gem, bonus for speed",
     levelProgression: "More complex facet patterns",
-    reward: "Gem Cutter Badge",
+    reward: "Spark Cutter Badge",
     isSecret: false,
     gameType: "pipe_puzzle",
     world: "crystal-caverns",
@@ -2273,7 +2273,7 @@ export const BADGES: BadgeInfo[] = [
   { id: "star-memory-badge", name: "Star Navigator", description: "Score 200+ in Star Memory", icon: "Star", color: "hsl(250, 75%, 55%)", requirement: "Score 200 or more in Star Memory", rarity: "uncommon", topic: "games" },
   { id: "reactor-clicks-badge", name: "Reactor Operator", description: "Score 200+ in Reactor Clicks", icon: "Atom", color: "hsl(270, 80%, 55%)", requirement: "Score 200 or more in Reactor Clicks", rarity: "uncommon", topic: "games" },
   { id: "crystal-match-badge", name: "Crystal Matcher", description: "Score 200+ in Crystal Match", icon: "Diamond", color: "hsl(320, 75%, 55%)", requirement: "Score 200 or more in Crystal Match", rarity: "uncommon", topic: "games" },
-  { id: "gem-cutter-badge", name: "Gem Cutter", description: "Score 200+ in Gem Cutter", icon: "Diamond", color: "hsl(290, 70%, 55%)", requirement: "Score 200 or more in Gem Cutter", rarity: "uncommon", topic: "games" },
+  { id: "gem-cutter-badge", name: "Spark Cutter", description: "Score 200+ in Spark Cutter", icon: "Diamond", color: "hsl(290, 70%, 55%)", requirement: "Score 200 or more in Spark Cutter", rarity: "uncommon", topic: "games" },
   { id: "mineral-sort-badge", name: "Mineral Sorter", description: "Score 200+ in Mineral Sort", icon: "Layers", color: "hsl(310, 65%, 50%)", requirement: "Score 200 or more in Mineral Sort", rarity: "uncommon", topic: "games" },
   { id: "lightning-rod-badge", name: "Lightning Catcher", description: "Score 200+ in Lightning Rod", icon: "Zap", color: "hsl(50, 90%, 50%)", requirement: "Score 200 or more in Lightning Rod", rarity: "uncommon", topic: "games" },
   { id: "storm-runner-badge", name: "Storm Runner", description: "Score 200+ in Storm Runner", icon: "Wind", color: "hsl(45, 80%, 50%)", requirement: "Score 200 or more in Storm Runner", rarity: "uncommon", topic: "games" },
@@ -2346,9 +2346,9 @@ export const BADGES: BadgeInfo[] = [
   { id: "rebirth-veteran", name: "Rebirth Veteran", description: "Reach Rebirth Level 5", icon: "RotateCcw", color: "hsl(280, 85%, 55%)", requirement: "Rebirth 5 times", rarity: "epic", topic: "progression" },
   { id: "rebirth-master", name: "Rebirth Master", description: "Reach Rebirth Level 10", icon: "RotateCcw", color: "hsl(330, 85%, 50%)", requirement: "Rebirth 10 times", rarity: "legendary", topic: "progression" },
 
-  { id: "coin-saver", name: "Coin Saver", description: "Earn 1000 total coins", icon: "Coins", color: "hsl(42, 85%, 55%)", requirement: "Accumulate 1000 coins", rarity: "common", topic: "coins" },
-  { id: "coin-banker", name: "Coin Banker", description: "Earn 5000 total coins", icon: "Coins", color: "hsl(38, 90%, 50%)", requirement: "Accumulate 5000 coins", rarity: "uncommon", topic: "coins" },
-  { id: "coin-tycoon", name: "Coin Tycoon", description: "Earn 15000 total coins", icon: "Coins", color: "hsl(34, 95%, 45%)", requirement: "Accumulate 15000 coins", rarity: "rare", topic: "coins" },
+  { id: "coin-saver", name: "Neuro Saver", description: "Earn 1000 total coins", icon: "Neuros", color: "hsl(42, 85%, 55%)", requirement: "Accumulate 1000 coins", rarity: "common", topic: "coins" },
+  { id: "coin-banker", name: "Neuro Banker", description: "Earn 5000 total coins", icon: "Neuros", color: "hsl(38, 90%, 50%)", requirement: "Accumulate 5000 coins", rarity: "uncommon", topic: "coins" },
+  { id: "coin-tycoon", name: "Neuro Tycoon", description: "Earn 15000 total coins", icon: "Neuros", color: "hsl(34, 95%, 45%)", requirement: "Accumulate 15000 coins", rarity: "rare", topic: "coins" },
   { id: "shopkeeper", name: "Shopkeeper", description: "Buy every item in the shop!", icon: "ShoppingCart", color: "hsl(50, 90%, 50%)", requirement: "Purchase all shop items", rarity: "legendary", topic: "coins" },
 
   { id: "badge-collector", name: "Badge Collector", description: "Earn 5 different badges", icon: "Award", color: "hsl(280, 70%, 60%)", requirement: "Collect 5 badges", rarity: "common", topic: "collection" },
@@ -2455,7 +2455,7 @@ export const SHOP_AVATARS: { id: string; name: string; icon: string; source?: st
   { id: "reward-tournament-avatar", name: "Tournament Victor", icon: "Medal", source: "Win a Tournament", category: "tournament" },
   { id: "avatar-clan-champion", name: "Clan Champion", icon: "Globe", source: "Lead the #1 Ranked Clan", category: "leaderboard" },
   { id: "avatar-team-champion", name: "Team Champion", icon: "Users", source: "Lead the #1 Ranked Team", category: "leaderboard" },
-  { id: "avatar-supreme-champion", name: "Supreme Champion", icon: "Gem", source: "Reach #1 on Leaderboard", category: "leaderboard" },
+  { id: "avatar-supreme-champion", name: "Supreme Champion", icon: "Spark", source: "Reach #1 on Leaderboard", category: "leaderboard" },
 ];
 
 export function getXPForLevel(level: number): number {
@@ -2550,9 +2550,9 @@ export const POTIONS: PotionDef[] = [
   },
   {
     id: "potion-coin-small",
-    name: "Coin Brew",
+    name: "Neuro Brew",
     description: "Earn 1.5x coins for 10 minutes",
-    icon: "Coins",
+    icon: "Neuros",
     color: "from-yellow-500 to-amber-600",
     effectType: "coin_boost",
     multiplier: 150,
@@ -2567,7 +2567,7 @@ export const POTIONS: PotionDef[] = [
     id: "potion-coin-large",
     name: "Gold Rush",
     description: "Earn 2x coins for 15 minutes",
-    icon: "Coins",
+    icon: "Neuros",
     color: "from-amber-500 to-orange-600",
     effectType: "coin_boost",
     multiplier: 200,
@@ -2655,9 +2655,9 @@ export const POTIONS: PotionDef[] = [
   },
   {
     id: "potion-coin-mega",
-    name: "Coin Tsunami",
+    name: "Neuro Tsunami",
     description: "Earn 4x coins for 5 minutes",
-    icon: "Coins",
+    icon: "Neuros",
     color: "from-yellow-600 to-orange-700",
     effectType: "coin_boost",
     multiplier: 400,

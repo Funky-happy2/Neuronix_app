@@ -587,7 +587,7 @@ export const BOSS_QUESTIONS_BY_YEAR: Record<string, Record<number, BossQ[]>> = {
       { question: "Diamonds are made of...", options: ["Glass", "Carbon atoms", "Metal", "Sand"], correct: 1, explanation: "Diamonds are pure carbon atoms arranged in an incredibly strong crystal structure!" },
       { question: "Where do crystals grow?", options: ["Only in labs", "In rocks, caves, and even at home", "Only in space", "Only underwater"], correct: 1, explanation: "Crystals form naturally in rocks and caves, and you can even grow some at home!" },
       { question: "What shape do salt crystals have?", options: ["Round", "Cube shaped", "Triangle", "Star shaped"], correct: 1, explanation: "Table salt (sodium chloride) naturally forms perfect little cube-shaped crystals!" },
-      { question: "Gems and minerals are...", options: ["The same thing", "Gems are special beautiful minerals", "Not related", "Both fake"], correct: 1, explanation: "Gems are minerals that are especially beautiful, rare, and durable enough for jewelry!" },
+      { question: "Sparks and minerals are...", options: ["The same thing", "Sparks are special beautiful minerals", "Not related", "Both fake"], correct: 1, explanation: "Sparks are minerals that are especially beautiful, rare, and durable enough for jewelry!" },
       { question: "Rocks are made of...", options: ["Just dirt", "One or more minerals", "Water", "Air"], correct: 1, explanation: "Rocks are made of one or more minerals combined together!" },
     ],
     6: [

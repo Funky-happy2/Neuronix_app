@@ -468,14 +468,14 @@ function BossFight({ boss, bossForm, onComplete, onBack, yearLevel = 7, isReplay
                   +{bossForm.mutationLevel === 0 ? 500 : bossForm.mutationLevel === 1 ? 750 : 1500} XP
                 </Badge>
                 <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30 font-bold">
-                  +{bossForm.mutationLevel === 0 ? 100 : bossForm.mutationLevel === 1 ? 200 : 500} Coins
+                  +{bossForm.mutationLevel === 0 ? 100 : bossForm.mutationLevel === 1 ? 200 : 500} Neuros
                 </Badge>
                 <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 font-bold">
                   {bossForm.badgeId.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase())} Badge
                 </Badge>
                 {bossForm.mutationLevel >= 2 && (
                   <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 font-bold">
-                    +5 Gems
+                    +5 Sparks
                   </Badge>
                 )}
               </div>
@@ -944,24 +944,24 @@ export default function BossesPage({ onAddXP, onAddCoins, onEarnBadge, onDefeatB
 
                   <div className="flex items-center gap-2 mb-1 text-xs">
                     <Trophy className="w-4 h-4 text-yellow-300" />
-                    <span className="font-bold text-yellow-200">{form.reward} + {form.mutationLevel === 0 ? 100 : form.mutationLevel === 1 ? 200 : 500} Coins</span>
+                    <span className="font-bold text-yellow-200">{form.reward} + {form.mutationLevel === 0 ? 100 : form.mutationLevel === 1 ? 200 : 500} Neuros</span>
                   </div>
                   {form.mutationLevel >= 2 && (
                     <div className="flex items-center gap-2 mb-4 text-xs">
                       <Gem className="w-4 h-4 text-cyan-300" />
-                      <span className="font-bold text-cyan-200">Defeat {form.name} to earn 5 Gems + Omega Slayer Title!</span>
+                      <span className="font-bold text-cyan-200">Defeat {form.name} to earn 5 Sparks + Omega Slayer Title!</span>
                     </div>
                   )}
                   {form.mutationLevel === 0 && boss.mutations.length >= 2 && (
                     <div className="flex items-center gap-2 mb-4 text-xs">
                       <Sparkles className="w-4 h-4 text-purple-300/70" />
-                      <span className="font-semibold text-white/50">Defeat all mutations to unlock the Omega form for 5 Gems + rewards!</span>
+                      <span className="font-semibold text-white/50">Defeat all mutations to unlock the Omega form for 5 Sparks + rewards!</span>
                     </div>
                   )}
                   {form.mutationLevel === 1 && (
                     <div className="flex items-center gap-2 mb-4 text-xs">
                       <Sparkles className="w-4 h-4 text-purple-300/70" />
-                      <span className="font-semibold text-white/50">One more mutation to reach the Omega form - 5 Gems await!</span>
+                      <span className="font-semibold text-white/50">One more mutation to reach the Omega form - 5 Sparks await!</span>
                     </div>
                   )}
                   {form.mutationLevel < 2 && boss.mutations.length < 2 && <div className="mb-3" />}
@@ -1135,12 +1135,12 @@ export default function BossesPage({ onAddXP, onAddCoins, onEarnBadge, onDefeatB
 
                       <div className="flex items-center gap-2 mb-1 text-xs">
                         <Trophy className="w-4 h-4 text-yellow-300" />
-                        <span className="font-bold text-yellow-200">{form.reward} + {form.mutationLevel === 0 ? 100 : form.mutationLevel === 1 ? 200 : 500} Coins</span>
+                        <span className="font-bold text-yellow-200">{form.reward} + {form.mutationLevel === 0 ? 100 : form.mutationLevel === 1 ? 200 : 500} Neuros</span>
                       </div>
                       {form.mutationLevel >= 2 && (
                         <div className="flex items-center gap-2 mb-4 text-xs">
                           <Gem className="w-4 h-4 text-cyan-300" />
-                          <span className="font-bold text-cyan-200">Defeat {form.name} (Omega) to earn 5 Gems + Omega Slayer Title!</span>
+                          <span className="font-bold text-cyan-200">Defeat {form.name} (Omega) to earn 5 Sparks + Omega Slayer Title!</span>
                         </div>
                       )}
                       {form.mutationLevel < 2 && <div className="mb-3" />}

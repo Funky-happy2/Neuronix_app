@@ -429,14 +429,14 @@ function WorldBossFight({ boss, bossForm, onComplete, onBack, yearLevel = 7, has
                   +{bossForm.mutationLevel === 0 ? 500 : bossForm.mutationLevel === 1 ? 750 : 1500} XP
                 </Badge>
                 <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30 font-bold">
-                  +{bossForm.mutationLevel === 0 ? 100 : bossForm.mutationLevel === 1 ? 200 : 500} Coins
+                  +{bossForm.mutationLevel === 0 ? 100 : bossForm.mutationLevel === 1 ? 200 : 500} Neuros
                 </Badge>
                 <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 font-bold">
                   {bossForm.badgeId.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase())} Badge
                 </Badge>
                 {bossForm.mutationLevel >= 2 && (
                   <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 font-bold">
-                    +5 Gems
+                    +5 Sparks
                   </Badge>
                 )}
               </div>
@@ -1191,7 +1191,7 @@ export default function WorldsPage() {
                 const category = shopItem?.category || (itemId.startsWith("theme-") ? "theme" : itemId.startsWith("avatar-") ? "avatar" : "decoration");
                 const ItemIcon = SHOP_ICON_MAP[shopItem?.icon] || ShoppingBag;
                 const CategoryIcon = CATEGORY_ICONS[category] || ShoppingBag;
-                const categoryLabel: Record<string, string> = { theme: "UI Theme", avatar: "Avatar Skin", decoration: "Screen Effect", follower: "Mouse Trail", frame: "Profile Frame", coin_style: "Coin Style", gem_style: "Gem Style", badge_style: "Badge Style", title: "Title" };
+                const categoryLabel: Record<string, string> = { theme: "UI Theme", avatar: "Avatar Skin", decoration: "Screen Effect", follower: "Mouse Trail", frame: "Profile Frame", coin_style: "Neuro Style", gem_style: "Spark Style", badge_style: "Badge Style", title: "Title" };
                 const categoryDesc: Record<string, string> = {
                   theme: "Changes your app colors and accent tones",
                   avatar: "A unique profile avatar only from this world",

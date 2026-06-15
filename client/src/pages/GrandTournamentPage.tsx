@@ -235,10 +235,10 @@ export default function GrandTournamentPage() {
             </h2>
             <div className="flex items-center justify-center gap-8 text-lg flex-wrap">
               <span className="flex items-center gap-1 text-yellow-400 font-bold" data-testid="text-prize-coins">
-                <Coins className="w-5 h-5" /> {totalPrizePool.coins.toLocaleString()} Coins
+                <Coins className="w-5 h-5" /> {totalPrizePool.coins.toLocaleString()} Neuros
               </span>
               <span className="flex items-center gap-1 text-purple-400 font-bold" data-testid="text-prize-gems">
-                <Gem className="w-5 h-5" /> {totalPrizePool.gems} Gems
+                <Gem className="w-5 h-5" /> {totalPrizePool.gems} Sparks
               </span>
               <span className="flex items-center gap-1 text-cyan-400 font-bold" data-testid="text-prize-xp">
                 <Zap className="w-5 h-5" /> {totalPrizePool.xp.toLocaleString()} XP
