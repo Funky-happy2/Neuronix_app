@@ -1,0 +1,9 @@
+node_modules
+dist
+.git
+.DS_Store
+*.log
+server.log
+neuronix_backup.sql
+attached_assets
+*.tar.gz
