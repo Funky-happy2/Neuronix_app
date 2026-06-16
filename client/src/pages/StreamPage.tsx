@@ -138,7 +138,7 @@ export default function StreamPage() {
 
       if (msg.type === "stream_reward") {
         if (msg.gems > 0) {
-          toast({ title: "Streaming reward! 💎", description: `You earned ${msg.gems} gems for streaming ${msg.minutes} min!` });
+          toast({ title: "Streaming reward! 💎", description: `You earned ${msg.gems} Sparks for streaming ${msg.minutes} min!` });
           queryClient.invalidateQueries({ queryKey: ["/api/user"] });
         }
         if (msg.endedByAdmin) {

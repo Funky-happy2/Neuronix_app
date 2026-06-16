@@ -1131,7 +1131,7 @@ export default function LabPage({ onAddXP, onEarnBadge }: LabPageProps) {
       const res = await apiRequest("POST", "/api/experiment/complete", { experimentId, gemUpgradesDisabled });
       const data = await res.json();
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      let desc = `You earned ${data.rewards.xp} XP and ${data.rewards.coins} coins!`;
+      let desc = `You earned ${data.rewards.xp} XP and ${data.rewards.coins} Neuros!`;
       const ups = data.rewards.activeUpgrades || [];
       if (ups.includes("upgrade-lab-mastery")) desc += ` (Lab Mastery 3x boost!)`;
       if (data.rewards.badgesEarned && data.rewards.badgesEarned.length > 0) {

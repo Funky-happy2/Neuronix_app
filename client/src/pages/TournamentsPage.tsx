@@ -992,8 +992,8 @@ function TournamentPlay({ tournament, onFinish, userId, userYearLevel }: { tourn
       return res.json();
     },
     onSuccess: (data) => {
-      const parts = [`${data.rewards.xp} XP`, `${data.rewards.coins} coins`];
-      if (data.rewards.gems > 0) parts.push(`${data.rewards.gems} gems`);
+      const parts = [`${data.rewards.xp} XP`, `${data.rewards.coins} Neuros`];
+      if (data.rewards.gems > 0) parts.push(`${data.rewards.gems} Sparks`);
       if (data.rewards.tournamentXp > 0) parts.push(`${data.rewards.tournamentXp} Tournament XP`);
       const rankText = data.rewards.rank ? ` Rank #${data.rewards.rank}!` : "";
       const noteText = data.rewards.note ? ` ${data.rewards.note}` : "";

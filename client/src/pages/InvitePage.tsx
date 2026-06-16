@@ -43,7 +43,7 @@ export default function InvitePage() {
             <Users className="w-8 h-8 text-purple-500" /> Invite Friends
           </h1>
           <p className="text-muted-foreground font-medium">
-            Share your personal invite link. When a friend signs up using it, you both get <strong>100 coins</strong>!
+            Share your personal invite link. When a friend signs up using it, you both get <strong>100 Neuros</strong>!
           </p>
         </div>
 
@@ -108,7 +108,7 @@ export default function InvitePage() {
             <li>Copy your personal invite link above</li>
             <li>Share it with a friend who hasn't joined Neuronix yet</li>
             <li>They sign up using your link</li>
-            <li>You <strong>both</strong> get 100 coins instantly!</li>
+            <li>You <strong>both</strong> get 100 Neuros instantly!</li>
             <li>You can invite up to 4 friends total</li>
           </ol>
         </Card>

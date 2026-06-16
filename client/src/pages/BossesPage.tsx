@@ -475,7 +475,7 @@ function BossFight({ boss, bossForm, onComplete, onBack, yearLevel = 7, isReplay
                 </Badge>
                 {bossForm.mutationLevel >= 2 && (
                   <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 font-bold">
-                    +5 Sparks
+                    +2 Sparks
                   </Badge>
                 )}
               </div>
@@ -824,8 +824,8 @@ export default function BossesPage({ onAddXP, onAddCoins, onEarnBadge, onDefeatB
                 const data = await r.json();
                 const parts: string[] = [];
                 if (data.xpEarned > 0) parts.push(`${data.xpEarned} XP`);
-                if (data.coinsEarned > 0) parts.push(`${data.coinsEarned} coins`);
-                if (data.gemsEarned > 0) parts.push(`${data.gemsEarned} gems`);
+                if (data.coinsEarned > 0) parts.push(`${data.coinsEarned} Neuros`);
+                if (data.gemsEarned > 0) parts.push(`${data.gemsEarned} Sparks`);
                 if (data.itemsAwarded?.length > 0) parts.push(`${data.itemsAwarded.length} reward item${data.itemsAwarded.length > 1 ? "s" : ""}`);
                 if (data.badgesAwarded?.length > 0) parts.push(`${data.badgesAwarded.length} badge${data.badgesAwarded.length > 1 ? "s" : ""}`);
                 if (parts.length > 0) {
@@ -835,7 +835,7 @@ export default function BossesPage({ onAddXP, onAddCoins, onEarnBadge, onDefeatB
               })
               .catch(() => {});
           } else if (!won) {
-            toast({ title: "Defeated!", description: challengeFee > 0 ? `You lost ${challengeFee} coins! Train harder and try again!` : "Train harder and try again!", variant: "destructive" });
+            toast({ title: "Defeated!", description: challengeFee > 0 ? `You lost ${challengeFee} Neuros! Train harder and try again!` : "Train harder and try again!", variant: "destructive" });
           }
           setFightingBoss(null);
           setFightingForm(null);
@@ -949,19 +949,19 @@ export default function BossesPage({ onAddXP, onAddCoins, onEarnBadge, onDefeatB
                   {form.mutationLevel >= 2 && (
                     <div className="flex items-center gap-2 mb-4 text-xs">
                       <Gem className="w-4 h-4 text-cyan-300" />
-                      <span className="font-bold text-cyan-200">Defeat {form.name} to earn 5 Sparks + Omega Slayer Title!</span>
+                      <span className="font-bold text-cyan-200">Defeat {form.name} to earn 2 Sparks + Omega Slayer Title!</span>
                     </div>
                   )}
                   {form.mutationLevel === 0 && boss.mutations.length >= 2 && (
                     <div className="flex items-center gap-2 mb-4 text-xs">
                       <Sparkles className="w-4 h-4 text-purple-300/70" />
-                      <span className="font-semibold text-white/50">Defeat all mutations to unlock the Omega form for 5 Sparks + rewards!</span>
+                      <span className="font-semibold text-white/50">Defeat all mutations to unlock the Omega form for 2 Sparks + rewards!</span>
                     </div>
                   )}
                   {form.mutationLevel === 1 && (
                     <div className="flex items-center gap-2 mb-4 text-xs">
                       <Sparkles className="w-4 h-4 text-purple-300/70" />
-                      <span className="font-semibold text-white/50">One more mutation to reach the Omega form - 5 Sparks await!</span>
+                      <span className="font-semibold text-white/50">One more mutation to reach the Omega form - 2 Sparks await!</span>
                     </div>
                   )}
                   {form.mutationLevel < 2 && boss.mutations.length < 2 && <div className="mb-3" />}
@@ -1140,7 +1140,7 @@ export default function BossesPage({ onAddXP, onAddCoins, onEarnBadge, onDefeatB
                       {form.mutationLevel >= 2 && (
                         <div className="flex items-center gap-2 mb-4 text-xs">
                           <Gem className="w-4 h-4 text-cyan-300" />
-                          <span className="font-bold text-cyan-200">Defeat {form.name} (Omega) to earn 5 Sparks + Omega Slayer Title!</span>
+                          <span className="font-bold text-cyan-200">Defeat {form.name} (Omega) to earn 2 Sparks + Omega Slayer Title!</span>
                         </div>
                       )}
                       {form.mutationLevel < 2 && <div className="mb-3" />}
@@ -1240,7 +1240,7 @@ export default function BossesPage({ onAddXP, onAddCoins, onEarnBadge, onDefeatB
           </li>
           <li className="flex items-start gap-2">
             <Coins className="w-4 h-4 flex-shrink-0 mt-0.5 text-yellow-500" />
-            <span>Boss challenges cost coins to enter (10 + 5 per mutation level). If you lose, the coins are gone! Win to earn big rewards.</span>
+            <span>Boss challenges cost Neuros to enter (10 + 5 per mutation level). If you lose, the Neuros are gone! Win to earn big rewards.</span>
           </li>
         </ul>
       </Card>

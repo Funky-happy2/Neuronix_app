@@ -30,7 +30,7 @@ const STEPS: TutorialStep[] = [
     gradient: "from-purple-600 to-blue-600",
     bullets: [
       { icon: Zap, text: "Earn XP to level up and unlock exclusive content" },
-      { icon: Coins, text: "Collect coins and gems to spend in the shop" },
+      { icon: Coins, text: "Collect Neuros and Sparks to spend in the shop" },
       { icon: Star, text: "Earn badges by completing challenges and milestones" },
     ],
   },
@@ -41,7 +41,7 @@ const STEPS: TutorialStep[] = [
     gradient: "from-blue-500 to-cyan-500",
     bullets: [
       { icon: Target, text: "Filter games by subject, difficulty, or year level" },
-      { icon: Trophy, text: "Score high to earn XP, coins, and badges" },
+      { icon: Trophy, text: "Score high to earn XP, Neuros, and badges" },
       { icon: Star, text: "Some games unlock special shop items when mastered" },
     ],
   },
@@ -62,7 +62,7 @@ const STEPS: TutorialStep[] = [
     icon: Map,
     gradient: "from-cyan-500 to-emerald-500",
     bullets: [
-      { icon: Map, text: "Worlds unlock as you progress and spend coins/gems" },
+      { icon: Map, text: "Worlds unlock as you progress and spend Neuros/Sparks" },
       { icon: Swords, text: "Each world has a unique final boss to defeat" },
       { icon: ShoppingBag, text: "Exclusive themes, avatars, and decos per world" },
     ],
@@ -73,7 +73,7 @@ const STEPS: TutorialStep[] = [
     icon: Swords,
     gradient: "from-red-500 to-orange-500",
     bullets: [
-      { icon: Zap, text: "Each boss drops XP, coins, and sometimes gems" },
+      { icon: Zap, text: "Each boss drops XP, Neuros, and sometimes Sparks" },
       { icon: Star, text: "Defeating all bosses in a world unlocks special prizes" },
       { icon: Trophy, text: "Use boss battle powerups to gain an edge in fights" },
     ],
@@ -96,7 +96,7 @@ const STEPS: TutorialStep[] = [
     gradient: "from-violet-500 to-purple-600",
     bullets: [
       { icon: Users, text: "Find opponents from across the globe in real time" },
-      { icon: Trophy, text: "Win to earn coins and climb the PvP ranking" },
+      { icon: Trophy, text: "Win to earn Neuros and climb the PvP ranking" },
       { icon: Zap, text: "Use powerup items mid-match to turn the tide" },
     ],
   },
@@ -135,12 +135,12 @@ const STEPS: TutorialStep[] = [
   },
   {
     title: "Shop, Potions & Mystery Boxes",
-    description: "Spend your coins and gems on avatars, themes, decorations, potions, and mystery boxes!",
+    description: "Spend your Neuros and Sparks on avatars, themes, decorations, potions, and mystery boxes!",
     icon: ShoppingCart,
     gradient: "from-fuchsia-500 to-pink-500",
     bullets: [
       { icon: ShoppingBag, text: "Themes, avatars, and decos customise your profile" },
-      { icon: FlaskRound, text: "Potions give you XP or coin boosts for a limited time" },
+      { icon: FlaskRound, text: "Potions give you XP or Neuro boosts for a limited time" },
       { icon: Gift, text: "Mystery Boxes (Bronze/Silver/Gold) drop random rare items" },
     ],
   },
@@ -168,12 +168,12 @@ const STEPS: TutorialStep[] = [
   },
   {
     title: "Codes, Invites & Profile",
-    description: "Redeem gift codes for free rewards, invite friends for bonus coins, and build your profile!",
+    description: "Redeem gift codes for free rewards, invite friends for bonus Neuros, and build your profile!",
     icon: Gift,
     gradient: "from-green-500 to-emerald-600",
     bullets: [
-      { icon: Gift, text: "Redeem codes for coins, gems, potions, items, and more" },
-      { icon: Users, text: "Your unique invite link earns you 100 coins per friend" },
+      { icon: Gift, text: "Redeem codes for Neuros, Sparks, potions, items, and more" },
+      { icon: Users, text: "Your unique invite link earns you 100 Neuros per friend" },
       { icon: UserCircle, text: "Your profile shows stats, badges, inventory and scores" },
     ],
   },

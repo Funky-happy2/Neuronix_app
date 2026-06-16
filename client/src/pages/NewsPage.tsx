@@ -244,7 +244,7 @@ function PostComments({ postId, isAdmin, authorId, onViewProfile }: { postId: nu
         if (milestoneReached) {
           toast({ title: "🏆 Milestone Reached!", description: "Your boost helped the author unlock a new badge or reward!" });
         } else {
-          toast({ title: "Boosted! 💎", description: "You boosted this post — the author earned a gem!" });
+          toast({ title: "Boosted! 💎", description: "You boosted this post — the author earned a Spark!" });
         }
       } else {
         toast({ title: "Boost removed", description: "Your boost was removed." });

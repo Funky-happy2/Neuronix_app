@@ -443,7 +443,7 @@ function UsersTab() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      toast({ title: "Admin's Favourite badge granted with 500 coins!" });
+      toast({ title: "Admin's Favourite badge granted with 500 Neuros!" });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -783,7 +783,7 @@ function UsersTab() {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => { if (confirm(`Give ${user.username} the Admin's Favourite badge + 500 coins?`)) grantFavourite.mutate(user.id); }}
+                  onClick={() => { if (confirm(`Give ${user.username} the Admin's Favourite badge + 500 Neuros?`)) grantFavourite.mutate(user.id); }}
                   className="gap-1 font-bold text-xs text-pink-600 dark:text-pink-400 border-pink-400"
                   disabled={grantFavourite.isPending}
                   data-testid={`button-grant-favourite-${user.id}`}

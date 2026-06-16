@@ -759,7 +759,7 @@ export default function WorldsPage() {
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       queryClient.invalidateQueries({ queryKey: ["/api/shop"] });
-      toast({ title: "Refunded!", description: `You got ${data.refundAmount} coins back (70% refund).` });
+      toast({ title: "Refunded!", description: `You got ${data.refundAmount} Neuros back (70% refund).` });
     },
     onError: (err: any) => {
       toast({ title: "Can't refund", description: err.message || "Something went wrong", variant: "destructive" });
@@ -793,7 +793,7 @@ export default function WorldsPage() {
   async function purchaseWorld(world: WorldInfo) {
     if (!meetsRequirements(world)) return;
     if (!canAffordWorld(world)) {
-      toast({ title: "Not Enough Resources", description: "You need more coins or gems to unlock this world!", variant: "destructive" });
+      toast({ title: "Not Enough Resources", description: "You need more Neuros or Sparks to unlock this world!", variant: "destructive" });
       return;
     }
 
@@ -857,7 +857,7 @@ export default function WorldsPage() {
                 const res = await apiRequest("POST", "/api/experiment/complete", { experimentId: activeLabExperiment.id, gemUpgradesDisabled });
                 const data = await res.json();
                 queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-                let desc = `You earned ${data.rewards.xp} XP and ${data.rewards.coins} coins!`;
+                let desc = `You earned ${data.rewards.xp} XP and ${data.rewards.coins} Neuros!`;
                 if (data.rewards.badgesEarned?.length > 0) {
                   desc += ` New badge: ${data.rewards.badgesEarned.join(", ")}!`;
                 }
@@ -903,8 +903,8 @@ export default function WorldsPage() {
                   const data = await r.json();
                   const parts: string[] = [];
                   if (data.xpEarned > 0) parts.push(`${data.xpEarned} XP`);
-                  if (data.coinsEarned > 0) parts.push(`${data.coinsEarned} coins`);
-                  if (data.gemsEarned > 0) parts.push(`${data.gemsEarned} gems`);
+                  if (data.coinsEarned > 0) parts.push(`${data.coinsEarned} Neuros`);
+                  if (data.gemsEarned > 0) parts.push(`${data.gemsEarned} Sparks`);
                   if (data.itemsAwarded?.length > 0) parts.push(`${data.itemsAwarded.length} reward item${data.itemsAwarded.length > 1 ? "s" : ""}`);
                   if (data.badgesAwarded?.length > 0) parts.push(`${data.badgesAwarded.length} badge${data.badgesAwarded.length > 1 ? "s" : ""}`);
                   if (parts.length > 0) {
@@ -914,7 +914,7 @@ export default function WorldsPage() {
                 })
                 .catch(() => {});
             } else if (worldChallengeFee > 0) {
-              toast({ title: "Defeated!", description: `You lost ${worldChallengeFee} coins! Train harder and try again.`, variant: "destructive" });
+              toast({ title: "Defeated!", description: `You lost ${worldChallengeFee} Neuros! Train harder and try again.`, variant: "destructive" });
               queryClient.invalidateQueries({ queryKey: ["/api/user"] });
             }
             setFightingBoss(null);
@@ -1168,7 +1168,7 @@ export default function WorldsPage() {
                     {defeatCount === 0 ? " Challenge Boss" : mutLevel > 0 && !isMaxed ? ` Fight ${mutLabel}` : " Fight Again"}
                   </Button>
                   <span className="text-xs text-yellow-300 font-bold flex items-center gap-1">
-                    <Coins className="w-3 h-3" /> {10 + ((defeatCount > 0 ? Math.min(defeatCount, (worldBoss as any).mutations?.length || 0) : 0) * 5)} coins
+                    <Coins className="w-3 h-3" /> {10 + ((defeatCount > 0 ? Math.min(defeatCount, (worldBoss as any).mutations?.length || 0) : 0) * 5)} Neuros
                   </span>
                 </div>
               </Card>

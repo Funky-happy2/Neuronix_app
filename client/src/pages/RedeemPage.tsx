@@ -73,8 +73,8 @@ export default function RedeemPage() {
       }
 
       const parts: string[] = [];
-      if (data.coinReward > 0) parts.push(`${data.coinReward} coins`);
-      if (data.gemReward > 0) parts.push(`${data.gemReward} gems`);
+      if (data.coinReward > 0) parts.push(`${data.coinReward} Neuros`);
+      if (data.gemReward > 0) parts.push(`${data.gemReward} Sparks`);
       if (data.xpReward > 0) parts.push(`${data.xpReward} XP`);
       if (data.mysteryBoxReward > 0) {
         const boxLabel = BOX_LABELS[data.mysteryBoxType || "bronze"]?.label || "Mystery Box";
@@ -115,7 +115,7 @@ export default function RedeemPage() {
               <Badge variant="secondary" className="text-xs ml-auto">{freeCode.currentUses}/{freeCode.maxUses} claimed</Badge>
             </div>
             <p className="text-sm text-muted-foreground mb-3">
-              A free code is always available — redeem it for <strong>{freeCode.coinReward} coins</strong>. Once {freeCode.maxUses} players use it, a new one appears.
+              A free code is always available — redeem it for <strong>{freeCode.coinReward} Neuros</strong>. Once {freeCode.maxUses} players use it, a new one appears.
             </p>
             <div className="flex items-center gap-3 flex-wrap">
               <code className="text-xl font-black tracking-widest bg-emerald-500/10 px-4 py-2 rounded-lg border border-emerald-500/20 text-emerald-700 dark:text-emerald-300">

@@ -572,7 +572,7 @@ function PlayCommunityPack({ pack, onBack, onFinish }: { pack: PackWithQuestions
       const xpEarned = data.xpEarned ?? 10;
       const coinsEarned = data.coinsEarned ?? 0;
       toast({
-        title: `+${xpEarned} XP!${coinsEarned > 0 ? ` +${coinsEarned} coins` : ""}`,
+        title: `+${xpEarned} XP!${coinsEarned > 0 ? ` +${coinsEarned} Neuros` : ""}`,
         description: "Pack complete — reward collected!",
       });
       apiRequest("POST", "/api/daily-challenge/complete", { challengeType: "community-play" }).catch(() => {});

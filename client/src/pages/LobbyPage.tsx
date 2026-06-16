@@ -346,7 +346,7 @@ export default function LobbyPage() {
       }
 
       if (msg.type === "win_bonus") {
-        toast({ title: "Win Bonus! 🏆", description: `+${msg.xp} XP, +${msg.coins} coins for winning!` });
+        toast({ title: "Win Bonus! 🏆", description: `+${msg.xp} XP, +${msg.coins} Neuros for winning!` });
         queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       }
 
@@ -1503,7 +1503,7 @@ export default function LobbyPage() {
                   data-testid="button-recover-win-streak"
                 >
                   {recoverWinStreakMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
-                  Recover ({winStreakPeak * 50} coins{Math.floor(winStreakPeak / 10) > 0 ? ` + ${Math.floor(winStreakPeak / 10)} gems` : ""})
+                  Recover ({winStreakPeak * 50} Neuros{Math.floor(winStreakPeak / 10) > 0 ? ` + ${Math.floor(winStreakPeak / 10)} Sparks` : ""})
                 </Button>
               )}
             </div>
@@ -1529,7 +1529,7 @@ export default function LobbyPage() {
                   data-testid="button-recover-tournament-streak"
                 >
                   {recoverTournamentStreakMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
-                  Recover ({tournamentWinStreakPeak * 150} coins{Math.floor(tournamentWinStreakPeak / 5) > 0 ? ` + ${Math.floor(tournamentWinStreakPeak / 5)} gems` : ""})
+                  Recover ({tournamentWinStreakPeak * 150} Neuros{Math.floor(tournamentWinStreakPeak / 5) > 0 ? ` + ${Math.floor(tournamentWinStreakPeak / 5)} Sparks` : ""})
                 </Button>
               )}
             </div>
@@ -1774,7 +1774,7 @@ export default function LobbyPage() {
                   <li>10 questions from community packs</li>
                   <li>15s per question</li>
                   <li>+1 pt correct, +0.5 bonus if under 5s</li>
-                  <li>Winner: 100 XP + 50 coins (+ wager)</li>
+                  <li>Winner: 100 XP + 50 Neuros (+ wager)</li>
                 </ul>
               </div>
             </Card>
