@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, hashPassword, comparePasswords } from "./auth";
 import { WebSocketServer, WebSocket } from "ws";
+import { getDimension, getDimensionGroup, hasFullStoneSet, dimensionBuffMultipliers, type DimensionDef } from "@shared/dimensions";
 
 interface LobbyPlayer {
   id: number;
@@ -747,6 +748,11 @@ export async function registerRoutes(
       xpEarned = Math.max(1, Math.round(xpEarned * diffMult));
       coinsEarned = Math.max(1, Math.round(coinsEarned * diffMult));
 
+      // Permanent buff from holding a complete Infinity Stone set (+25% XP/coins).
+      const dimBuff = dimensionBuffMultipliers(user.inventory || []);
+      xpEarned = Math.round(xpEarned * dimBuff.xp);
+      coinsEarned = Math.round(coinsEarned * dimBuff.coins);
+
       const activeUpgrades: string[] = [];
       if (!upgradesOff && isUpgradeActive(user, "upgrade-xp-boost")) {
         xpEarned = Math.floor(xpEarned * 2);
@@ -1275,12 +1281,7 @@ export async function registerRoutes(
 
       const newXP = (user.xp || 0) + finalXP;
       const newCoins = (user.coins || 0) + finalCoins;
-      let newLevel = user.level || 1;
-      let xpCheck = 0;
-      for (let l = 1; l <= 100; l++) {
-        xpCheck += l * 100 + (l - 1) * 50;
-        if (newXP < xpCheck) { newLevel = l; break; }
-      }
+      const newLevel = computeLevel(newXP);
 
       const updates: any = { bossesDefeated: updatedBosses, xp: newXP, coins: newCoins, level: newLevel };
       if (gemsEarned > 0) {
@@ -1751,9 +1752,14 @@ export async function registerRoutes(
         return res.status(400).json({ message: "You don't own this item" });
       }
 
+      // The premium "profile border" upgrades live in the `upgrade` category but
+      // share the single `frame` border slot, so only one border shows at a time.
+      const BORDER_UPGRADE_IDS = ["upgrade-golden-profile", "upgrade-diamond-profile", "upgrade-elite-border"];
+      const isBorderUpgrade = category === "frame" && BORDER_UPGRADE_IDS.includes(itemId);
+
       const items = await storage.getShopItems();
       const shopItem = items.find((i) => i.id === itemId);
-      if (!shopItem || shopItem.category !== category) {
+      if (!isBorderUpgrade && (!shopItem || shopItem.category !== category)) {
         return res.status(400).json({ message: "Item does not match the specified category" });
       }
 
@@ -4895,11 +4901,14 @@ export async function registerRoutes(
             if (newBadgesEarned.length > 0) authorUpdates.badges = [...creator.badges, ...newBadgesEarned];
             if (newItemsEarned.length > 0) authorUpdates.inventory = [...creator.inventory, ...newItemsEarned];
             if (bonusCoins > 0) authorUpdates.coins = (creator.coins || 0) + bonusCoins;
-            if (bonusXP > 0) authorUpdates.xp = (creator.xp || 0) + bonusXP;
+            if (bonusXP > 0) {
+              authorUpdates.xp = (creator.xp || 0) + bonusXP;
+              authorUpdates.level = computeLevel(authorUpdates.xp);
+            }
             await storage.updateUser(pack.creatorId, authorUpdates as any);
           }
         }
-        res.json({ action: "added", type, badgesEarned: newBadgesEarned, itemsEarned: newItemsEarned });
+        res.json({ action: "added", type, authorMilestone: newBadgesEarned.length > 0 || newItemsEarned.length > 0 });
       }
     } catch (error) {
       res.status(500).json({ message: "Failed to react" });
@@ -4916,6 +4925,123 @@ export async function registerRoutes(
     } catch (error) {
       res.status(500).json({ message: "Failed to get reactions" });
     }
+  });
+
+  // ─── DIMENSIONS: entry sacrifices, rewards, stones, set completion ──────────
+  const dimUnlocked = (user: any, dim: DimensionDef) =>
+    (user.xp || 0) >= dim.unlockXp || (user.inventory || []).includes("dimunlock-" + dim.id);
+
+  app.post("/api/dimensions/enter", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const { dimensionId, sacrificeItemId } = req.body;
+      const dim = getDimension(dimensionId);
+      if (!dim) return res.status(404).json({ message: "Dimension not found" });
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.sendStatus(404);
+      if (!dimUnlocked(user, dim)) return res.status(403).json({ message: "This dimension is locked." });
+
+      const group = getDimensionGroup(dim.groupId);
+      const exp = { ...(((user as any).upgradeExpirations as Record<string, number>) || {}) };
+      let inventory = [...(user.inventory || [])];
+      const updates: any = {};
+
+      // Validate every required sacrifice before deducting anything.
+      if (dim.costCoins && (user.coins || 0) < dim.costCoins) return res.status(400).json({ message: `You need ${dim.costCoins} Neuros to enter.` });
+      if (dim.costGems && ((user as any).gems || 0) < dim.costGems) return res.status(400).json({ message: `You need ${dim.costGems} gems to enter.` });
+      if (dim.costShards && group?.currencyId && (exp[group.currencyId] || 0) < dim.costShards) {
+        return res.status(400).json({ message: `You need ${dim.costShards} ${group.currencyName}.` });
+      }
+      if (dim.wagerXp && (user.xp || 0) < dim.wagerXp) return res.status(400).json({ message: `You need ${dim.wagerXp} XP to wager.` });
+      let burnedItem: string | null = null;
+      if (dim.sacrificeItem) {
+        const sacrificeable = (id: string) => id.startsWith("potion-") || id.startsWith("powerup-") || id.startsWith("battle-powerup-");
+        burnedItem = (sacrificeItemId && inventory.includes(sacrificeItemId) && sacrificeable(sacrificeItemId))
+          ? sacrificeItemId
+          : (inventory.find(sacrificeable) || null);
+        if (!burnedItem) return res.status(400).json({ message: "You need a potion or power-up to sacrifice." });
+      }
+
+      // Deduct.
+      if (dim.costCoins) updates.coins = (user.coins || 0) - dim.costCoins;
+      if (dim.costGems) updates.gems = ((user as any).gems || 0) - dim.costGems;
+      if (dim.costShards && group?.currencyId) exp[group.currencyId] = (exp[group.currencyId] || 0) - dim.costShards;
+      if (dim.wagerXp) {
+        updates.xp = (user.xp || 0) - dim.wagerXp;
+        updates.level = computeLevel(updates.xp);
+        exp["dim-wager-" + dim.id] = dim.wagerXp; // refunded (+bonus) only on a win
+      }
+      if (burnedItem) { inventory.splice(inventory.indexOf(burnedItem), 1); updates.inventory = inventory; }
+      updates.upgradeExpirations = exp;
+
+      await storage.updateUser(user.id, updates);
+      const fresh = await storage.getUser(user.id);
+      const { password: _p, ...safe } = fresh as any;
+      res.json({ ok: true, sacrificedItem: burnedItem, user: safe });
+    } catch (e) { console.error("dimension enter", e); res.status(500).json({ message: "Failed to enter dimension" }); }
+  });
+
+  app.post("/api/dimensions/complete", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const { dimensionId, won } = req.body;
+      const dim = getDimension(dimensionId);
+      if (!dim) return res.status(404).json({ message: "Dimension not found" });
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.sendStatus(404);
+
+      const group = getDimensionGroup(dim.groupId);
+      const exp = { ...(((user as any).upgradeExpirations as Record<string, number>) || {}) };
+      let inventory = [...(user.inventory || [])];
+      let badges = [...(user.badges || [])];
+      const updates: any = {};
+      const result: any = { won: !!won, xp: 0, coins: 0, shards: 0, stoneEarned: null, setComplete: false, grand: null, wagerLost: 0, wagerRefunded: 0 };
+
+      const wager = exp["dim-wager-" + dim.id] || 0;
+      let xpGain = 0, coinGain = 0;
+
+      if (won) {
+        xpGain += dim.rewardXp;
+        coinGain += dim.rewardCoins;
+        if (wager > 0) { xpGain += wager + Math.round(wager * 0.5); result.wagerRefunded = wager; } // money back + 50%
+        if (dim.rewardShards && group?.currencyId) { exp[group.currencyId] = (exp[group.currencyId] || 0) + dim.rewardShards; result.shards = dim.rewardShards; }
+        if (dim.stoneId && !inventory.includes(dim.stoneId)) { inventory.push(dim.stoneId); result.stoneEarned = dim.stoneId; }
+        if (dim.badgeId && !badges.includes(dim.badgeId)) badges.push(dim.badgeId);
+
+        // Grand reward: complete the stone set.
+        if (group?.grandReward && hasFullStoneSet(group, inventory) && !inventory.includes(group.grandReward.completeFlag)) {
+          const gr = group.grandReward;
+          inventory.push(gr.completeFlag);
+          if (!inventory.includes(gr.avatarId)) inventory.push(gr.avatarId);
+          if (!inventory.includes(gr.borderId)) inventory.push(gr.borderId);
+          if (!badges.includes(gr.badgeId)) badges.push(gr.badgeId);
+          xpGain += gr.xp;
+          coinGain += gr.coins;
+          updates.gems = ((user as any).gems || 0) + gr.gems;
+          result.setComplete = true;
+          result.grand = { title: gr.title, xp: gr.xp, coins: gr.coins, gems: gr.gems, buffXpPct: gr.buffXpPct, buffCoinPct: gr.buffCoinPct };
+        }
+      } else {
+        // Lose = lose it all: no consolation, the wager (deducted at entry) is forfeit.
+        if (wager > 0) result.wagerLost = wager;
+      }
+      if (wager > 0) delete exp["dim-wager-" + dim.id];
+
+      const newXp = (user.xp || 0) + xpGain;
+      updates.xp = newXp;
+      updates.level = computeLevel(newXp);
+      updates.coins = (user.coins || 0) + coinGain;
+      updates.upgradeExpirations = exp;
+      updates.inventory = inventory;
+      updates.badges = badges;
+      result.xp = xpGain;
+      result.coins = coinGain;
+
+      await storage.updateUser(user.id, updates);
+      const fresh = await storage.getUser(user.id);
+      const { password: _p, ...safe } = fresh as any;
+      res.json({ ...result, user: safe });
+    } catch (e) { console.error("dimension complete", e); res.status(500).json({ message: "Failed to complete dimension" }); }
   });
 
   // === FEEDBACK ROUTES ===
@@ -4956,6 +5082,36 @@ export async function registerRoutes(
     if (!user || !user.isAdmin) return res.status(403).json({ message: "Admin only" });
     next();
   };
+
+  // Records one row in the public, appealable admin-decision log. Every admin
+  // action (including the ultra admin's) must supply a description, so callers
+  // should validate `description` before invoking this.
+  async function logAdminDecision(
+    admin: { id: number; username: string },
+    opts: { type: string; targetId?: number | null; targetName?: string | null; description: string; reversible?: boolean },
+  ) {
+    try {
+      await storage.createAdminDecision({
+        createdAt: new Date().toISOString(),
+        adminId: admin.id,
+        adminName: admin.username,
+        type: opts.type,
+        targetId: opts.targetId ?? null,
+        targetName: opts.targetName ?? null,
+        description: opts.description,
+        reversible: opts.reversible ?? false,
+        appealStatus: "none",
+        appealText: null,
+        appealedAt: null,
+        appealResponse: null,
+        appealResolvedById: null,
+        appealResolvedByName: null,
+        appealResolvedAt: null,
+      } as any);
+    } catch (e) {
+      console.error("Failed to log admin decision", e);
+    }
+  }
 
   app.get("/api/admin/feedback", requireAdmin, async (req, res) => {
     try {
@@ -5091,7 +5247,12 @@ export async function registerRoutes(
       const target = await storage.getUser(userId);
       if (!target) return res.status(404).json({ message: "User not found" });
       if (isUltraAdmin(target.username)) return res.status(400).json({ message: "Cannot remove ultra admin status" });
+      const { description } = req.body;
+      if (!description || typeof description !== "string" || !description.trim()) {
+        return res.status(400).json({ message: "A reason/description is required for this action" });
+      }
       await storage.updateUser(userId, { isAdmin: !target.isAdmin } as any);
+      await logAdminDecision(requester!, { type: target.isAdmin ? "remove-admin" : "grant-admin", targetId: target.id, targetName: target.username, description: description.trim(), reversible: false });
       res.json({ success: true, isAdmin: !target.isAdmin });
     } catch (error) {
       res.status(500).json({ message: "Failed to toggle admin status" });
@@ -5103,7 +5264,13 @@ export async function registerRoutes(
       const userId = Number(req.params.id);
       const target = await storage.getUser(userId);
       if (!target) return res.status(404).json({ message: "User not found" });
+      const { description } = req.body;
+      if (!description || typeof description !== "string" || !description.trim()) {
+        return res.status(400).json({ message: "A reason/description is required for this action" });
+      }
+      const requester = await storage.getUser(req.user!.id);
       await storage.updateUser(userId, { isVip: !(target as any).isVip } as any);
+      await logAdminDecision(requester!, { type: (target as any).isVip ? "remove-vip" : "grant-vip", targetId: target.id, targetName: target.username, description: description.trim(), reversible: false });
       res.json({ success: true, isVip: !(target as any).isVip });
     } catch (error) {
       res.status(500).json({ message: "Failed to toggle VIP status" });
@@ -5118,8 +5285,12 @@ export async function registerRoutes(
       const requester = await storage.getUser(req.user!.id);
       if (target.isAdmin && !isUltraAdmin(requester!.username)) return res.status(400).json({ message: "Only the ultra admin can ban other admins" });
       if (isUltraAdmin(target.username)) return res.status(400).json({ message: "The ultra admin cannot be banned" });
-      const { banned } = req.body;
-      const user = await storage.updateUser(userId, { banned: !!banned } as any);
+      const { banned, description } = req.body;
+      if (!description || typeof description !== "string" || !description.trim()) {
+        return res.status(400).json({ message: "A reason/description is required for this action" });
+      }
+      await storage.updateUser(userId, { banned: !!banned } as any);
+      await logAdminDecision(requester!, { type: banned ? "ban" : "unban", targetId: target.id, targetName: target.username, description: description.trim(), reversible: !!banned });
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ message: "Failed to update user ban status" });
@@ -5134,12 +5305,17 @@ export async function registerRoutes(
       const requester = await storage.getUser(req.user!.id);
       if (user.isAdmin && !isUltraAdmin(requester!.username)) return res.status(400).json({ message: "Only the ultra admin can strike other admins" });
       if (isUltraAdmin(user.username)) return res.status(400).json({ message: "The ultra admin cannot be given strikes" });
+      const { description } = req.body;
+      if (!description || typeof description !== "string" || !description.trim()) {
+        return res.status(400).json({ message: "A reason/description is required for this action" });
+      }
       const newStrikes = user.strikes + 1;
       const updates: any = { strikes: newStrikes };
       if (newStrikes >= 3) {
         updates.banned = true;
       }
       await storage.updateUser(userId, updates);
+      await logAdminDecision(requester!, { type: "strike", targetId: user.id, targetName: user.username, description: description.trim(), reversible: true });
       res.json({ success: true, strikes: newStrikes, banned: newStrikes >= 3 });
     } catch (error) {
       res.status(500).json({ message: "Failed to give strike" });
@@ -5148,8 +5324,14 @@ export async function registerRoutes(
 
   app.post("/api/admin/users/:id/clear-strikes", requireAdmin, async (req, res) => {
     try {
+      const { description } = req.body;
+      if (!description || typeof description !== "string" || !description.trim()) {
+        return res.status(400).json({ message: "A reason/description is required for this action" });
+      }
+      const requester = await storage.getUser(req.user!.id);
       const user = await storage.updateUser(Number(req.params.id), { strikes: 0 } as any);
       if (!user) return res.status(404).json({ message: "User not found" });
+      await logAdminDecision(requester!, { type: "clear-strikes", targetId: user.id, targetName: user.username, description: description.trim(), reversible: false });
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ message: "Failed to clear strikes" });
@@ -5164,6 +5346,10 @@ export async function registerRoutes(
       const requester = await storage.getUser(req.user!.id);
       if (user.isAdmin && !isUltraAdmin(requester!.username)) return res.status(400).json({ message: "Only the ultra admin can reset other admins" });
       if (isUltraAdmin(user.username)) return res.status(400).json({ message: "The ultra admin's progress cannot be reset" });
+      const { description } = req.body;
+      if (!description || typeof description !== "string" || !description.trim()) {
+        return res.status(400).json({ message: "A reason/description is required for this action" });
+      }
       await storage.updateUser(userId, {
         xp: 0, coins: 0, gems: 0, level: 1,
         currentStreak: 0, longestStreak: 0,
@@ -5171,6 +5357,7 @@ export async function registerRoutes(
         inventory: [], equippedTheme: "default",
         dailyChallengesCompleted: 0, bossesDefeated: {},
       } as any);
+      await logAdminDecision(requester!, { type: "reset-progress", targetId: user.id, targetName: user.username, description: description.trim(), reversible: false });
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ message: "Failed to reset progress" });
@@ -5185,7 +5372,12 @@ export async function registerRoutes(
       const requester = await storage.getUser(req.user!.id);
       if (user.isAdmin && !isUltraAdmin(requester!.username)) return res.status(400).json({ message: "Only the ultra admin can deactivate admin accounts" });
       if (isUltraAdmin(user.username)) return res.status(400).json({ message: "The ultra admin account cannot be deactivated" });
+      const { description } = req.body;
+      if (!description || typeof description !== "string" || !description.trim()) {
+        return res.status(400).json({ message: "A reason/description is required for this action" });
+      }
       await storage.deleteUser(userId);
+      await logAdminDecision(requester!, { type: "deactivate", targetId: user.id, targetName: user.username, description: description.trim(), reversible: true });
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ message: "Failed to deactivate user" });
@@ -5200,6 +5392,11 @@ export async function registerRoutes(
       const requester = await storage.getUser(req.user!.id);
       if (!isUltraAdmin(requester!.username)) return res.status(403).json({ message: "Only the ultra admin can permanently delete accounts" });
       if (isUltraAdmin(user.username)) return res.status(400).json({ message: "The ultra admin account cannot be permanently deleted" });
+      const { description } = req.body;
+      if (!description || typeof description !== "string" || !description.trim()) {
+        return res.status(400).json({ message: "A reason/description is required for this action" });
+      }
+      await logAdminDecision(requester!, { type: "permanent-delete", targetId: user.id, targetName: user.username, description: description.trim(), reversible: false });
       await storage.permanentDeleteUser(userId);
       res.json({ success: true });
     } catch (error) {
@@ -5212,10 +5409,33 @@ export async function registerRoutes(
       const userId = Number(req.params.id);
       const user = await storage.getUser(userId);
       if (!user) return res.status(404).json({ message: "User not found" });
+      const { description } = req.body;
+      if (!description || typeof description !== "string" || !description.trim()) {
+        return res.status(400).json({ message: "A reason/description is required for this action" });
+      }
+      const requester = await storage.getUser(req.user!.id);
       await storage.reviveUser(userId);
+      await logAdminDecision(requester!, { type: "revive", targetId: user.id, targetName: user.username, description: description.trim(), reversible: false });
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ message: "Failed to revive user" });
+    }
+  });
+
+  app.post("/api/admin/users/:id/unlock-dimension", requireAdmin, async (req, res) => {
+    try {
+      const { dimensionId } = req.body;
+      const dim = getDimension(dimensionId);
+      if (!dim) return res.status(404).json({ message: "Dimension not found" });
+      const target = await storage.getUser(Number(req.params.id));
+      if (!target) return res.status(404).json({ message: "User not found" });
+      const flag = "dimunlock-" + dim.id;
+      if (!(target.inventory || []).includes(flag)) {
+        await storage.updateUser(target.id, { inventory: [...(target.inventory || []), flag] } as any);
+      }
+      res.json({ ok: true, dimension: dim.name, user: target.username });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to unlock dimension" });
     }
   });
 
@@ -5630,6 +5850,19 @@ export async function registerRoutes(
         resolvedByName: requester.username,
         resolvedAt: new Date().toISOString(),
       });
+
+      // Approved proposals are real decisions — log them to the public board so
+      // the affected user can appeal. (Bans/strikes/suspensions are reversible.)
+      if (decision === "approve" && proposal.targetId) {
+        const reversibleTypes = ["ban", "strike", "delete"];
+        await logAdminDecision(requester, {
+          type: proposal.type,
+          targetId: proposal.targetId,
+          targetName: proposal.targetName,
+          description: proposal.description,
+          reversible: reversibleTypes.includes(proposal.type),
+        });
+      }
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ message: "Failed to resolve proposal" });
@@ -5653,6 +5886,105 @@ export async function registerRoutes(
     } catch (error) {
       res.status(500).json({ message: "Failed to transfer ultra admin status" });
     }
+  });
+
+  // ── Public admin-decision log + appeals ────────────────────────────────────
+  // Any logged-in user can view the full decision history (transparency board).
+  app.get("/api/decisions", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const decisions = await storage.getAdminDecisions(200);
+      res.json(decisions);
+    } catch { res.status(500).json({ message: "Failed to load decisions" }); }
+  });
+
+  // The affected user files an appeal on a decision about their own account.
+  app.post("/api/decisions/:id/appeal", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const { text } = req.body;
+      if (!text || typeof text !== "string" || text.trim().length < 5) {
+        return res.status(400).json({ message: "Please explain why you're appealing (at least 5 characters)." });
+      }
+      const decision = await storage.getAdminDecision(Number(req.params.id));
+      if (!decision) return res.status(404).json({ message: "Decision not found" });
+      if (decision.targetId !== req.user!.id) return res.status(403).json({ message: "You can only appeal decisions about your own account." });
+      if (decision.appealStatus !== "none") return res.status(400).json({ message: "This decision has already been appealed." });
+      await storage.updateAdminDecision(decision.id, {
+        appealStatus: "pending",
+        appealText: text.trim(),
+        appealedAt: new Date().toISOString(),
+      } as any);
+      res.json({ success: true });
+    } catch { res.status(500).json({ message: "Failed to submit appeal" }); }
+  });
+
+  // Admins review pending appeals.
+  app.get("/api/admin/appeals", requireAdmin, async (req, res) => {
+    try {
+      const appeals = await storage.getPendingAppeals();
+      res.json(appeals);
+    } catch { res.status(500).json({ message: "Failed to load appeals" }); }
+  });
+
+  // Resolve an appeal: "deny" upholds the original, "overturn" grants it and
+  // auto-reverses reversible actions. Either way a description is mandatory.
+  app.post("/api/admin/appeals/:id/resolve", requireAdmin, async (req, res) => {
+    try {
+      const { action, description } = req.body; // action: "deny" | "overturn"
+      if (!["deny", "overturn"].includes(action)) return res.status(400).json({ message: "action must be 'deny' or 'overturn'" });
+      if (!description || typeof description !== "string" || !description.trim()) {
+        return res.status(400).json({ message: "A reason/description is required to resolve an appeal" });
+      }
+      const requester = await storage.getUser(req.user!.id);
+      const decision = await storage.getAdminDecision(Number(req.params.id));
+      if (!decision) return res.status(404).json({ message: "Decision not found" });
+      if (decision.appealStatus !== "pending") return res.status(400).json({ message: "This appeal is not pending" });
+
+      if (action === "overturn" && decision.reversible && decision.targetId) {
+        const target = await storage.getUser(decision.targetId);
+        if (target) {
+          switch (decision.type) {
+            case "ban":
+              await storage.updateUser(target.id, { banned: false } as any);
+              break;
+            case "strike": {
+              const newStrikes = Math.max(0, target.strikes - 1);
+              await storage.updateUser(target.id, { strikes: newStrikes, banned: newStrikes >= 3 ? target.banned : false } as any);
+              break;
+            }
+            case "autoclicker-suspension": {
+              const safety = ((target as any).safetySettings || {}) as Record<string, any>;
+              safety.suspended = false;
+              delete safety.suspendedReason;
+              await storage.updateUser(target.id, { safetySettings: safety } as any);
+              break;
+            }
+            case "deactivate":
+              await storage.reviveUser(target.id);
+              break;
+          }
+        }
+      }
+
+      await storage.updateAdminDecision(decision.id, {
+        appealStatus: action === "overturn" ? "overturned" : "upheld",
+        appealResponse: description.trim(),
+        appealResolvedById: requester!.id,
+        appealResolvedByName: requester!.username,
+        appealResolvedAt: new Date().toISOString(),
+      } as any);
+
+      // The resolution is itself a logged decision.
+      await logAdminDecision(requester!, {
+        type: action === "overturn" ? "appeal-overturned" : "appeal-upheld",
+        targetId: decision.targetId,
+        targetName: decision.targetName,
+        description: `Appeal on "${decision.type}" ${action === "overturn" ? "GRANTED — action reversed" : "denied"}: ${description.trim()}`,
+        reversible: false,
+      });
+      res.json({ success: true });
+    } catch { res.status(500).json({ message: "Failed to resolve appeal" }); }
   });
 
   // ── End Parliament routes ──────────────────────────────────────────────────
@@ -6081,8 +6413,17 @@ export async function registerRoutes(
 
   app.get("/api/gt-questions/active", async (req, res) => {
     try {
-      const questions = await storage.getGrandTournamentQuestions(true);
-      const shuffled = [...questions].sort(() => Math.random() - 0.5);
+      const all = await storage.getGrandTournamentQuestions(true);
+      // Difficulty scales with the player's year level. Questions tagged
+      // yearLevel 0 are universal; the rest must match the player's year.
+      let pool = all;
+      if (req.isAuthenticated()) {
+        const u = await storage.getUser(req.user!.id);
+        const yl = (u as any)?.yearLevel ?? 7;
+        const matched = all.filter((q: any) => !q.yearLevel || q.yearLevel === 0 || q.yearLevel === yl);
+        if (matched.length > 0) pool = matched; // fall back to all if none tagged for this year
+      }
+      const shuffled = [...pool].sort(() => Math.random() - 0.5);
       res.json(shuffled.map(q => ({
         id: q.id,
         question: q.question,
@@ -6462,7 +6803,10 @@ export async function registerRoutes(
             authorUpdates.inventory = [...author.inventory, ...newItemsEarned];
           }
           if (bonusCoins > 0) authorUpdates.coins = (author.coins || 0) + bonusCoins;
-          if (bonusXP > 0) authorUpdates.xp = (author.xp || 0) + bonusXP;
+          if (bonusXP > 0) {
+            authorUpdates.xp = (author.xp || 0) + bonusXP;
+            authorUpdates.level = computeLevel(authorUpdates.xp);
+          }
         }
 
         await storage.updateUser(post.authorId, authorUpdates as any);
@@ -6470,7 +6814,9 @@ export async function registerRoutes(
 
       const allReactions = await storage.getNewsReactions(postId);
       const boostCount = allReactions.filter(r => r.emoji === "boost").length;
-      res.json({ boosted: added, boostCount, badgesEarned: newBadgesEarned, itemsEarned: newItemsEarned });
+      // Rewards belong to the AUTHOR — don't leak their badge/item ids to the booster,
+      // just signal whether this boost tipped the author over a milestone.
+      res.json({ boosted: added, boostCount, authorMilestone: newBadgesEarned.length > 0 || newItemsEarned.length > 0 });
     } catch (error) {
       res.status(500).json({ message: "Failed to boost post" });
     }
@@ -7388,6 +7734,14 @@ export async function registerRoutes(
             isSmallIssue: false,
             votes: {},
           } as any);
+          // Log it as an appealable decision so the player can contest a false positive.
+          await logAdminDecision({ id: 0, username: "System (Anti-Cheat)" }, {
+            type: "autoclicker-suspension",
+            targetId: user.id,
+            targetName: user.username,
+            description: `Account auto-suspended: automated input (autoclicker) detected. ${details || ""}`.trim(),
+            reversible: true,
+          });
         }
         suspended = true;
       }

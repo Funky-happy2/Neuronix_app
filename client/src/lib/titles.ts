@@ -40,6 +40,13 @@ export const FRAME_MINI_STYLES: Record<string, string> = {
   "frame-clan-champion":     "ring-[3px] ring-sky-400 animate-frame-clan-champion",
   "frame-team-champion":     "ring-[3px] ring-fuchsia-500 animate-frame-team-champion",
   "reward-tournament-frame": "ring-[3px] ring-yellow-400 animate-frame-golden",
+  // Premium profile borders (share the single border slot — only one shows).
+  "upgrade-golden-profile":  "ring-[4px] ring-double ring-amber-400 animate-frame-golden rounded-lg",
+  "upgrade-diamond-profile": "ring-[3px] ring-cyan-300 animate-frame-ice",
+  "upgrade-elite-border":    "ring-[3px] ring-violet-500 animate-frame-void rounded-sm",
+  "frame-infinity":          "ring-[4px] ring-fuchsia-500 animate-frame-galaxy rounded-xl",
+  "frame-elemental":         "ring-[4px] ring-orange-500 animate-frame-fire rounded-lg",
+  "frame-cosmos":            "ring-[4px] ring-indigo-400 animate-frame-galaxy rounded-xl",
 };
 
 export const TITLE_DISPLAY: Record<string, string> = {

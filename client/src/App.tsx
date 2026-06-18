@@ -33,6 +33,8 @@ import TradePage from "@/pages/TradePage";
 import FriendsPage from "@/pages/FriendsPage";
 import ClanBattlePage from "@/pages/ClanBattlePage";
 import WorldsPage from "@/pages/WorldsPage";
+import DimensionsPage from "@/pages/DimensionsPage";
+import DecisionsPage from "@/pages/DecisionsPage";
 import GrandTournamentPage from "@/pages/GrandTournamentPage";
 import DistrictBattlesPage from "@/pages/DistrictBattlesPage";
 import TournamentRankingsPage from "@/pages/TournamentRankingsPage";
@@ -269,6 +271,7 @@ function Router() {
             onAddXP={addXP}
             onEarnBadge={earnBadge}
             yearLevel={progress.yearLevel}
+            onSetYearLevel={setYearLevel}
           />
         </Route>
         <Route path="/lobby" component={LobbyPage} />
@@ -296,6 +299,17 @@ function Router() {
         <Route path="/trade" component={TradePage} />
         <Route path="/friends" component={FriendsPage} />
         <Route path="/worlds" component={WorldsPage} />
+        <Route path="/dimensions">
+          <DimensionsPage
+            onAddXP={addXP}
+            onAddCoins={addCoins}
+            onEarnBadge={earnBadge}
+            yearLevel={progress.yearLevel}
+            onSetYearLevel={setYearLevel}
+            xp={progress.xp}
+            badges={progress.badges}
+          />
+        </Route>
         <Route path="/clan-battles" component={ClanBattlePage} />
         <Route path="/grand-tournament" component={GrandTournamentPage} />
         <Route path="/district-battles" component={DistrictBattlesPage} />
@@ -338,6 +352,7 @@ function Router() {
         <Route path="/safety">
           <SafetyPage />
         </Route>
+        <Route path="/decisions" component={DecisionsPage} />
         <Route path="/auth">
           <AuthPage />
         </Route>

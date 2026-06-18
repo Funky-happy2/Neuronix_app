@@ -9,6 +9,36 @@ export const DISTRICTS = [
   { id: "year-8", name: "Year 8", yearLevel: 8, emoji: "💎", color: "from-pink-400 to-rose-500" },
 ];
 
+// Year level is the single difficulty dial. It maps onto the legacy
+// easy/medium/hard tiers that every mini-game already understands…
+export function yearToDifficulty(yearLevel: number): "easy" | "medium" | "hard" {
+  if (yearLevel <= 4) return "easy";
+  if (yearLevel <= 6) return "medium";
+  return "hard";
+}
+
+// …and adds a per-year time bonus/penalty (seconds) on top, so that years
+// within the same tier still feel meaningfully easier or harder. Year 6 is the
+// neutral baseline: younger years get extra time, older years lose time.
+export function yearTimeBonus(yearLevel: number): number {
+  return (6 - yearLevel) * 3; // Y3:+9, Y4:+6, Y5:+3, Y6:0, Y7:-3, Y8:-6
+}
+
+export function getDistrict(yearLevel: number) {
+  return DISTRICTS.find((d) => d.yearLevel === yearLevel) ?? DISTRICTS[DISTRICTS.length - 1];
+}
+
+// Dimensions config now lives in shared/dimensions.ts (shared with the server so
+// it can validate entry sacrifices and grant rewards). Re-exported here for the
+// many client modules that import dimension data from "@/lib/gameData".
+import type { DimensionDef } from "@shared/dimensions";
+export {
+  DIMENSIONS, DIMENSION_GROUPS, getDimension, getDimensionGroup,
+  getGroupForDimension, hasFullStoneSet, dimensionBuffMultipliers,
+} from "@shared/dimensions";
+export type { DimensionDef, DimensionGroupDef, DimensionStone, DimensionEngine, WorldDef, WorldParams } from "@shared/dimensions";
+export type DimensionInfo = DimensionDef;
+
 export const GRAND_TOURNAMENT_EVENTS = {
   individual: [
     { id: "solo-quiz-championship", name: "Solo Quiz Championship", gameMode: "quiz", description: "Classic science quiz - answer correctly to score big!", icon: "Brain", scope: "individual" as const },
@@ -1496,6 +1526,101 @@ export const BOSS_BATTLES: BossBattle[] = [
       { name: "The Probability Storm", title: "Omega Quantum Boss", description: "Reality itself is becoming probabilistic! Master quantum mechanics to restore certainty!", icon: "Atom", gradient: "from-violet-900 to-purple-950", phases: 5, difficulty: "Legendary", reward: "Probability Master Badge + 1500 XP", badgeId: "probability-master" },
     ],
   },
+  {
+    id: "tidal-leviathan",
+    name: "The Tidal Leviathan",
+    title: "Ocean Boss",
+    description: "A colossal sea beast is flooding the coastlines! Master the tides, currents and ocean science to send it back to the deep!",
+    scienceConcepts: ["Tides & currents", "Water cycle", "Marine science"],
+    requiredSkills: ["Ocean Explorer"],
+    phases: 3,
+    difficulty: "Medium",
+    icon: "Waves",
+    color: "hsl(200, 80%, 50%)",
+    gradient: "from-cyan-600 to-blue-800",
+    reward: "Tide Tamer Badge + 500 XP",
+    badgeId: "tide-tamer",
+    mutations: [
+      { name: "The Abyssal Leviathan", title: "Mutated Ocean Boss", description: "It dove into the crushing deep and grew stronger! Withstand the pressure of the abyss!", icon: "Waves", gradient: "from-blue-800 to-indigo-900", phases: 4, difficulty: "Hard", reward: "Abyss Conqueror Badge + 750 XP", badgeId: "abyss-conqueror" },
+      { name: "The World Tsunami", title: "Omega Ocean Boss", description: "A planet-drowning megatsunami! Only a true oceanographer can calm the seas!", icon: "Waves", gradient: "from-indigo-900 to-slate-950", phases: 5, difficulty: "Legendary", reward: "Tsunami Master Badge + 1500 XP", badgeId: "tsunami-master" },
+    ],
+  },
+  {
+    id: "inferno-colossus",
+    name: "The Inferno Colossus",
+    title: "Heat & Energy Boss",
+    description: "A molten giant is overheating the planet! Use thermodynamics and energy science to cool it down!",
+    scienceConcepts: ["Heat transfer", "Thermodynamics", "States of matter"],
+    requiredSkills: ["Heat Master"],
+    phases: 4,
+    difficulty: "Hard",
+    icon: "Flame",
+    color: "hsl(15, 90%, 50%)",
+    gradient: "from-orange-600 to-red-800",
+    reward: "Heat Sink Badge + 750 XP",
+    badgeId: "heat-sink",
+    mutations: [
+      { name: "The Plasma Colossus", title: "Mutated Heat Boss", description: "Its core ignited into raw plasma! Matter's fourth state rages out of control!", icon: "Flame", gradient: "from-red-800 to-pink-900", phases: 5, difficulty: "Extreme", reward: "Plasma Purger Badge + 1000 XP", badgeId: "plasma-purger" },
+      { name: "The Solar Core", title: "Omega Heat Boss", description: "A miniature star is forming! Master fusion-grade thermodynamics to prevent meltdown!", icon: "Flame", gradient: "from-pink-900 to-amber-950", phases: 6, difficulty: "Legendary", reward: "Fusion Master Badge + 1500 XP", badgeId: "fusion-master" },
+    ],
+  },
+  {
+    id: "cryo-sovereign",
+    name: "The Cryo Sovereign",
+    title: "Cold & Matter Boss",
+    description: "An icy ruler is freezing the world solid! Use your knowledge of matter and energy to thaw the freeze!",
+    scienceConcepts: ["States of matter", "Phase changes", "Energy & temperature"],
+    requiredSkills: ["Matter Master"],
+    phases: 3,
+    difficulty: "Medium",
+    icon: "Snowflake",
+    color: "hsl(195, 80%, 55%)",
+    gradient: "from-sky-500 to-blue-700",
+    reward: "Frost Breaker Badge + 500 XP",
+    badgeId: "frost-breaker",
+    mutations: [
+      { name: "The Absolute Zero", title: "Mutated Cold Boss", description: "It is approaching absolute zero, where all motion stops! Restore the heat of the world!", icon: "Snowflake", gradient: "from-blue-700 to-cyan-900", phases: 4, difficulty: "Hard", reward: "Kelvin Crusher Badge + 750 XP", badgeId: "kelvin-crusher" },
+      { name: "The Glacial Eternity", title: "Omega Cold Boss", description: "An unending ice age descends! Only a master of thermal physics can melt this fate!", icon: "Snowflake", gradient: "from-cyan-900 to-slate-950", phases: 5, difficulty: "Legendary", reward: "Thaw Master Badge + 1500 XP", badgeId: "thaw-master" },
+    ],
+  },
+  {
+    id: "gaia-behemoth",
+    name: "The Gaia Behemoth",
+    title: "Ecology Boss",
+    description: "An overgrown nature titan is choking every ecosystem! Balance food webs and biodiversity to restore harmony!",
+    scienceConcepts: ["Ecosystems", "Food webs", "Biodiversity"],
+    requiredSkills: ["Eco Warrior"],
+    phases: 4,
+    difficulty: "Hard",
+    icon: "TreePine",
+    color: "hsl(130, 65%, 40%)",
+    gradient: "from-green-600 to-emerald-800",
+    reward: "Balance Keeper Badge + 750 XP",
+    badgeId: "balance-keeper",
+    mutations: [
+      { name: "The Invasive Swarm", title: "Mutated Ecology Boss", description: "It spread invasive species everywhere! Repair the broken food webs before they collapse!", icon: "TreePine", gradient: "from-emerald-800 to-teal-900", phases: 5, difficulty: "Extreme", reward: "Web Weaver Badge + 1000 XP", badgeId: "web-weaver" },
+      { name: "The Biosphere Tyrant", title: "Omega Ecology Boss", description: "It seized control of the entire biosphere! Only a true ecologist can rebalance the planet!", icon: "TreePine", gradient: "from-teal-900 to-green-950", phases: 6, difficulty: "Legendary", reward: "Biosphere Master Badge + 1500 XP", badgeId: "biosphere-master" },
+    ],
+  },
+  {
+    id: "astro-devourer",
+    name: "The Astro Devourer",
+    title: "Space Boss",
+    description: "A cosmic horror is swallowing the solar system! Use astronomy and space science to drive it back into the void!",
+    scienceConcepts: ["Solar system", "Stars & gravity", "Space science"],
+    requiredSkills: ["Astronomer"],
+    phases: 4,
+    difficulty: "Hard",
+    icon: "Orbit",
+    color: "hsl(250, 80%, 60%)",
+    gradient: "from-indigo-600 to-purple-800",
+    reward: "Star Guardian Badge + 750 XP",
+    badgeId: "star-guardian",
+    mutations: [
+      { name: "The Black Hole Maw", title: "Mutated Space Boss", description: "It collapsed into a hungry black hole! Escape its event horizon with gravity science!", icon: "Orbit", gradient: "from-purple-800 to-slate-900", phases: 5, difficulty: "Extreme", reward: "Event Horizon Badge + 1000 XP", badgeId: "event-horizon-survivor" },
+      { name: "The Galactic End", title: "Omega Space Boss", description: "It threatens to devour the whole galaxy! Only a master astronomer can save the cosmos!", icon: "Orbit", gradient: "from-slate-900 to-indigo-950", phases: 6, difficulty: "Legendary", reward: "Cosmos Master Badge + 1500 XP", badgeId: "cosmos-master" },
+    ],
+  },
 ];
 
 export const LAB_EXPERIMENTS: LabExperiment[] = [
@@ -2408,6 +2533,34 @@ export const BADGES: BadgeInfo[] = [
   { id: "phantom-collapser", name: "Phantom Collapser", description: "Defeat The Quantum Phantom", icon: "Atom", color: "hsl(270, 85%, 55%)", requirement: "Beat the Quantum Realm Boss", rarity: "rare", topic: "bosses" },
   { id: "entanglement-breaker", name: "Entanglement Breaker", description: "Defeat The Entangled Horror (mutated)", icon: "Atom", color: "hsl(260, 85%, 50%)", requirement: "Beat the mutated Quantum Boss", rarity: "epic", topic: "bosses" },
   { id: "probability-master", name: "Probability Master", description: "Defeat The Probability Storm (omega)", icon: "Atom", color: "hsl(250, 85%, 45%)", requirement: "Beat the omega Quantum Boss", rarity: "legendary", topic: "bosses" },
+  // Tidal Leviathan (Ocean)
+  { id: "tide-tamer", name: "Tide Tamer", description: "Defeat The Tidal Leviathan", icon: "Waves", color: "hsl(200, 80%, 50%)", requirement: "Beat the Ocean Boss", rarity: "rare", topic: "bosses" },
+  { id: "abyss-conqueror", name: "Abyss Conqueror", description: "Defeat The Abyssal Leviathan (mutated)", icon: "Waves", color: "hsl(215, 80%, 45%)", requirement: "Beat the mutated Ocean Boss", rarity: "epic", topic: "bosses" },
+  { id: "tsunami-master", name: "Tsunami Master", description: "Defeat The World Tsunami (omega)", icon: "Waves", color: "hsl(225, 80%, 40%)", requirement: "Beat the omega Ocean Boss", rarity: "legendary", topic: "bosses" },
+  // Inferno Colossus (Heat & Energy)
+  { id: "heat-sink", name: "Heat Sink", description: "Defeat The Inferno Colossus", icon: "Flame", color: "hsl(15, 90%, 50%)", requirement: "Beat the Heat & Energy Boss", rarity: "rare", topic: "bosses" },
+  { id: "plasma-purger", name: "Plasma Purger", description: "Defeat The Plasma Colossus (mutated)", icon: "Flame", color: "hsl(345, 85%, 50%)", requirement: "Beat the mutated Heat Boss", rarity: "epic", topic: "bosses" },
+  { id: "fusion-master", name: "Fusion Master", description: "Defeat The Solar Core (omega)", icon: "Flame", color: "hsl(35, 90%, 50%)", requirement: "Beat the omega Heat Boss", rarity: "legendary", topic: "bosses" },
+  // Cryo Sovereign (Cold & Matter)
+  { id: "frost-breaker", name: "Frost Breaker", description: "Defeat The Cryo Sovereign", icon: "Snowflake", color: "hsl(195, 80%, 55%)", requirement: "Beat the Cold & Matter Boss", rarity: "rare", topic: "bosses" },
+  { id: "kelvin-crusher", name: "Kelvin Crusher", description: "Defeat The Absolute Zero (mutated)", icon: "Snowflake", color: "hsl(205, 80%, 50%)", requirement: "Beat the mutated Cold Boss", rarity: "epic", topic: "bosses" },
+  { id: "thaw-master", name: "Thaw Master", description: "Defeat The Glacial Eternity (omega)", icon: "Snowflake", color: "hsl(215, 80%, 45%)", requirement: "Beat the omega Cold Boss", rarity: "legendary", topic: "bosses" },
+  // Gaia Behemoth (Ecology)
+  { id: "balance-keeper", name: "Balance Keeper", description: "Defeat The Gaia Behemoth", icon: "TreePine", color: "hsl(130, 65%, 40%)", requirement: "Beat the Ecology Boss", rarity: "rare", topic: "bosses" },
+  { id: "web-weaver", name: "Web Weaver", description: "Defeat The Invasive Swarm (mutated)", icon: "TreePine", color: "hsl(150, 65%, 38%)", requirement: "Beat the mutated Ecology Boss", rarity: "epic", topic: "bosses" },
+  { id: "biosphere-master", name: "Biosphere Master", description: "Defeat The Biosphere Tyrant (omega)", icon: "TreePine", color: "hsl(160, 65%, 35%)", requirement: "Beat the omega Ecology Boss", rarity: "legendary", topic: "bosses" },
+  // Astro Devourer (Space)
+  { id: "star-guardian", name: "Star Guardian", description: "Defeat The Astro Devourer", icon: "Orbit", color: "hsl(250, 80%, 60%)", requirement: "Beat the Space Boss", rarity: "rare", topic: "bosses" },
+  { id: "event-horizon-survivor", name: "Event Horizon Survivor", description: "Defeat The Black Hole Maw (mutated)", icon: "Orbit", color: "hsl(265, 80%, 50%)", requirement: "Beat the mutated Space Boss", rarity: "epic", topic: "bosses" },
+  { id: "cosmos-master", name: "Cosmos Master", description: "Defeat The Galactic End (omega)", icon: "Orbit", color: "hsl(275, 80%, 45%)", requirement: "Beat the omega Space Boss", rarity: "legendary", topic: "bosses" },
+  // Dimensions
+  { id: "gauntlet-champion", name: "Gauntlet Champion", description: "Reach Wave 5 in The Gauntlet", icon: "Swords", color: "hsl(15, 85%, 50%)", requirement: "Survive to wave 5 in the Gauntlet dimension", rarity: "rare", topic: "special" },
+  { id: "labyrinth-master", name: "Labyrinth Master", description: "Escape The Labyrinth", icon: "Map", color: "hsl(265, 70%, 55%)", requirement: "Complete a run in the Labyrinth dimension", rarity: "epic", topic: "special" },
+  { id: "nexus-ascendant", name: "Nexus Ascendant", description: "Top the ladder in The Nexus", icon: "Sparkles", color: "hsl(190, 85%, 50%)", requirement: "Reach the top rung in the Nexus dimension", rarity: "epic", topic: "special" },
+  { id: "colosseum-victor", name: "Colosseum Victor", description: "Beat all 3 bosses in The Colosseum", icon: "Skull", color: "hsl(340, 80%, 50%)", requirement: "Defeat all three bosses in the Colosseum dimension", rarity: "legendary", topic: "special" },
+  { id: "infinity-master", name: "Infinity Master", description: "Collect all 6 Infinity Stones", icon: "Gem", color: "hsl(280, 90%, 55%)", requirement: "Complete every Infinity Rift and claim the Infinity Gauntlet", rarity: "legendary", topic: "special" },
+  { id: "elemental-sovereign", name: "Elemental Sovereign", description: "Collect all 4 Elemental Cores", icon: "Flame", color: "hsl(25, 90%, 55%)", requirement: "Complete every Elemental trial and claim the Elemental Crown", rarity: "legendary", topic: "special" },
+  { id: "cosmic-sovereign", name: "Cosmic Sovereign", description: "Collect all 4 Star Fragments", icon: "Telescope", color: "hsl(250, 80%, 60%)", requirement: "Complete every Cosmic trial and claim the Cosmic Crown", rarity: "legendary", topic: "special" },
 ];
 
 export const AVATARS: AvatarInfo[] = [
@@ -2456,6 +2609,9 @@ export const SHOP_AVATARS: { id: string; name: string; icon: string; source?: st
   { id: "avatar-clan-champion", name: "Clan Champion", icon: "Globe", source: "Lead the #1 Ranked Clan", category: "leaderboard" },
   { id: "avatar-team-champion", name: "Team Champion", icon: "Users", source: "Lead the #1 Ranked Team", category: "leaderboard" },
   { id: "avatar-supreme-champion", name: "Supreme Champion", icon: "Spark", source: "Reach #1 on Leaderboard", category: "leaderboard" },
+  { id: "avatar-infinity", name: "Infinity Bearer", icon: "Gem", source: "Collect all 6 Infinity Stones", category: "achievement" },
+  { id: "avatar-elemental-lord", name: "Elemental Lord", icon: "Flame", source: "Claim the Elemental Crown", category: "achievement" },
+  { id: "avatar-cosmos-sovereign", name: "Cosmos Sovereign", icon: "Telescope", source: "Claim the Cosmic Crown", category: "achievement" },
 ];
 
 export function getXPForLevel(level: number): number {

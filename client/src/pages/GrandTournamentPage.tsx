@@ -126,6 +126,22 @@ export default function GrandTournamentPage() {
     },
   });
 
+  // Year level is the single dial for GT difficulty AND your competing district.
+  const yearLevelMutation = useMutation({
+    mutationFn: async (yearLevel: number) => {
+      const res = await apiRequest("PATCH", "/api/user/progress", { yearLevel });
+      return res.json();
+    },
+    onSuccess: (_d, yearLevel) => {
+      const dist = DISTRICTS.find(d => d.yearLevel === yearLevel);
+      toast({ title: "Year level updated!", description: `Now competing in ${dist?.name} with Year ${yearLevel} difficulty.` });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/grand-tournament"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/gt-questions/active"] });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
   const submitMutation = useMutation({
     mutationFn: async ({ eventType, score }: { eventType: string; score: number }) => {
       const res = await apiRequest("POST", "/api/grand-tournament/submit", { eventType, score });
@@ -254,27 +270,36 @@ export default function GrandTournamentPage() {
 
         <div className="space-y-2">
           <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-blue-400" /> Select Your District
+            <MapPin className="w-5 h-5 text-blue-400" /> Your Year Level — Difficulty &amp; District
           </h3>
+          <p className="text-sm text-gray-400">
+            Pick your year level. This sets your Grand Tournament <span className="font-semibold text-gray-300">question difficulty</span> and the <span className="font-semibold text-gray-300">district you compete in</span>.
+          </p>
           <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
-            {DISTRICTS.map(d => (
-              <Button
-                key={d.id}
-                variant={userDistrict === d.id ? "default" : "outline"}
-                className={`${userDistrict === d.id
-                  ? `bg-gradient-to-r ${d.color} text-white border-0`
-                  : "border-gray-600 text-gray-300 hover:text-white"
-                }`}
-                onClick={() => setSelectedDistrict(d.id)}
-                data-testid={`button-district-${d.id}`}
-              >
-                <span className="mr-1">{d.emoji}</span> {d.name}
-              </Button>
-            ))}
+            {DISTRICTS.map(d => {
+              const currentYear = (user as any)?.yearLevel || 7;
+              const isActive = currentYear === d.yearLevel;
+              return (
+                <Button
+                  key={d.id}
+                  variant={isActive ? "default" : "outline"}
+                  disabled={yearLevelMutation.isPending}
+                  className={`${isActive
+                    ? `bg-gradient-to-r ${d.color} text-white border-0`
+                    : "border-gray-600 text-gray-300 hover:text-white"
+                  }`}
+                  onClick={() => { setSelectedDistrict(d.id); yearLevelMutation.mutate(d.yearLevel); }}
+                  data-testid={`button-district-${d.id}`}
+                >
+                  <span className="mr-1">{d.emoji}</span> {d.name}
+                </Button>
+              );
+            })}
           </div>
-          {data?.userDistrict && (
-            <p className="text-sm text-gray-500">Your district: {DISTRICTS.find(d => d.id === data.userDistrict)?.name || data.userDistrict}</p>
-          )}
+          <p className="text-sm text-gray-500">
+            Competing in: <span className="font-semibold text-gray-300">{DISTRICTS.find(d => d.yearLevel === ((user as any)?.yearLevel || 7))?.name || data?.userDistrict}</span>
+            {" "}· You can also change this from the Profile page or any game's start screen.
+          </p>
         </div>
 
         <div className="flex gap-2 flex-wrap">

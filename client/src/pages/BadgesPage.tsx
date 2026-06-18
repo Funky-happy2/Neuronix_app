@@ -9,7 +9,7 @@ import {
   CloudLightning, Bug, Orbit, Timer, Crown, Calendar, GraduationCap,
   Sparkles, Pickaxe, Globe, Clock, Microscope, Moon, Cpu, Gamepad2,
   ShoppingCart, RotateCcw, Coins, Mountain, Link, Settings, Heart,
-  Magnet, TrendingUp
+  Magnet, TrendingUp, Waves, Snowflake, Skull, Map as MapIcon
 } from "lucide-react";
 import { BADGES } from "@/lib/gameData";
 import { useAuth } from "@/hooks/use-auth";
@@ -21,7 +21,7 @@ const ICON_MAP: Record<string, any> = {
   CloudLightning, Bug, Orbit, Timer, Crown, Calendar, GraduationCap,
   Trophy, Swords, FlaskConical, Sparkles, Pickaxe, Globe, Clock, Microscope,
   Moon, Cpu, Gamepad2, ShoppingCart, RotateCcw, Coins, Mountain, Link, Settings,
-  Heart, Award, Magnet, TrendingUp,
+  Heart, Award, Magnet, TrendingUp, Waves, Snowflake, Skull, Map: MapIcon,
 };
 
 type FilterType = "all" | "earned" | "locked";

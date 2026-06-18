@@ -55,6 +55,9 @@ const AVATAR_ICON_MAP: Record<string, { icon: LucideIcon; gradient: string }> = 
   "avatar-news-star": { icon: Star, gradient: "from-yellow-400 to-amber-500" },
   "avatar-viral-scientist": { icon: Zap, gradient: "from-violet-500 to-purple-600" },
   "avatar-pvp-beater": { icon: Swords, gradient: "from-red-500 to-orange-600" },
+  "avatar-infinity": { icon: GemIcon, gradient: "from-fuchsia-500 via-purple-600 to-amber-500" },
+  "avatar-elemental-lord": { icon: Flame, gradient: "from-orange-500 via-amber-500 to-teal-500" },
+  "avatar-cosmos-sovereign": { icon: Telescope, gradient: "from-indigo-500 via-violet-500 to-sky-400" },
 };
 
 function getAvatarInfo(id: string | null) {

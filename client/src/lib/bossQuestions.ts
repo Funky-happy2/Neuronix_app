@@ -712,4 +712,139 @@ export const BOSS_QUESTIONS_BY_YEAR: Record<string, Record<number, BossQ[]>> = {
     ],
   },
 
+  "tidal-leviathan": {
+    4: [
+      { question: "What causes ocean tides?", options: ["Wind", "The Moon's gravity pulling on the ocean", "Fish swimming", "Boats"], correct: 1, explanation: "The Moon's gravity tugs on Earth's oceans, creating high and low tides!" },
+      { question: "Salt water is found in the...", options: ["Rivers", "Ocean", "Rain", "Lakes"], correct: 1, explanation: "Oceans are full of salty seawater, while most lakes and rivers are freshwater!" },
+      { question: "What do we call a giant ocean wave caused by an earthquake?", options: ["A ripple", "A tsunami", "A puddle", "A breeze"], correct: 1, explanation: "Underwater earthquakes can create huge waves called tsunamis!" },
+      { question: "Where does most rain water come from?", options: ["Underground", "Evaporated ocean water", "Volcanoes", "Trees"], correct: 1, explanation: "The Sun evaporates ocean water, which forms clouds and falls as rain!" },
+      { question: "Which animal lives in the ocean?", options: ["Lion", "Dolphin", "Eagle", "Camel"], correct: 1, explanation: "Dolphins are smart mammals that live in the ocean!" },
+      { question: "The ocean is mostly made of...", options: ["Sand", "Water", "Rock", "Air"], correct: 1, explanation: "Oceans are enormous bodies of salty water covering most of Earth!" },
+    ],
+    6: [
+      { question: "High tide and low tide usually happen about how often?", options: ["Once a year", "Twice a day", "Once a week", "Never"], correct: 1, explanation: "Most coasts get two high tides and two low tides roughly every 24 hours!" },
+      { question: "Ocean currents are mainly driven by...", options: ["Fish", "Wind and differences in water temperature/salt", "Moonlight", "Sound"], correct: 1, explanation: "Wind, temperature and salinity differences drive huge ocean currents!" },
+      { question: "Why is the ocean salty?", options: ["Someone added salt", "Rivers carry dissolved minerals into it", "Fish make salt", "The Moon"], correct: 1, explanation: "Rivers wash dissolved minerals and salts from rocks into the sea over millions of years!" },
+      { question: "The deepest part of the ocean is the...", options: ["Mariana Trench", "Sahara", "Grand Canyon", "Dead Sea"], correct: 0, explanation: "The Mariana Trench is the deepest known point in the ocean, almost 11 km down!" },
+      { question: "Coral reefs are built by...", options: ["Rocks", "Tiny animals called polyps", "Plastic", "Seaweed only"], correct: 1, explanation: "Coral reefs are made by colonies of tiny animals called coral polyps!" },
+      { question: "Water pressure in the ocean as you go deeper...", options: ["Decreases", "Increases", "Stays the same", "Disappears"], correct: 1, explanation: "Pressure increases with depth because more water pushes down from above!" },
+    ],
+    8: [
+      { question: "Spring tides (the highest tides) happen when...", options: ["Only in spring", "The Sun and Moon align their gravity", "It rains", "The wind stops"], correct: 1, explanation: "Spring tides occur at new and full Moon, when Sun and Moon gravity combine!" },
+      { question: "The global 'conveyor belt' of ocean currents is driven by differences in...", options: ["Colour", "Density (temperature + salinity)", "Sound", "Fish population"], correct: 1, explanation: "Thermohaline circulation is driven by water density from temperature and salt!" },
+      { question: "Roughly what fraction of Earth's surface is ocean?", options: ["About 10%", "About 71%", "About 25%", "About 95%"], correct: 1, explanation: "Oceans cover about 71% of Earth's surface!" },
+      { question: "Ocean acidification is mainly caused by the ocean absorbing...", options: ["Oxygen", "Carbon dioxide (CO₂)", "Nitrogen", "Helium"], correct: 1, explanation: "Dissolved CO₂ forms carbonic acid, lowering ocean pH and harming shellfish!" },
+      { question: "The Coriolis effect makes large ocean currents...", options: ["Stop", "Curve due to Earth's rotation", "Heat up", "Freeze"], correct: 1, explanation: "Earth's rotation deflects currents, making gyres rotate clockwise/anticlockwise!" },
+      { question: "Most of the oxygen produced on Earth comes from...", options: ["Trees only", "Ocean phytoplankton", "Volcanoes", "Deserts"], correct: 1, explanation: "Tiny ocean phytoplankton produce a majority of the planet's oxygen via photosynthesis!" },
+    ],
+  },
+
+  "inferno-colossus": {
+    4: [
+      { question: "Heat usually moves from...", options: ["Cold to hot", "Hot to cold", "It never moves", "Up only"], correct: 1, explanation: "Heat always flows from hotter things to colder things!" },
+      { question: "When you heat ice, it turns into...", options: ["Gas straight away", "Water", "Rock", "Air"], correct: 1, explanation: "Heating solid ice melts it into liquid water!" },
+      { question: "Which feels hot?", options: ["Ice cube", "A campfire", "Snow", "Cold water"], correct: 1, explanation: "A campfire gives off lots of heat energy!" },
+      { question: "Metal spoons in hot soup get warm because metal is a good...", options: ["Insulator", "Conductor of heat", "Magnet", "Liquid"], correct: 1, explanation: "Metals are good conductors, so heat travels through them quickly!" },
+      { question: "The Sun gives Earth...", options: ["Cold", "Light and heat", "Rain", "Wind only"], correct: 1, explanation: "The Sun is our main source of light and heat energy!" },
+      { question: "What happens to water when it boils?", options: ["Turns to ice", "Turns to steam (gas)", "Disappears forever", "Becomes solid"], correct: 1, explanation: "Boiling water turns into steam, which is water in gas form!" },
+    ],
+    6: [
+      { question: "Heat transfer through direct contact is called...", options: ["Radiation", "Conduction", "Convection", "Reflection"], correct: 1, explanation: "Conduction is heat moving through a material by direct contact!" },
+      { question: "Hot air rising and cool air sinking is an example of...", options: ["Conduction", "Convection", "Radiation", "Freezing"], correct: 1, explanation: "Convection moves heat through fluids as warm parts rise and cool parts sink!" },
+      { question: "The Sun's heat reaches Earth through empty space by...", options: ["Conduction", "Convection", "Radiation", "Wires"], correct: 2, explanation: "Radiation transfers heat as waves, even through the vacuum of space!" },
+      { question: "Which is a good insulator (slows heat)?", options: ["Copper", "Wool", "Iron", "Aluminium"], correct: 1, explanation: "Wool traps air and slows heat transfer, so it keeps you warm!" },
+      { question: "Adding heat to a substance usually makes its particles...", options: ["Slow down", "Move faster", "Stop", "Disappear"], correct: 1, explanation: "Heating gives particles more energy, so they move faster!" },
+      { question: "When a gas cools enough it...", options: ["Heats up", "Condenses into a liquid", "Becomes solid metal", "Vanishes"], correct: 1, explanation: "Cooling a gas removes energy until it condenses into a liquid!" },
+    ],
+    8: [
+      { question: "The first law of thermodynamics says energy is...", options: ["Created from nothing", "Conserved (not created or destroyed)", "Always lost", "Made of matter"], correct: 1, explanation: "Energy can change form but the total amount is conserved!" },
+      { question: "Plasma, the fourth state of matter, forms when a gas is...", options: ["Frozen", "Heated until atoms ionize", "Compressed to a solid", "Mixed with water"], correct: 1, explanation: "Extreme heat strips electrons from atoms, creating charged plasma!" },
+      { question: "The Sun produces energy through nuclear...", options: ["Fission", "Fusion of hydrogen into helium", "Combustion", "Friction"], correct: 1, explanation: "The Sun fuses hydrogen into helium, releasing enormous energy!" },
+      { question: "Energy needed to change state without changing temperature is called...", options: ["Specific heat", "Latent heat", "Kinetic energy", "Potential energy"], correct: 1, explanation: "Latent heat is absorbed/released during phase changes like melting or boiling!" },
+      { question: "The second law of thermodynamics says entropy (disorder) tends to...", options: ["Decrease", "Increase over time", "Stay constant always", "Become zero"], correct: 1, explanation: "In an isolated system, total entropy tends to increase!" },
+      { question: "Temperature is a measure of the average ___ of particles.", options: ["Mass", "Kinetic energy", "Colour", "Charge"], correct: 1, explanation: "Temperature reflects the average kinetic energy of particles!" },
+    ],
+  },
+
+  "cryo-sovereign": {
+    4: [
+      { question: "Water freezes into ice when it gets...", options: ["Hot", "Very cold", "Wet", "Dark"], correct: 1, explanation: "When water gets cold enough (0°C), it freezes into solid ice!" },
+      { question: "Ice is water in which state?", options: ["Solid", "Liquid", "Gas", "Plasma"], correct: 0, explanation: "Ice is the solid state of water!" },
+      { question: "What melts ice?", options: ["Cold", "Adding heat", "Darkness", "Wind only"], correct: 1, explanation: "Adding heat energy melts ice back into liquid water!" },
+      { question: "Which is colder?", options: ["Boiling water", "A freezer", "A warm room", "Sunlight"], correct: 1, explanation: "A freezer is well below freezing temperature!" },
+      { question: "The three main states of matter are solid, liquid and...", options: ["Gas", "Metal", "Wood", "Light"], correct: 0, explanation: "Solid, liquid and gas are the three everyday states of matter!" },
+      { question: "When you breathe on a cold window, the fog is water...", options: ["Freezing", "Condensing from your breath", "Boiling", "Burning"], correct: 1, explanation: "Warm water vapour in your breath condenses on the cold glass!" },
+    ],
+    6: [
+      { question: "Going straight from solid to gas (like dry ice) is called...", options: ["Melting", "Sublimation", "Boiling", "Freezing"], correct: 1, explanation: "Sublimation is when a solid turns directly into a gas!" },
+      { question: "Most substances are densest as a...", options: ["Gas", "Solid", "Plasma", "Liquid"], correct: 1, explanation: "Particles are packed closest together in solids — though water ice is a famous exception!" },
+      { question: "Ice floats on water because ice is...", options: ["Heavier", "Less dense than liquid water", "Warmer", "Made of air"], correct: 1, explanation: "Water expands when it freezes, so ice is less dense and floats!" },
+      { question: "Adding salt to icy roads...", options: ["Raises freezing point", "Lowers the freezing point of water", "Makes it colder", "Has no effect"], correct: 1, explanation: "Salt lowers water's freezing point, helping ice melt!" },
+      { question: "In a solid, particles mostly...", options: ["Fly around freely", "Vibrate in fixed positions", "Disappear", "Turn to gas"], correct: 1, explanation: "Solid particles are locked in place and only vibrate!" },
+      { question: "Turning a liquid into a solid by cooling is...", options: ["Melting", "Freezing", "Evaporation", "Boiling"], correct: 1, explanation: "Freezing removes heat until a liquid becomes solid!" },
+    ],
+    8: [
+      { question: "The coldest possible temperature, where particle motion stops, is...", options: ["0°C", "Absolute zero (0 K, -273°C)", "-100°C", "Freezing point of salt"], correct: 1, explanation: "Absolute zero (0 kelvin) is the theoretical point of minimum energy!" },
+      { question: "The Kelvin scale starts at...", options: ["Freezing of water", "Absolute zero", "Boiling of water", "Room temperature"], correct: 1, explanation: "0 K is absolute zero; water freezes at 273 K!" },
+      { question: "Water's unusual property of expanding when frozen is due to its...", options: ["Salt content", "Hydrogen bonds forming an open lattice", "Temperature only", "Colour"], correct: 1, explanation: "Hydrogen bonds arrange ice into an open hexagonal lattice that's less dense!" },
+      { question: "A plasma differs from a gas because plasma is...", options: ["Colder", "Ionized (has free charged particles)", "Solid", "Heavier"], correct: 1, explanation: "Plasma contains free electrons and ions, making it electrically conductive!" },
+      { question: "Latent heat of fusion is the energy to...", options: ["Boil a liquid", "Melt a solid into liquid", "Heat a gas", "Cool a solid"], correct: 1, explanation: "It's the energy needed to change a solid to liquid at its melting point!" },
+      { question: "Evaporative cooling works because escaping molecules carry away...", options: ["Mass only", "Energy, lowering the remaining liquid's temperature", "Colour", "Pressure only"], correct: 1, explanation: "The fastest molecules escape, leaving cooler, slower ones behind!" },
+    ],
+  },
+
+  "gaia-behemoth": {
+    4: [
+      { question: "What do plants need to make food?", options: ["Meat", "Sunlight, water and air", "Plastic", "Rocks"], correct: 1, explanation: "Plants use sunlight, water and carbon dioxide to make food by photosynthesis!" },
+      { question: "An animal that eats only plants is a...", options: ["Carnivore", "Herbivore", "Robot", "Predator"], correct: 1, explanation: "Herbivores eat plants, like cows and rabbits!" },
+      { question: "A food chain usually starts with...", options: ["A lion", "A plant", "A shark", "A rock"], correct: 1, explanation: "Plants are producers, the start of most food chains!" },
+      { question: "Bees help plants by...", options: ["Eating them", "Carrying pollen between flowers", "Cutting them", "Freezing them"], correct: 1, explanation: "Bees pollinate flowers, helping plants make seeds!" },
+      { question: "Which is a living part of an ecosystem?", options: ["A rock", "A tree", "Sunlight", "Water"], correct: 1, explanation: "Trees are living (biotic) parts of an ecosystem!" },
+      { question: "What do decomposers like mushrooms do?", options: ["Make sunlight", "Break down dead things", "Hunt animals", "Fly"], correct: 1, explanation: "Decomposers break down dead plants and animals, recycling nutrients!" },
+    ],
+    6: [
+      { question: "Energy in a food web flows from...", options: ["Animals to the Sun", "The Sun to producers to consumers", "Rocks to plants", "Water to air"], correct: 1, explanation: "Energy flows from the Sun to plants (producers) and up to consumers!" },
+      { question: "Biodiversity means...", options: ["One type of animal", "The variety of living things in an area", "Only plants", "No life"], correct: 1, explanation: "Biodiversity is the variety of different species in an ecosystem!" },
+      { question: "If predators are removed, prey populations often...", options: ["Stay the same", "Increase rapidly", "Disappear", "Turn into plants"], correct: 1, explanation: "Without predators, prey can grow out of control and overgraze!" },
+      { question: "An invasive species is one that...", options: ["Belongs there", "Is introduced and harms the local ecosystem", "Is always tiny", "Only eats rocks"], correct: 1, explanation: "Invasive species spread and disrupt native ecosystems!" },
+      { question: "At each step of a food chain, available energy...", options: ["Increases", "Decreases (much is lost as heat)", "Stays equal", "Doubles"], correct: 1, explanation: "Only about 10% of energy passes to the next level; the rest is lost!" },
+      { question: "Which gas do plants take in for photosynthesis?", options: ["Oxygen", "Carbon dioxide", "Nitrogen", "Helium"], correct: 1, explanation: "Plants absorb carbon dioxide and release oxygen during photosynthesis!" },
+    ],
+    8: [
+      { question: "A keystone species is one that...", options: ["Is the biggest", "Has a large effect on its ecosystem relative to its abundance", "Lives the longest", "Eats only plants"], correct: 1, explanation: "Keystone species hold ecosystems together; removing them causes big changes!" },
+      { question: "The total mass of living matter at a trophic level is its...", options: ["Volume", "Biomass", "Density", "Habitat"], correct: 1, explanation: "Biomass is the total mass of organisms at a level in a food web!" },
+      { question: "Carbon moves between living things and the atmosphere in the...", options: ["Rock cycle", "Carbon cycle", "Water cycle only", "Nitrogen cycle"], correct: 1, explanation: "The carbon cycle moves carbon through organisms, air, oceans and soil!" },
+      { question: "Carrying capacity is the...", options: ["Maximum population an environment can support", "Speed of an animal", "Number of plants only", "Weight an animal carries"], correct: 0, explanation: "Carrying capacity is the largest population the resources can sustain!" },
+      { question: "Eutrophication of a lake is usually caused by excess...", options: ["Oxygen", "Nutrients like nitrogen and phosphorus", "Salt", "Sunlight"], correct: 1, explanation: "Excess nutrients cause algal blooms that deplete oxygen and kill fish!" },
+      { question: "Symbiosis where both species benefit is called...", options: ["Predation", "Mutualism", "Parasitism", "Competition"], correct: 1, explanation: "Mutualism is a relationship where both species gain benefits!" },
+    ],
+  },
+
+  "astro-devourer": {
+    4: [
+      { question: "What is at the center of our solar system?", options: ["The Moon", "The Sun", "Earth", "Mars"], correct: 1, explanation: "The Sun is at the center, and the planets orbit around it!" },
+      { question: "Which planet do we live on?", options: ["Mars", "Earth", "Jupiter", "Venus"], correct: 1, explanation: "We live on Earth, the third planet from the Sun!" },
+      { question: "What lights up at night in the sky?", options: ["Stars", "Rocks", "Trees", "Cars"], correct: 0, explanation: "Stars are giant balls of glowing gas far away in space!" },
+      { question: "The Moon goes around the...", options: ["Sun", "Earth", "Mars", "Stars"], correct: 1, explanation: "The Moon orbits Earth about once a month!" },
+      { question: "Which planet is known as the Red Planet?", options: ["Venus", "Mars", "Saturn", "Earth"], correct: 1, explanation: "Mars looks red because of rusty iron in its soil!" },
+      { question: "What keeps planets orbiting the Sun?", options: ["Wind", "Gravity", "Magnets", "Light"], correct: 1, explanation: "The Sun's gravity holds the planets in their orbits!" },
+    ],
+    6: [
+      { question: "How many planets are in our solar system?", options: ["7", "8", "9", "12"], correct: 1, explanation: "There are 8 planets since Pluto was reclassified as a dwarf planet!" },
+      { question: "A year is the time Earth takes to...", options: ["Spin once", "Orbit the Sun once", "Orbit the Moon", "Cross the galaxy"], correct: 1, explanation: "One orbit of Earth around the Sun takes about 365 days — a year!" },
+      { question: "The Sun is actually a...", options: ["Planet", "Star", "Moon", "Comet"], correct: 1, explanation: "The Sun is a medium-sized star, the closest one to us!" },
+      { question: "What is a galaxy?", options: ["A single star", "A huge collection of stars, gas and dust", "A planet", "A type of rocket"], correct: 1, explanation: "A galaxy is a vast group of billions of stars — we live in the Milky Way!" },
+      { question: "Why do we have day and night?", options: ["The Sun moves around Earth", "Earth rotates on its axis", "The Moon blocks the Sun", "Clouds"], correct: 1, explanation: "Earth spins on its axis, so each side faces the Sun in turn!" },
+      { question: "The largest planet in our solar system is...", options: ["Earth", "Jupiter", "Mars", "Saturn"], correct: 1, explanation: "Jupiter is the biggest planet — over 1,300 Earths could fit inside!" },
+    ],
+    8: [
+      { question: "A light-year measures...", options: ["Time", "Distance light travels in one year", "Brightness", "A planet's age"], correct: 1, explanation: "A light-year is a distance: about 9.5 trillion km!" },
+      { question: "A black hole is a region where gravity is so strong that...", options: ["Light can escape easily", "Not even light can escape", "Time speeds up everywhere", "Nothing happens"], correct: 1, explanation: "A black hole's gravity is so intense that nothing, not even light, can escape past the event horizon!" },
+      { question: "Stars produce energy in their cores through nuclear...", options: ["Fission", "Fusion", "Combustion", "Friction"], correct: 1, explanation: "Stars fuse hydrogen into helium, releasing huge amounts of energy!" },
+      { question: "The expansion of the universe is evidence for the...", options: ["Steady State", "Big Bang theory", "Geocentric model", "Flat universe"], correct: 1, explanation: "Galaxies moving apart supports the Big Bang theory of an expanding universe!" },
+      { question: "What is the 'event horizon' of a black hole?", options: ["Its surface temperature", "The point of no return", "Its colour", "Its orbit"], correct: 1, explanation: "The event horizon is the boundary beyond which nothing can escape!" },
+      { question: "Most of the mass in galaxies seems to be invisible, called...", options: ["Dark matter", "Sunlight", "Plasma", "Comets"], correct: 0, explanation: "Dark matter doesn't emit light but its gravity shapes galaxies!" },
+    ],
+  },
+
 };

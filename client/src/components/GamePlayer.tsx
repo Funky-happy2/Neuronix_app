@@ -18,8 +18,9 @@ import {
   CATCH_FALLING_THEMES, DEFENSE_THEMES, SLIDER_MATCH_THEMES,
   LAUNCHER_THEMES, MAZE_THEMES, GRAVITY_MAZE_THEMES,
 } from "@/lib/worldGameThemes";
-import { WORLDS } from "@/lib/gameData";
+import { WORLDS, DISTRICTS, yearToDifficulty, yearTimeBonus } from "@/lib/gameData";
 import { getQuizExplanation } from "@/lib/quizExplanations";
+import { analyzeCadence, type InputSample } from "@/lib/antiCheat";
 
 interface GameRewards {
   xp: number;
@@ -42,9 +43,43 @@ interface GamePlayerProps {
   onScoreChange?: (score: number) => void;
   gravityModifier?: string;
   autoLoop?: boolean;
+  onSetYearLevel?: (yearLevel: number) => void;
 }
 
-export default function GamePlayer({ game, onBack, onComplete, yearLevel = 7, autoStart = false, skipRewardSubmit = false, isChallenge = false, forcedDifficulty, onScoreChange, gravityModifier, autoLoop = false }: GamePlayerProps) {
+// Single difficulty dial: pick a Year Level (3-8). Higher years mean harder
+// questions, faster timers and tougher enemies — and it sets your district too.
+function YearLevelPicker({ selectedYear, onPick }: { selectedYear: number; onPick: (y: number) => void }) {
+  const diff = yearToDifficulty(selectedYear);
+  const district = DISTRICTS.find((d) => d.yearLevel === selectedYear);
+  const diffLabel = diff === "easy" ? "Easier" : diff === "hard" ? "Advanced" : "Standard";
+  const diffColor = diff === "easy" ? "text-green-300" : diff === "hard" ? "text-red-300" : "text-amber-300";
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-bold text-xs uppercase tracking-wider text-white/50">Year Level</h3>
+        <span className={`text-xs font-black ${diffColor}`}>{district?.emoji} {district?.name} · {diffLabel}</span>
+      </div>
+      <div className="grid grid-cols-6 gap-1.5">
+        {DISTRICTS.map((d) => (
+          <Button
+            key={d.id}
+            variant="outline"
+            className={`font-black border-2 transition-all px-0 h-11 text-lg ${selectedYear === d.yearLevel ? "bg-white text-gray-900 border-white shadow-lg scale-110" : "bg-white/10 text-white border-white/30 hover:bg-white/20"}`}
+            onClick={() => onPick(d.yearLevel)}
+            data-testid={`button-year-${d.yearLevel}`}
+          >
+            {d.yearLevel}
+          </Button>
+        ))}
+      </div>
+      <p className="text-[11px] text-white/50 mt-2 leading-snug">
+        Higher years = harder questions, faster timers & tougher enemies. This also sets your district.
+      </p>
+    </div>
+  );
+}
+
+export default function GamePlayer({ game, onBack, onComplete, yearLevel = 7, autoStart = false, skipRewardSubmit = false, isChallenge = false, forcedDifficulty, onScoreChange, gravityModifier, autoLoop = false, onSetYearLevel }: GamePlayerProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const gemUpgradesEnabled = localStorage.getItem("cosmetic-gem-upgrades") !== "false";
@@ -63,7 +98,12 @@ export default function GamePlayer({ game, onBack, onComplete, yearLevel = 7, au
   const [timeLeft, setTimeLeft] = useState(30);
   const [lives, setLives] = useState(3);
   const [gameOver, setGameOver] = useState(false);
-  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>(forcedDifficulty ?? 'medium');
+  // Year level is now the single difficulty dial (Year 3 easiest → Year 8 hardest).
+  // It maps to the legacy easy/medium/hard tiers the mini-games already understand,
+  // and adds a per-year time bonus/penalty so every year feels distinct.
+  const [selectedYear, setSelectedYear] = useState<number>(yearLevel);
+  const difficulty: 'easy' | 'medium' | 'hard' = forcedDifficulty ?? yearToDifficulty(selectedYear);
+  const pickYear = (y: number) => { setSelectedYear(y); onSetYearLevel?.(y); };
   const [rewards, setRewards] = useState<GameRewards | null>(null);
   const [highScores, setHighScores] = useState<{ overall: number; easy: number; medium: number; hard: number } | null>(null);
   const [rewardsLoading, setRewardsLoading] = useState(false);
@@ -96,40 +136,44 @@ export default function GamePlayer({ game, onBack, onComplete, yearLevel = 7, au
   }, [phase, autoLoop]);
 
   // Global anti-autoclicker watchdog — runs across every mini-game while playing.
-  // Inhumanly fast + perfectly uniform input patterns trigger an account suspension.
+  // Robotic input patterns (metronome timing, superhuman speed, or pixel-locked
+  // clicks) trigger an account suspension. See lib/antiCheat.ts for the detector.
   const autoFlaggedRef = useRef(false);
   useEffect(() => {
     if (phase !== "playing" || !user) return;
-    const stamps: number[] = [];
-    const onInput = () => {
-      const now = Date.now();
-      stamps.push(now);
-      if (stamps.length > 40) stamps.shift();
-      if (autoFlaggedRef.current || stamps.length < 16) return;
-      const recent = stamps.slice(-16);
-      const intervals = recent.slice(1).map((t, i) => t - recent[i]);
-      const mean = intervals.reduce((a, b) => a + b, 0) / intervals.length;
-      const stdDev = Math.sqrt(intervals.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / intervals.length);
-      // Humans vary; bots are fast AND metronome-uniform.
-      if (mean < 95 && stdDev < 22) {
-        autoFlaggedRef.current = true;
-        apiRequest("POST", "/api/report/suspicious", {
-          reason: "autoclicker_detected",
-          details: `${game.id}: mean interval ${Math.round(mean)}ms, stdDev ${Math.round(stdDev)}ms over 16 inputs`,
-        }).then(() => queryClient.invalidateQueries({ queryKey: ["/api/user"] })).catch(() => {});
-        toast({
-          title: "Suspicious activity detected",
-          description: "Automated clicking was detected. Your account has been suspended for review.",
-          variant: "destructive",
-        });
-        handleGameEnd(0);
-      }
+    const samples: InputSample[] = [];
+    const flag = (verdict: ReturnType<typeof analyzeCadence>) => {
+      autoFlaggedRef.current = true;
+      apiRequest("POST", "/api/report/suspicious", {
+        reason: "autoclicker_detected",
+        details: `${game.id}: ${verdict.reason}`,
+      }).then(() => queryClient.invalidateQueries({ queryKey: ["/api/user"] })).catch(() => {});
+      toast({
+        title: "Suspicious activity detected",
+        description: "Automated clicking was detected. Your account has been suspended for review.",
+        variant: "destructive",
+      });
+      handleGameEnd(0);
     };
-    window.addEventListener("pointerdown", onInput);
-    window.addEventListener("keydown", onInput);
+    const onPointer = (e: PointerEvent) => {
+      if (autoFlaggedRef.current) return;
+      samples.push({ t: performance.now(), x: e.clientX, y: e.clientY });
+      if (samples.length > 60) samples.shift();
+      const verdict = analyzeCadence(samples);
+      if (verdict.robotic) flag(verdict);
+    };
+    const onKey = () => {
+      if (autoFlaggedRef.current) return;
+      samples.push({ t: performance.now() });
+      if (samples.length > 60) samples.shift();
+      const verdict = analyzeCadence(samples);
+      if (verdict.robotic) flag(verdict);
+    };
+    window.addEventListener("pointerdown", onPointer);
+    window.addEventListener("keydown", onKey);
     return () => {
-      window.removeEventListener("pointerdown", onInput);
-      window.removeEventListener("keydown", onInput);
+      window.removeEventListener("pointerdown", onPointer);
+      window.removeEventListener("keydown", onKey);
     };
   }, [phase, user, game.id, toast]);
 
@@ -259,33 +303,7 @@ export default function GamePlayer({ game, onBack, onComplete, yearLevel = 7, au
               </div>
 
               <div className="mb-6">
-                <h3 className="font-bold mb-3 text-xs uppercase tracking-wider text-white/50">Difficulty</h3>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    className={`font-bold border-2 transition-all capitalize flex-1 ${difficulty === 'easy' ? 'bg-green-500 text-white border-green-400 shadow-lg scale-105' : 'bg-green-500/20 text-green-100 border-green-400/40 hover:bg-green-500/40'}`}
-                    onClick={() => setDifficulty('easy')}
-                    data-testid="button-difficulty-easy"
-                  >
-                    Easy
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className={`font-bold border-2 transition-all capitalize flex-1 ${difficulty === 'medium' ? 'bg-amber-500 text-white border-amber-400 shadow-lg scale-105' : 'bg-amber-500/20 text-amber-100 border-amber-400/40 hover:bg-amber-500/40'}`}
-                    onClick={() => setDifficulty('medium')}
-                    data-testid="button-difficulty-medium"
-                  >
-                    Medium
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className={`font-bold border-2 transition-all capitalize flex-1 ${difficulty === 'hard' ? 'bg-red-500 text-white border-red-400 shadow-lg scale-105' : 'bg-red-500/20 text-red-100 border-red-400/40 hover:bg-red-500/40'}`}
-                    onClick={() => setDifficulty('hard')}
-                    data-testid="button-difficulty-hard"
-                  >
-                    Hard
-                  </Button>
-                </div>
+                <YearLevelPicker selectedYear={selectedYear} onPick={pickYear} />
               </div>
 
               <Button
@@ -310,33 +328,7 @@ export default function GamePlayer({ game, onBack, onComplete, yearLevel = 7, au
               <p className="text-white/80 text-sm">{game.howToPlay}</p>
             </div>
             <div className="mb-6">
-              <h3 className="font-bold mb-3 text-sm uppercase tracking-wider text-white/70">Select Difficulty:</h3>
-              <div className="flex gap-2 flex-wrap">
-                <Button
-                  variant="outline"
-                  className={`font-bold border-2 transition-all ${difficulty === 'easy' ? 'bg-green-500 text-white border-green-400 shadow-lg scale-105' : 'bg-green-500/20 text-green-100 border-green-400/40 hover:bg-green-500/40'}`}
-                  onClick={() => setDifficulty('easy')}
-                  data-testid="button-difficulty-easy"
-                >
-                  Easy
-                </Button>
-                <Button
-                  variant="outline"
-                  className={`font-bold border-2 transition-all ${difficulty === 'medium' ? 'bg-amber-500 text-white border-amber-400 shadow-lg scale-105' : 'bg-amber-500/20 text-amber-100 border-amber-400/40 hover:bg-amber-500/40'}`}
-                  onClick={() => setDifficulty('medium')}
-                  data-testid="button-difficulty-medium"
-                >
-                  Medium
-                </Button>
-                <Button
-                  variant="outline"
-                  className={`font-bold border-2 transition-all ${difficulty === 'hard' ? 'bg-red-500 text-white border-red-400 shadow-lg scale-105' : 'bg-red-500/20 text-red-100 border-red-400/40 hover:bg-red-500/40'}`}
-                  onClick={() => setDifficulty('hard')}
-                  data-testid="button-difficulty-hard"
-                >
-                  Hard
-                </Button>
-              </div>
+              <YearLevelPicker selectedYear={selectedYear} onPick={pickYear} />
             </div>
             <Button
               size="lg"
@@ -495,9 +487,9 @@ export default function GamePlayer({ game, onBack, onComplete, yearLevel = 7, au
         onScore={(pts) => setScore((prev) => Math.max(0, prev + pts))}
         onEnd={(finalScore) => handleGameEnd(finalScore)}
         score={score}
-        yearLevel={yearLevel}
+        yearLevel={selectedYear}
         difficulty={difficulty}
-        extraTime={hasExtraTime ? 10 : 0}
+        extraTime={(hasExtraTime ? 10 : 0) + yearTimeBonus(selectedYear)}
         hasLuckyAnswer={hasLuckyAnswer}
         hasScienceScanner={hasScienceScanner}
         luckyAnswerLevel={luckyAnswerLevel}
@@ -2674,32 +2666,6 @@ function ClickerGame({ gameId, onScore, onEnd, score, difficulty, extraTime }: M
   const nextId = useRef(0);
   const scoreRef = useRef(score);
   scoreRef.current = score;
-  const { user } = useAuth();
-  const clickTimestamps = useRef<number[]>([]);
-  const reportedRef = useRef(false);
-  const [flagged, setFlagged] = useState(false);
-
-  const recordClick = () => {
-    const now = Date.now();
-    const ts = clickTimestamps.current;
-    ts.push(now);
-    if (ts.length > 30) ts.shift();
-    if (reportedRef.current || ts.length < 12) return;
-    const recent = ts.slice(-12);
-    const intervals = recent.slice(1).map((t, i) => t - recent[i]);
-    const mean = intervals.reduce((a, b) => a + b, 0) / intervals.length;
-    const stdDev = Math.sqrt(intervals.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / intervals.length);
-    const tooFast = mean < 80;
-    const tooUniform = stdDev < 25;
-    if (tooFast && tooUniform && user) {
-      reportedRef.current = true;
-      setFlagged(true);
-      apiRequest("POST", "/api/report/suspicious", {
-        reason: "autoclicker_detected",
-        details: `Clicker game: mean interval ${Math.round(mean)}ms, stdDev ${Math.round(stdDev)}ms over 12 clicks`,
-      }).catch(() => {});
-    }
-  };
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -2735,7 +2701,6 @@ function ClickerGame({ gameId, onScore, onEnd, score, difficulty, extraTime }: M
   }, [organisms]);
 
   const addOrganism = (type: string, emoji: string) => {
-    recordClick();
     setOrganisms((prev) => [
       ...prev,
       { id: nextId.current++, type, x: 50 + Math.random() * 200, y: 30 + Math.random() * 180, emoji },
@@ -2751,12 +2716,6 @@ function ClickerGame({ gameId, onScore, onEnd, score, difficulty, extraTime }: M
         </Badge>
       </div>
 
-      {flagged && (
-        <div className="mb-3 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/40 text-red-600 dark:text-red-400 text-xs font-bold flex items-center gap-2" data-testid="autoclicker-warning">
-          ⚠️ Unusual click pattern detected. Admins have been notified.
-        </div>
-      )}
-
       <div className={`relative w-full h-60 rounded-xl bg-gradient-to-b ${ct ? ct.bgGradient : "from-sky-200 to-green-300 dark:from-sky-900 dark:to-green-900"} mb-4 overflow-hidden`}>
         {organisms.map((o) => (
           <motion.div
@@ -2766,7 +2725,7 @@ function ClickerGame({ gameId, onScore, onEnd, score, difficulty, extraTime }: M
             transition={{ x: { repeat: Infinity, duration: 2 }, y: { repeat: Infinity, duration: 3 } }}
             className="absolute text-2xl cursor-pointer"
             style={{ left: o.x, top: o.y }}
-            onClick={() => { recordClick(); setOrganisms((prev) => prev.filter((p) => p.id !== o.id)); }}
+            onClick={() => { setOrganisms((prev) => prev.filter((p) => p.id !== o.id)); }}
           >
             {o.emoji}
           </motion.div>

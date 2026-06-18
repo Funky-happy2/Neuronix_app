@@ -10,16 +10,16 @@ import {
   Trash2, Eye, Crown, Coins, Gem, Star, Zap, Award, Save, RefreshCw,
   AlertTriangle, RotateCcw, UserX, Trophy, Plus, Loader2, Clock,
   Swords, Heart, Gift, Package, Lock, FlaskConical, Search, ShoppingBag,
-  Scale, ThumbsUp, ThumbsDown, Send, History, ArrowRightLeft, School, Pencil, Bot
+  Scale, ThumbsUp, ThumbsDown, Send, History, ArrowRightLeft, School, Pencil, Bot, Gavel
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import type { CommunityPack, Feedback } from "@shared/schema";
-import { BADGES, WORLDS, POTIONS, GAME_MODES as ARCADE_GAME_MODES } from "@/lib/gameData";
+import { BADGES, WORLDS, POTIONS, GAME_MODES as ARCADE_GAME_MODES, DIMENSIONS } from "@/lib/gameData";
 
-type AdminTab = "feedback" | "packs" | "users" | "daily" | "tournaments" | "gt-questions" | "codes" | "messages" | "parliament" | "schools" | "reports";
+type AdminTab = "feedback" | "packs" | "users" | "daily" | "tournaments" | "gt-questions" | "codes" | "messages" | "parliament" | "schools" | "reports" | "appeals" | "dimensions";
 
 interface AdminUser {
   id: number;
@@ -101,6 +101,8 @@ export default function AdminPage() {
     { id: "messages", label: "Messages", icon: MessageCircle },
     { id: "schools", label: "Apps", icon: School },
     { id: "reports", label: "Reports", icon: AlertTriangle },
+    { id: "appeals", label: "Appeals", icon: Gavel },
+    { id: "dimensions", label: "Dimensions", icon: Gem },
   ];
 
   return (
@@ -136,6 +138,8 @@ export default function AdminPage() {
         {tab === "messages" && <MessagesTab />}
         {tab === "schools" && <SchoolsTab />}
         {tab === "reports" && <ReportsTab />}
+        {tab === "appeals" && <AppealsTab />}
+        {tab === "dimensions" && <DimensionsAdminTab />}
       </motion.div>
     </div>
   );
@@ -523,83 +527,95 @@ function UsersTab() {
     },
   });
 
+  // Every admin decision must carry a reason — it's logged publicly and is appealable.
+  const promptReason = (label: string): string => {
+    const r = window.prompt(`Reason for "${label}" (required — logged publicly & appealable):`);
+    if (!r || !r.trim()) throw new Error("A reason is required for this action.");
+    return r.trim();
+  };
+  const modErr = (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" });
+
   const banUser = useMutation({
     mutationFn: ({ id, banned }: { id: number; banned: boolean }) =>
-      apiRequest("POST", `/api/admin/users/${id}/ban`, { banned }),
+      apiRequest("POST", `/api/admin/users/${id}/ban`, { banned, description: promptReason(banned ? "Ban user" : "Unban user") }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       toast({ title: "User status updated" });
     },
+    onError: modErr,
   });
 
   const strikeUser = useMutation({
-    mutationFn: (id: number) => apiRequest("POST", `/api/admin/users/${id}/strike`),
+    mutationFn: (id: number) => apiRequest("POST", `/api/admin/users/${id}/strike`, { description: promptReason("Strike user") }),
     onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       toast({ title: "Strike given!" });
     },
+    onError: modErr,
   });
 
   const clearStrikes = useMutation({
-    mutationFn: (id: number) => apiRequest("POST", `/api/admin/users/${id}/clear-strikes`),
+    mutationFn: (id: number) => apiRequest("POST", `/api/admin/users/${id}/clear-strikes`, { description: promptReason("Clear strikes") }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       toast({ title: "Strikes cleared" });
     },
+    onError: modErr,
   });
 
   const resetProgress = useMutation({
-    mutationFn: (id: number) => apiRequest("POST", `/api/admin/users/${id}/reset-progress`),
+    mutationFn: (id: number) => apiRequest("POST", `/api/admin/users/${id}/reset-progress`, { description: promptReason("Reset progress") }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       toast({ title: "Progress reset!" });
     },
+    onError: modErr,
   });
 
   const toggleAdmin = useMutation({
-    mutationFn: (id: number) => apiRequest("POST", `/api/admin/users/${id}/toggle-admin`),
+    mutationFn: (id: number) => apiRequest("POST", `/api/admin/users/${id}/toggle-admin`, { description: promptReason("Change admin status") }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       toast({ title: "Admin status updated" });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: modErr,
   });
 
   const toggleVip = useMutation({
-    mutationFn: (id: number) => apiRequest("POST", `/api/admin/users/${id}/toggle-vip`),
+    mutationFn: (id: number) => apiRequest("POST", `/api/admin/users/${id}/toggle-vip`, { description: promptReason("Change VIP status") }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       toast({ title: "VIP status updated" });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: modErr,
   });
 
   const deleteAccount = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/admin/users/${id}`),
+    mutationFn: (id: number) => apiRequest("DELETE", `/api/admin/users/${id}`, { description: promptReason("Deactivate account") }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       toast({ title: "Account deactivated" });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: modErr,
   });
 
   const reviveAccount = useMutation({
-    mutationFn: (id: number) => apiRequest("POST", `/api/admin/users/${id}/revive`),
+    mutationFn: (id: number) => apiRequest("POST", `/api/admin/users/${id}/revive`, { description: promptReason("Revive account") }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       toast({ title: "Account revived" });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: modErr,
   });
 
   const permanentDelete = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/admin/users/${id}/permanent`),
+    mutationFn: (id: number) => apiRequest("DELETE", `/api/admin/users/${id}/permanent`, { description: promptReason("Permanently delete account") }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       toast({ title: "Account permanently deleted", variant: "destructive" });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: modErr,
   });
 
   const startEdit = (user: AdminUser) => {
@@ -1978,6 +1994,7 @@ function GTQuestionsTab() {
   const [newCategory, setNewCategory] = useState("general");
   const [newYearLevel, setNewYearLevel] = useState(0);
   const [filterCategory, setFilterCategory] = useState("all");
+  const [filterYear, setFilterYear] = useState<number | "all">("all");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editQ, setEditQ] = useState("");
   const [editOpts, setEditOpts] = useState(["", "", "", ""]);
@@ -2057,7 +2074,11 @@ function GTQuestionsTab() {
     setEditYearLevel(q.yearLevel ?? 0);
   };
 
-  const filtered = filterCategory === "all" ? questions : questions.filter((q: any) => q.category === filterCategory);
+  const filtered = questions.filter((q: any) => {
+    const catOk = filterCategory === "all" || q.category === filterCategory;
+    const yearOk = filterYear === "all" || (q.yearLevel ?? 0) === filterYear;
+    return catOk && yearOk;
+  });
   const activeCount = questions.filter((q: any) => q.active).length;
   const canAdd = newQ.trim() && newOpts.every((o: string) => o.trim());
 
@@ -2165,6 +2186,35 @@ function GTQuestionsTab() {
               data-testid={`button-gt-filter-${c.key}`}
             >
               {c.label} ({count})
+            </Button>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-sm font-bold text-muted-foreground">Year:</span>
+        <Button
+          size="sm"
+          variant={filterYear === "all" ? "default" : "outline"}
+          onClick={() => setFilterYear("all")}
+          className="text-xs"
+          data-testid="button-gt-year-filter-all"
+        >
+          All ({questions.length})
+        </Button>
+        {([0, 3, 4, 5, 6, 7, 8] as const).map(y => {
+          const count = questions.filter((q: any) => (q.yearLevel ?? 0) === y).length;
+          if (count === 0) return null;
+          return (
+            <Button
+              key={y}
+              size="sm"
+              variant={filterYear === y ? "default" : "outline"}
+              onClick={() => setFilterYear(y)}
+              className={`text-xs ${y === 0 ? "border-blue-400 text-blue-600 dark:text-blue-400" : ""}`}
+              data-testid={`button-gt-year-filter-${y}`}
+            >
+              {y === 0 ? "Universal" : `Year ${y}`} ({count})
             </Button>
           );
         })}
@@ -2957,5 +3007,177 @@ function ReportsTab() {
         )}
       </Card>
     </div>
+  );
+}
+
+interface AppealDecision {
+  id: number;
+  createdAt: string;
+  adminName: string;
+  type: string;
+  targetId: number | null;
+  targetName: string | null;
+  description: string;
+  reversible: boolean;
+  appealText: string | null;
+  appealedAt: string | null;
+}
+
+function AppealsTab() {
+  const { toast } = useToast();
+  const { data: appeals = [], isLoading } = useQuery<AppealDecision[]>({
+    queryKey: ["/api/admin/appeals"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/appeals", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load appeals");
+      return res.json();
+    },
+  });
+
+  const resolveMutation = useMutation({
+    mutationFn: async ({ id, action }: { id: number; action: "deny" | "overturn" }) => {
+      const description = window.prompt(`Reason for ${action === "overturn" ? "GRANTING" : "denying"} this appeal (required & logged):`);
+      if (!description || !description.trim()) throw new Error("A reason is required.");
+      const res = await apiRequest("POST", `/api/admin/appeals/${id}/resolve`, { action, description: description.trim() });
+      return res.json();
+    },
+    onSuccess: (_d, vars) => {
+      toast({ title: vars.action === "overturn" ? "Appeal granted — action reversed" : "Appeal denied" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/appeals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/decisions"] });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  return (
+    <div>
+      <Card className="p-5 border-border">
+        <h2 className="text-lg font-black mb-1 flex items-center gap-2">
+          <Gavel className="w-5 h-5 text-purple-500" /> Pending Appeals
+        </h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          Players can appeal decisions about them. Granting an appeal auto-reverses reversible actions (bans, strikes, suspensions, deactivations).
+        </p>
+        {isLoading ? (
+          <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
+        ) : appeals.length === 0 ? (
+          <p className="text-center text-muted-foreground py-8 text-sm">No pending appeals. 🎉</p>
+        ) : (
+          <div className="space-y-3">
+            {appeals.map((a) => (
+              <Card key={a.id} className="p-4 border-amber-500/30 bg-amber-500/5">
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <Badge className="font-bold bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/40">{a.type.replace(/-/g, " ")}</Badge>
+                  <span className="font-bold text-sm">{a.targetName || `User #${a.targetId}`}</span>
+                  {a.reversible && <Badge variant="outline" className="text-[10px]">reversible</Badge>}
+                </div>
+                <p className="text-xs text-muted-foreground mb-2">Original reason ({a.adminName}): {a.description}</p>
+                <div className="text-sm bg-background/70 rounded-lg p-2.5 mb-3">
+                  <span className="font-bold">Their appeal:</span> {a.appealText}
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" className="font-bold text-xs bg-green-600 hover:bg-green-700" disabled={resolveMutation.isPending} onClick={() => resolveMutation.mutate({ id: a.id, action: "overturn" })} data-testid={`appeal-grant-${a.id}`}>
+                    <CheckCircle className="w-3 h-3 mr-1" /> Grant & Reverse
+                  </Button>
+                  <Button size="sm" variant="outline" className="font-bold text-xs" disabled={resolveMutation.isPending} onClick={() => resolveMutation.mutate({ id: a.id, action: "deny" })} data-testid={`appeal-deny-${a.id}`}>
+                    <XCircle className="w-3 h-3 mr-1" /> Deny
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+function DimensionsAdminTab() {
+  const { toast } = useToast();
+  const [search, setSearch] = useState("");
+  const [selectedUser, setSelectedUser] = useState<number | null>(null);
+  const [selectedDim, setSelectedDim] = useState(DIMENSIONS[0]?.id || "");
+
+  const { data: users = [], isLoading } = useQuery<any[]>({ queryKey: ["/api/admin/users"] });
+
+  const unlockMutation = useMutation({
+    mutationFn: async ({ userId, dimensionId }: { userId: number; dimensionId: string }) => {
+      const res = await apiRequest("POST", `/api/admin/users/${userId}/unlock-dimension`, { dimensionId });
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      toast({ title: "Dimension unlocked!", description: `${data.dimension} unlocked for ${data.user}.` });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const filtered = search.trim()
+    ? users.filter((u: any) => u.username.toLowerCase().includes(search.toLowerCase()))
+    : users;
+  const chosen = users.find((u: any) => u.id === selectedUser);
+
+  return (
+    <Card className="p-6 bg-card border-2 space-y-5">
+      <div>
+        <h2 className="text-xl font-black flex items-center gap-2">
+          <Gem className="w-5 h-5 text-fuchsia-500" /> Unlock Dimensions
+        </h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Grant a player early access to a locked dimension (it bypasses the XP requirement for them). This only unlocks entry — the entry sacrifice still applies.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-bold">1. Find a player</label>
+        <div className="flex items-center gap-2">
+          <Search className="w-4 h-4 text-muted-foreground" />
+          <Input placeholder="Search username…" value={search} onChange={e => setSearch(e.target.value)} className="max-w-xs" data-testid="input-dim-user-search" />
+        </div>
+        {isLoading ? (
+          <div className="py-4"><Loader2 className="w-5 h-5 animate-spin" /></div>
+        ) : (
+          <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
+            {filtered.slice(0, 40).map((u: any) => (
+              <Button
+                key={u.id}
+                size="sm"
+                variant={selectedUser === u.id ? "default" : "outline"}
+                onClick={() => setSelectedUser(u.id)}
+                className="text-xs"
+                data-testid={`dim-pick-user-${u.id}`}
+              >
+                {u.username}
+              </Button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-bold">2. Choose a dimension</label>
+        <select
+          value={selectedDim}
+          onChange={e => setSelectedDim(e.target.value)}
+          className="border rounded px-2 py-1.5 text-sm bg-background block w-full max-w-xs"
+          data-testid="select-dim-to-unlock"
+        >
+          {DIMENSIONS.map(d => (
+            <option key={d.id} value={d.id}>{d.name} ({d.groupId}) — unlocks at {d.unlockXp.toLocaleString()} XP</option>
+          ))}
+        </select>
+      </div>
+
+      <Button
+        className="gap-1 font-bold"
+        disabled={!selectedUser || !selectedDim || unlockMutation.isPending}
+        onClick={() => selectedUser && unlockMutation.mutate({ userId: selectedUser, dimensionId: selectedDim })}
+        data-testid="button-unlock-dimension"
+      >
+        {unlockMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Gem className="w-4 h-4" />}
+        Unlock {DIMENSIONS.find(d => d.id === selectedDim)?.name} {chosen ? `for ${chosen.username}` : ""}
+      </Button>
+    </Card>
   );
 }

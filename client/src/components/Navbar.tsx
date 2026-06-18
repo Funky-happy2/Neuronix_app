@@ -9,7 +9,7 @@ import {
   Zap, Rocket, Bot, Sparkles, Wand2, Flame, Bird, Diamond, Star, RefreshCw, Beaker, Medal,
   Snowflake, Orbit, Crown, ArrowLeftRight, Skull, Map,
   Telescope, Mountain, Wind, Hexagon, Footprints, Cpu, Waves, TreePine, Atom,
-  TrendingUp, GraduationCap, Calendar, Gift, Radio,
+  TrendingUp, GraduationCap, Calendar, Gift, Radio, Gavel,
   type LucideIcon
 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -22,6 +22,7 @@ const NAV_ITEMS = [
   { path: "/", label: "Home", tKey: "nav.home", icon: Home },
   { path: "/arcade", label: "Arcade", tKey: "nav.arcade", icon: Gamepad2 },
   { path: "/worlds", label: "Worlds", tKey: "nav.worlds", icon: Map },
+  { path: "/dimensions", label: "Dimensions", tKey: "", icon: Hexagon },
   { path: "/lobby", label: "Multiplayer", tKey: "nav.lobby", icon: Users },
   { path: "/party", label: "Party", tKey: "", icon: UsersRound },
   { path: "/ranked", label: "Ranked", tKey: "nav.ranked", icon: Crown },
@@ -46,6 +47,7 @@ const NAV_ITEMS = [
   { path: "/invite", label: "Invite", tKey: "", icon: Users },
   { path: "/classes", label: "Districts", tKey: "", icon: GraduationCap },
   { path: "/safety", label: "Safety", tKey: "", icon: ShieldCheck },
+  { path: "/decisions", label: "Decisions", tKey: "", icon: Gavel },
   { path: "/feedback", label: "Feedback", tKey: "nav.feedback", icon: MessageCircle },
   { path: "/settings", label: "Settings", tKey: "nav.settings", icon: Settings },
 ];
@@ -85,6 +87,11 @@ const AVATAR_ICON_MAP: Record<string, { icon: LucideIcon; gradient: string }> = 
   "avatar-game-master": { icon: Gamepad2, gradient: "from-blue-500 to-purple-600" },
   "avatar-rebirth-phoenix": { icon: RefreshCw, gradient: "from-rose-400 to-pink-600" },
   "avatar-rebirth-titan": { icon: Shield, gradient: "from-slate-400 to-gray-700" },
+  "avatar-news-star": { icon: Newspaper, gradient: "from-yellow-400 to-amber-500" },
+  "avatar-viral-scientist": { icon: Sparkles, gradient: "from-violet-500 to-purple-600" },
+  "avatar-infinity": { icon: Gem, gradient: "from-fuchsia-500 via-purple-600 to-amber-500" },
+  "avatar-elemental-lord": { icon: Flame, gradient: "from-orange-500 via-amber-500 to-teal-500" },
+  "avatar-cosmos-sovereign": { icon: Telescope, gradient: "from-indigo-500 via-violet-500 to-sky-400" },
   "reward-tournament-avatar": { icon: Medal, gradient: "from-yellow-400 to-orange-600" },
   "avatar-clan-champion": { icon: Globe, gradient: "from-blue-500 to-slate-700" },
   "avatar-team-champion": { icon: Users, gradient: "from-purple-500 to-violet-700" },
@@ -128,13 +135,10 @@ interface NavbarProps {
 }
 
 function computeLevel(xp: number): number {
-  let level = 1;
-  let xpCheck = 0;
-  for (let l = 1; l <= 100; l++) {
-    xpCheck += l * 100 + (l - 1) * 50;
-    if (xp < xpCheck) { level = l; break; }
-  }
-  return level;
+  // Closed-form inverse of the XP curve. Returns the correct level for ANY xp
+  // (the old loop returned 1 once xp passed the level-100 threshold).
+  if (typeof xp !== "number" || isNaN(xp) || xp <= 0) return 1;
+  return Math.max(1, Math.floor((125 + Math.sqrt(625 + 300 * xp)) / 150));
 }
 
 function getLevelXpRange(level: number): { start: number; end: number } {

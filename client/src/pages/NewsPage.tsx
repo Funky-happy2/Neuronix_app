@@ -234,15 +234,14 @@ function PostComments({ postId, isAdmin, authorId, onViewProfile }: { postId: nu
       const res = await apiRequest("POST", `/api/news/${postId}/boost`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to boost");
-      return data as { boosted: boolean; boostCount: number; badgesEarned?: string[]; itemsEarned?: string[] };
+      return data as { boosted: boolean; boostCount: number; authorMilestone?: boolean };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/news", postId, "boosts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       if (data.boosted) {
-        const milestoneReached = (data.badgesEarned?.length ?? 0) > 0 || (data.itemsEarned?.length ?? 0) > 0;
-        if (milestoneReached) {
-          toast({ title: "🏆 Milestone Reached!", description: "Your boost helped the author unlock a new badge or reward!" });
+        // The reward goes to the post's author, not the booster — keep wording clear.
+        if (data.authorMilestone) {
+          toast({ title: "Boosted! 🏆", description: "Your boost pushed the author past a milestone — they unlocked a reward!" });
         } else {
           toast({ title: "Boosted! 💎", description: "You boosted this post — the author earned a Spark!" });
         }

@@ -40,6 +40,20 @@ const FRAME_STYLES: Record<string, { border: string; shadow: string; animation?:
   "frame-clan-champion": { border: "ring-[3px] ring-sky-400", shadow: "shadow-xl shadow-sky-400/50", animation: "animate-frame-clan-champion" },
   "frame-team-champion": { border: "ring-[3px] ring-fuchsia-500", shadow: "shadow-xl shadow-fuchsia-500/50", animation: "animate-frame-team-champion" },
   "reward-tournament-frame": { border: "ring-[3px] ring-yellow-400", shadow: "shadow-xl shadow-yellow-400/40", animation: "animate-frame-golden" },
+  // Premium profile borders share the single border slot (only one can be equipped).
+  "upgrade-golden-profile": { border: "ring-[4px] ring-double ring-amber-400 rounded-lg", shadow: "shadow-xl shadow-amber-400/50", animation: "animate-frame-golden" },
+  "upgrade-diamond-profile": { border: "ring-[3px] ring-cyan-300", shadow: "shadow-xl shadow-cyan-300/50", animation: "animate-frame-ice" },
+  "upgrade-elite-border": { border: "ring-[3px] ring-violet-500 rounded-sm", shadow: "shadow-2xl shadow-violet-500/60", animation: "animate-frame-void" },
+  "frame-infinity": { border: "ring-[4px] ring-fuchsia-500 rounded-xl", shadow: "shadow-2xl shadow-fuchsia-500/60", animation: "animate-frame-galaxy" },
+  "frame-elemental": { border: "ring-[4px] ring-orange-500 rounded-lg", shadow: "shadow-2xl shadow-orange-500/60", animation: "animate-frame-fire" },
+  "frame-cosmos": { border: "ring-[4px] ring-indigo-400 rounded-xl", shadow: "shadow-2xl shadow-indigo-400/60", animation: "animate-frame-galaxy" },
+};
+
+const BORDER_UPGRADE_IDS = ["upgrade-golden-profile", "upgrade-diamond-profile", "upgrade-elite-border"];
+const BORDER_LABELS: Record<string, string> = {
+  "upgrade-golden-profile": "Gold Border",
+  "upgrade-diamond-profile": "Diamond Border",
+  "upgrade-elite-border": "Elite Border",
 };
 
 const COIN_STYLE_COLORS: Record<string, { icon: string; text: string }> = {
@@ -292,15 +306,15 @@ export default function ProfilePage({
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        <Card className={`p-6 lg:col-span-1 ${localStorage.getItem("cosmetic-gem-upgrades") !== "false" && isUpActive("upgrade-golden-profile") ? "border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.15)]" : "border-border"}`} data-testid="card-profile">
+        <Card className={`p-6 lg:col-span-1 ${equippedFrame === "upgrade-golden-profile" ? "border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.15)]" : "border-border"}`} data-testid="card-profile">
           <div className="text-center">
             {(() => {
-              const isGolden = localStorage.getItem("cosmetic-gem-upgrades") !== "false" && isUpActive("upgrade-golden-profile");
+              // A single equipped border drives the avatar ring — no stacking.
               const frameStyle = FRAME_STYLES[equippedFrame];
               const frameClasses = frameStyle
                 ? `${frameStyle.border} ${frameStyle.shadow} ${frameStyle.animation || ""}`
-                : isGolden ? "ring-4 ring-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.4)]" : "";
-              const bgGradient = isGolden ? "from-yellow-400 to-amber-500" : "from-purple-500 to-blue-500";
+                : "";
+              const bgGradient = equippedFrame === "upgrade-golden-profile" ? "from-yellow-400 to-amber-500" : "from-purple-500 to-blue-500";
               return (
                 <div className={`w-24 h-24 rounded-full mx-auto mb-4 overflow-hidden ${frameClasses}`} data-testid="profile-avatar-container">
                   <div className={`w-full h-full rounded-full bg-gradient-to-br ${bgGradient} flex items-center justify-center ${profileAnimClass}`}>
@@ -678,7 +692,7 @@ export default function ProfilePage({
       </div>
 
       {(() => {
-        const ownedFrames = inventory.filter(i => i.startsWith("frame-") || i === "reward-tournament-frame");
+        const ownedFrames = inventory.filter(i => i.startsWith("frame-") || i === "reward-tournament-frame" || BORDER_UPGRADE_IDS.includes(i));
         const ownedCoinStyles = inventory.filter(i => i.startsWith("coin-style-"));
         const ownedGemStyles = inventory.filter(i => i.startsWith("gem-style-"));
         const hasCustomization = ownedFrames.length > 0 || ownedCoinStyles.length > 0 || ownedGemStyles.length > 0;
@@ -693,7 +707,7 @@ export default function ProfilePage({
               {ownedFrames.length > 0 && (
                 <Card className="p-4 border-border">
                   <h3 className="font-bold text-sm mb-2 flex items-center gap-1.5">
-                    <Square className="w-4 h-4 text-pink-500" /> Frames
+                    <Square className="w-4 h-4 text-pink-500" /> Borders & Frames
                   </h3>
                   <div className="space-y-1.5">
                     {ownedFrames.map(f => {
@@ -707,7 +721,7 @@ export default function ProfilePage({
                           data-testid={`frame-${f}`}
                         >
                           <Check className={`w-3 h-3 shrink-0 ${isActive ? "opacity-100" : "opacity-0"}`} />
-                          <span className="flex-1">{f.replace(/^(frame-|reward-)/, "").replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</span>
+                          <span className="flex-1">{BORDER_LABELS[f] || f.replace(/^(frame-|reward-)/, "").replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</span>
                           {frameInfo?.animation && (
                             <div className={`w-4 h-4 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 ${frameInfo.animation}`} />
                           )}

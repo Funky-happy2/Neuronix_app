@@ -39,16 +39,9 @@ const DEFAULT_PROGRESS: LocalProgress = {
 };
 
 function computeLevel(xp: number): number {
-  let level = 1;
-  let xpCheck = 0;
-  for (let l = 1; l <= 100; l++) {
-    xpCheck += l * 100 + (l - 1) * 50;
-    if (xp < xpCheck) {
-      level = l;
-      break;
-    }
-  }
-  return level;
+  // Closed-form inverse of the XP curve — correct for ANY xp (matches the server).
+  if (typeof xp !== "number" || isNaN(xp) || xp <= 0) return 1;
+  return Math.max(1, Math.floor((125 + Math.sqrt(625 + 300 * xp)) / 150));
 }
 
 export function useLocalProgress() {

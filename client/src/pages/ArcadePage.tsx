@@ -29,9 +29,10 @@ interface ArcadePageProps {
   onAddXP: (amount: number) => void;
   onEarnBadge: (badgeId: string) => void;
   yearLevel: number;
+  onSetYearLevel?: (yearLevel: number) => void;
 }
 
-export default function ArcadePage({ badges, onPlayGame, onAddXP, onEarnBadge, yearLevel }: ArcadePageProps) {
+export default function ArcadePage({ badges, onPlayGame, onAddXP, onEarnBadge, yearLevel, onSetYearLevel }: ArcadePageProps) {
   const [location] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -121,6 +122,7 @@ export default function ArcadePage({ badges, onPlayGame, onAddXP, onEarnBadge, y
           onBack={() => { setPlayingGame(null); setChallengeInfo(null); }}
           onComplete={() => handleGameComplete()}
           yearLevel={yearLevel}
+          onSetYearLevel={onSetYearLevel}
           autoStart={!!challengeInfo}
           isChallenge={!!challengeInfo}
         />

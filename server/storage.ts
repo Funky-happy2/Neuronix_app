@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type DailyChallenge, type InsertDailyChallenge, type ShopItem, type InsertShopItem, type CommunityPack, type InsertCommunityPack, type CommunityQuestion, type InsertCommunityQuestion, type CommunityReaction, type Feedback, type InsertFeedback, type Clan, type InsertClan, type Team, type InsertTeam, type NewsPost, type InsertNewsPost, type NewsComment, type InsertNewsComment, type NewsReaction, type ChatMessage, type InsertChatMessage, type Tournament, type InsertTournament, type TournamentEntry, type InsertTournamentEntry, type Trade, type InsertTrade, type ClanBattle, type InsertClanBattle, type GrandTournament, type InsertGrandTournament, type GrandTournamentEntry, type InsertGrandTournamentEntry, type DistrictBattle, type InsertDistrictBattle, type GrandTournamentQuestion, type InsertGrandTournamentQuestion, type RedemptionCode, type InsertRedemptionCode, type CodeRedemption, type SiteMessage, type AdminProposal, type InsertAdminProposal, type School, type InsertSchool, type Class, type InsertClass, type Friendship, type InsertFriendship, type DirectMessage, type InsertDirectMessage, users, dailyChallenges, shopItems, communityPacks, communityQuestions, communityReactions, feedback, clans, teams, newsPosts, newsComments, newsReactions, chatMessages, tournaments, tournamentEntries, trades, clanBattles, grandTournaments, grandTournamentEntries, districtBattles, grandTournamentQuestions, redemptionCodes, codeRedemptions, siteMessages, adminProposals, schools, classes } from "@shared/schema";
+import { type User, type InsertUser, type DailyChallenge, type InsertDailyChallenge, type ShopItem, type InsertShopItem, type CommunityPack, type InsertCommunityPack, type CommunityQuestion, type InsertCommunityQuestion, type CommunityReaction, type Feedback, type InsertFeedback, type Clan, type InsertClan, type Team, type InsertTeam, type NewsPost, type InsertNewsPost, type NewsComment, type InsertNewsComment, type NewsReaction, type ChatMessage, type InsertChatMessage, type Tournament, type InsertTournament, type TournamentEntry, type InsertTournamentEntry, type Trade, type InsertTrade, type ClanBattle, type InsertClanBattle, type GrandTournament, type InsertGrandTournament, type GrandTournamentEntry, type InsertGrandTournamentEntry, type DistrictBattle, type InsertDistrictBattle, type GrandTournamentQuestion, type InsertGrandTournamentQuestion, type RedemptionCode, type InsertRedemptionCode, type CodeRedemption, type SiteMessage, type AdminProposal, type InsertAdminProposal, type AdminDecision, type InsertAdminDecision, type School, type InsertSchool, type Class, type InsertClass, type Friendship, type InsertFriendship, type DirectMessage, type InsertDirectMessage, users, dailyChallenges, shopItems, communityPacks, communityQuestions, communityReactions, feedback, clans, teams, newsPosts, newsComments, newsReactions, chatMessages, tournaments, tournamentEntries, trades, clanBattles, grandTournaments, grandTournamentEntries, districtBattles, grandTournamentQuestions, redemptionCodes, codeRedemptions, siteMessages, adminProposals, schools, classes } from "@shared/schema";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { eq, desc, and, sql } from "drizzle-orm";
 import pg from "pg";
@@ -10,6 +10,35 @@ const pool = new pg.Pool({
 });
 
 export const db = drizzle(pool);
+
+// The admin-decision log is created on first use so the feature works without a
+// separate `db:push` (mirrors how suspicious_activity is handled with raw SQL).
+let adminDecisionsTableReady: Promise<void> | null = null;
+function ensureAdminDecisionsTable(): Promise<void> {
+  if (!adminDecisionsTableReady) {
+    adminDecisionsTableReady = pool.query(`
+      CREATE TABLE IF NOT EXISTS admin_decisions (
+        id SERIAL PRIMARY KEY,
+        created_at TEXT NOT NULL,
+        admin_id INTEGER NOT NULL,
+        admin_name TEXT NOT NULL,
+        type TEXT NOT NULL,
+        target_id INTEGER,
+        target_name TEXT,
+        description TEXT NOT NULL,
+        reversible BOOLEAN NOT NULL DEFAULT false,
+        appeal_status TEXT NOT NULL DEFAULT 'none',
+        appeal_text TEXT,
+        appealed_at TEXT,
+        appeal_response TEXT,
+        appeal_resolved_by_id INTEGER,
+        appeal_resolved_by_name TEXT,
+        appeal_resolved_at TEXT
+      )
+    `).then(() => undefined).catch((e) => { adminDecisionsTableReady = null; throw e; });
+  }
+  return adminDecisionsTableReady;
+}
 
 const PostgresSessionStore = connectPg(session);
 
@@ -30,6 +59,27 @@ function mapProposalRow(row: any) {
     resolvedById: row.resolved_by_id,
     resolvedByName: row.resolved_by_name,
     resolvedAt: row.resolved_at,
+  };
+}
+
+function mapDecisionRow(row: any) {
+  return {
+    id: row.id,
+    createdAt: row.created_at,
+    adminId: row.admin_id,
+    adminName: row.admin_name,
+    type: row.type,
+    targetId: row.target_id,
+    targetName: row.target_name,
+    description: row.description,
+    reversible: row.reversible,
+    appealStatus: row.appeal_status,
+    appealText: row.appeal_text,
+    appealedAt: row.appealed_at,
+    appealResponse: row.appeal_response,
+    appealResolvedById: row.appeal_resolved_by_id,
+    appealResolvedByName: row.appeal_resolved_by_name,
+    appealResolvedAt: row.appeal_resolved_at,
   };
 }
 
@@ -162,6 +212,12 @@ export interface IStorage {
   getAdminProposal(id: number): Promise<AdminProposal | undefined>;
   createAdminProposal(data: InsertAdminProposal): Promise<AdminProposal>;
   updateAdminProposal(id: number, updates: Partial<AdminProposal>): Promise<AdminProposal | undefined>;
+  getAdminDecisions(limit?: number): Promise<AdminDecision[]>;
+  getAdminDecision(id: number): Promise<AdminDecision | undefined>;
+  getAdminDecisionsForUser(userId: number): Promise<AdminDecision[]>;
+  getPendingAppeals(): Promise<AdminDecision[]>;
+  createAdminDecision(data: InsertAdminDecision): Promise<AdminDecision>;
+  updateAdminDecision(id: number, updates: Partial<AdminDecision>): Promise<AdminDecision | undefined>;
   getUltraAdminUser(): Promise<User | undefined>;
   setUltraAdmin(newUserId: number, oldUserId?: number): Promise<void>;
   getSchools(): Promise<School[]>;
@@ -931,6 +987,59 @@ export class DatabaseStorage implements IStorage {
     values.push(id);
     const rows = await pool.query(`UPDATE admin_proposals SET ${fields.join(", ")} WHERE id = $${idx} RETURNING *`, values);
     return rows.rows[0] ? mapProposalRow(rows.rows[0]) as AdminProposal : undefined;
+  }
+
+  async getAdminDecisions(limit = 200): Promise<AdminDecision[]> {
+    await ensureAdminDecisionsTable();
+    const rows = await pool.query("SELECT * FROM admin_decisions ORDER BY created_at DESC LIMIT $1", [limit]);
+    return rows.rows.map(mapDecisionRow) as AdminDecision[];
+  }
+
+  async getAdminDecision(id: number): Promise<AdminDecision | undefined> {
+    await ensureAdminDecisionsTable();
+    const rows = await pool.query("SELECT * FROM admin_decisions WHERE id = $1", [id]);
+    return rows.rows[0] ? mapDecisionRow(rows.rows[0]) as AdminDecision : undefined;
+  }
+
+  async getAdminDecisionsForUser(userId: number): Promise<AdminDecision[]> {
+    await ensureAdminDecisionsTable();
+    const rows = await pool.query("SELECT * FROM admin_decisions WHERE target_id = $1 ORDER BY created_at DESC", [userId]);
+    return rows.rows.map(mapDecisionRow) as AdminDecision[];
+  }
+
+  async getPendingAppeals(): Promise<AdminDecision[]> {
+    await ensureAdminDecisionsTable();
+    const rows = await pool.query("SELECT * FROM admin_decisions WHERE appeal_status = 'pending' ORDER BY appealed_at ASC");
+    return rows.rows.map(mapDecisionRow) as AdminDecision[];
+  }
+
+  async createAdminDecision(data: InsertAdminDecision): Promise<AdminDecision> {
+    await ensureAdminDecisionsTable();
+    const rows = await pool.query(
+      `INSERT INTO admin_decisions (created_at, admin_id, admin_name, type, target_id, target_name, description, reversible, appeal_status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'none') RETURNING *`,
+      [data.createdAt, data.adminId, data.adminName, data.type, data.targetId ?? null, data.targetName ?? null, data.description, data.reversible ?? false]
+    );
+    return mapDecisionRow(rows.rows[0]) as AdminDecision;
+  }
+
+  async updateAdminDecision(id: number, updates: Partial<AdminDecision>): Promise<AdminDecision | undefined> {
+    await ensureAdminDecisionsTable();
+    const fields: string[] = [];
+    const values: any[] = [];
+    let idx = 1;
+    const colMap: Record<string, string> = {
+      appealStatus: "appeal_status", appealText: "appeal_text", appealedAt: "appealed_at",
+      appealResponse: "appeal_response", appealResolvedById: "appeal_resolved_by_id",
+      appealResolvedByName: "appeal_resolved_by_name", appealResolvedAt: "appeal_resolved_at",
+    };
+    for (const [key, col] of Object.entries(colMap)) {
+      if ((updates as any)[key] !== undefined) { fields.push(`${col} = $${idx++}`); values.push((updates as any)[key]); }
+    }
+    if (fields.length === 0) return this.getAdminDecision(id);
+    values.push(id);
+    const rows = await pool.query(`UPDATE admin_decisions SET ${fields.join(", ")} WHERE id = $${idx} RETURNING *`, values);
+    return rows.rows[0] ? mapDecisionRow(rows.rows[0]) as AdminDecision : undefined;
   }
 
   async getUltraAdminUser(): Promise<User | undefined> {

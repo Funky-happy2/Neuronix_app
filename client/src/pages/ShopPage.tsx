@@ -269,6 +269,10 @@ function ItemCard({ item, i, userInventory, userCoins, userLevel, userXp, userRe
   const cardEffect = ITEM_CARD_EFFECTS[item.id] || "";
   const currentLevel = (itemLevels || {})[item.id] || 0;
   const justUpgraded = justUpgradedId === item.id;
+  // Premium profile borders are "upgrade" items but equip into the single border slot.
+  const isBorderUpgrade = ["upgrade-golden-profile", "upgrade-diamond-profile", "upgrade-elite-border"].includes(item.id);
+  const equipCategory = isBorderUpgrade ? "frame" : item.category;
+  const isEquippable = EQUIPPABLE_CATEGORIES_CONST.includes(item.category) || isBorderUpgrade;
 
   return (
     <motion.div
@@ -407,15 +411,15 @@ function ItemCard({ item, i, userInventory, userCoins, userLevel, userXp, userRe
                     )}
                   </>
                 )
-              ) : EQUIPPABLE_CATEGORIES_CONST.includes(item.category) ? (
+              ) : isEquippable ? (
                 <>
-                  {equippedCosmetics[item.category] === item.id ? (
+                  {equippedCosmetics[equipCategory] === item.id ? (
                     <Button
                       size="sm"
                       variant="secondary"
                       className="font-bold text-xs bg-green-600/20 dark:bg-green-600/30 border-green-600/40 text-green-600 dark:text-green-400"
                       disabled={equipCosmeticMutation.isPending}
-                      onClick={() => equipCosmeticMutation.mutate({ itemId: item.id, category: item.category })}
+                      onClick={() => equipCosmeticMutation.mutate({ itemId: item.id, category: equipCategory })}
                       data-testid={`button-unequip-${item.id}`}
                     >
                       <Check className="w-3 h-3 mr-1" /> Equipped
@@ -426,7 +430,7 @@ function ItemCard({ item, i, userInventory, userCoins, userLevel, userXp, userRe
                       variant="outline"
                       className="font-bold text-xs"
                       disabled={equipCosmeticMutation.isPending}
-                      onClick={() => equipCosmeticMutation.mutate({ itemId: item.id, category: item.category })}
+                      onClick={() => equipCosmeticMutation.mutate({ itemId: item.id, category: equipCategory })}
                       data-testid={`button-equip-${item.id}`}
                     >
                       Equip
@@ -437,7 +441,7 @@ function ItemCard({ item, i, userInventory, userCoins, userLevel, userXp, userRe
                       size="sm"
                       variant="destructive"
                       className="font-bold text-xs"
-                      disabled={refundMutation.isPending || equippedCosmetics[item.category] === item.id}
+                      disabled={refundMutation.isPending || equippedCosmetics[equipCategory] === item.id}
                       onClick={() => refundMutation.mutate(item.id)}
                       data-testid={`button-refund-${item.id}`}
                     >

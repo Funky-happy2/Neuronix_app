@@ -631,6 +631,31 @@ export const insertAdminProposalSchema = createInsertSchema(adminProposals).omit
 export type InsertAdminProposal = z.infer<typeof insertAdminProposalSchema>;
 export type AdminProposal = typeof adminProposals.$inferSelect;
 
+// Public, appealable log of every moderation/governance decision an admin makes.
+// Every admin action records one row here with a mandatory description, and the
+// affected user can file an appeal that an admin resolves (uphold / overturn).
+export const adminDecisions = pgTable("admin_decisions", {
+  id: serial("id").primaryKey(),
+  createdAt: text("created_at").notNull(),
+  adminId: integer("admin_id").notNull(),
+  adminName: text("admin_name").notNull(),
+  type: text("type").notNull(),
+  targetId: integer("target_id"),
+  targetName: text("target_name"),
+  description: text("description").notNull(),
+  reversible: boolean("reversible").notNull().default(false),
+  appealStatus: text("appeal_status").notNull().default("none"), // none | pending | upheld | overturned
+  appealText: text("appeal_text"),
+  appealedAt: text("appealed_at"),
+  appealResponse: text("appeal_response"),
+  appealResolvedById: integer("appeal_resolved_by_id"),
+  appealResolvedByName: text("appeal_resolved_by_name"),
+  appealResolvedAt: text("appeal_resolved_at"),
+});
+export const insertAdminDecisionSchema = createInsertSchema(adminDecisions).omit({ id: true });
+export type InsertAdminDecision = z.infer<typeof insertAdminDecisionSchema>;
+export type AdminDecision = typeof adminDecisions.$inferSelect;
+
 export const referrals = pgTable("referrals", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().unique(),
