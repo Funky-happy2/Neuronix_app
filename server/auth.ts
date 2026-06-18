@@ -243,6 +243,8 @@ export function setupAuth(app: Express) {
         if (team) teamName = team.name;
       } catch {}
     }
-    res.json({ ...safeUser, classSafetySettings, clanName, teamName });
+    const restricted = (req.session as any)?.restricted === true;
+    const tempExpiresAt = (req.session as any)?.tempExpiresAt ?? null;
+    res.json({ ...safeUser, classSafetySettings, clanName, teamName, restricted, tempExpiresAt });
   });
 }

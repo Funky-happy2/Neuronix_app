@@ -4,12 +4,3 @@
 
 SESSION_SECRET not set — generated an ephemeral dev secret. Sessions will not survive a restart.
 WebSocket server error: Port 24678 is already in use
-8:18:00 PM [tsx] change in ./shared/dimensions.ts Rerunning...
-cSESSION_SECRET not set — generated an ephemeral dev secret. Sessions will not survive a restart.
-WebSocket server error: Port 24678 is already in use
-8:22:47 PM [tsx] change in ./server/routes.ts Rerunning...
-cSESSION_SECRET not set — generated an ephemeral dev secret. Sessions will not survive a restart.
-WebSocket server error: Port 24678 is already in use
-8:36:10 PM [tsx] change in ./shared/dimensions.ts Rerunning...
-cSESSION_SECRET not set — generated an ephemeral dev secret. Sessions will not survive a restart.
-WebSocket server error: Port 24678 is already in use

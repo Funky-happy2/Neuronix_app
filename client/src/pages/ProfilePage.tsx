@@ -12,7 +12,7 @@ import {
   Snowflake, Orbit, Skull, Moon, Globe, Gem, Waves, Cpu, Heart,
   Gamepad2, Diamond, ShoppingBag, MapPin, TrendingUp, Coins,
   Square, Circle, Rainbow, Palette, Frame, Eye,
-  Telescope, Mountain, Wind, Sun, Hexagon, Footprints, RefreshCw, Users, Pencil
+  Telescope, Mountain, Wind, Sun, Hexagon, Footprints, RefreshCw, Users, Pencil, KeyRound
 } from "lucide-react";
 import { BADGES, AVATARS, SHOP_AVATARS, getXPForLevel, type AvatarCategory } from "@/lib/gameData";
 import { motion } from "framer-motion";
@@ -278,6 +278,20 @@ export default function ProfilePage({
       toast({ title: "Error", description: err.message || "Failed to change password", variant: "destructive" });
     },
   });
+
+  const [guestPass, setGuestPass] = useState<{ code: string; expiresAt: string } | null>(null);
+  const generatePassMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/login-codes", {});
+      return res.json();
+    },
+    onSuccess: (data: { code: string; expiresAt: string }) => {
+      setGuestPass(data);
+      toast({ title: "Guest pass created!", description: "Share this code — it works once and lasts 10 minutes." });
+    },
+    onError: (err: any) => toast({ title: "Error", description: err.message || "Failed to create code", variant: "destructive" }),
+  });
+
   const { data: leaderboardData } = useQuery<{ leaders: { id: number; username: string; xp: number; level: number }[]; newlyGranted: string[] }>({
     queryKey: ["/api/leaderboard"],
   });
@@ -474,6 +488,29 @@ export default function ProfilePage({
                 </div>
               )}
             </div>
+
+            {!(user as any)?.restricted && (
+              <div className="mt-4 pt-4 border-t border-border">
+                <h3 className="text-xs font-bold mb-1.5 flex items-center gap-1.5"><KeyRound className="w-3.5 h-3.5 text-amber-500" /> Guest Pass</h3>
+                <p className="text-[11px] text-muted-foreground mb-2">Create a one-time code for a 10-minute look-around. The guest can't spend coins or trade.</p>
+                {guestPass ? (
+                  <div className="rounded-lg border border-amber-400/40 bg-amber-500/10 p-3 text-center">
+                    <div className="text-2xl font-black tracking-widest text-amber-600 dark:text-amber-400" data-testid="guest-pass-code">{guestPass.code}</div>
+                    <button
+                      className="text-[11px] font-bold text-amber-700 dark:text-amber-300 mt-1 underline"
+                      onClick={() => { navigator.clipboard?.writeText(guestPass.code); toast({ title: "Copied!" }); }}
+                      data-testid="button-copy-guest-pass"
+                    >Copy code</button>
+                    <p className="text-[10px] text-muted-foreground mt-1">Use within 10 minutes · valid once</p>
+                    <Button size="sm" variant="ghost" className="text-[11px] mt-1 h-7" onClick={() => generatePassMutation.mutate()} disabled={generatePassMutation.isPending} data-testid="button-new-guest-pass">New code</Button>
+                  </div>
+                ) : (
+                  <Button size="sm" variant="outline" className="w-full text-xs font-bold gap-1" onClick={() => generatePassMutation.mutate()} disabled={generatePassMutation.isPending} data-testid="button-generate-guest-pass">
+                    {generatePassMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <KeyRound className="w-3 h-3" />} Generate Guest Pass
+                  </Button>
+                )}
+              </div>
+            )}
 
             <div className="mt-4">
               <div className="flex items-center justify-between gap-2 mb-1">

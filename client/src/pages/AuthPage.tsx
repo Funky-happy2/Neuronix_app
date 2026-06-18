@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Gamepad2, Rocket, Trophy, Sparkles, FlaskConical, Swords, LogIn, UserPlus, Coins, Gift, GraduationCap, Users } from "lucide-react";
+import { Gamepad2, Rocket, Trophy, Sparkles, FlaskConical, Swords, LogIn, UserPlus, Coins, Gift, GraduationCap, Users, KeyRound, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { GAME_MODES, BOSS_BATTLES, LAB_EXPERIMENTS } from "@/lib/gameData";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import HumanCheck from "@/components/HumanCheck";
 
 const SESSION_KEY = "nx_verified";
@@ -25,6 +27,26 @@ export default function AuthPage() {
   const [isTeacher, setIsTeacher] = useState(false);
   const [showCaptcha, setShowCaptcha] = useState(false);
   const honeypotRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+  const [guestCode, setGuestCode] = useState("");
+  const [redeeming, setRedeeming] = useState(false);
+
+  const redeemGuestPass = async () => {
+    const code = guestCode.trim();
+    if (!code || redeeming) return;
+    setRedeeming(true);
+    try {
+      const res = await apiRequest("POST", "/api/login-codes/redeem", { code });
+      const data = await res.json();
+      queryClient.setQueryData(["/api/user"], data);
+      toast({ title: "Guest pass active!", description: "You have 10 minutes to look around. You can't spend coins or trade." });
+      setLocation("/");
+    } catch (e: any) {
+      toast({ title: "Couldn't redeem code", description: e.message, variant: "destructive" });
+    } finally {
+      setRedeeming(false);
+    }
+  };
 
   useEffect(() => {
     if (user) setLocation("/");
@@ -178,6 +200,26 @@ export default function AuthPage() {
                 {isLogin ? "Don't have an account? Sign up!" : "Already have an account? Log in!"}
               </button>
             </div>
+
+            {isLogin && (
+              <div className="mt-5 pt-4 border-t border-border">
+                <Label className="font-semibold flex items-center gap-1.5 mb-2"><KeyRound className="w-4 h-4 text-amber-500" /> Have a guest pass code?</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={guestCode}
+                    onChange={(e) => setGuestCode(e.target.value.toUpperCase())}
+                    placeholder="Enter 8-character code"
+                    maxLength={16}
+                    data-testid="input-guest-code"
+                    onKeyDown={(e) => { if (e.key === "Enter") redeemGuestPass(); }}
+                  />
+                  <Button type="button" variant="outline" className="font-bold gap-1 shrink-0" disabled={!guestCode.trim() || redeeming} onClick={redeemGuestPass} data-testid="button-redeem-guest">
+                    {redeeming ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />} Enter
+                  </Button>
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1.5">A guest pass gives 10 minutes of look-around access. You won't be able to spend coins or trade.</p>
+              </div>
+            )}
           </Card>
         </motion.div>
       </div>

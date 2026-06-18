@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Newspaper, Pin, Loader2, Megaphone, Sparkles, Wrench,
   Calendar, Trash2, Edit, Plus, X, Check, User, MessageCircle, Send, Zap, Gem, Clock, CheckCircle,
-  BarChart3, Vote
+  BarChart3, Vote, ShieldCheck
 } from "lucide-react";
 import UserProfileModal from "@/components/UserProfileModal";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -27,6 +27,7 @@ interface NewsPost {
   authorName: string;
   authorTitle?: string | null;
   authorIsVip?: boolean;
+  authorIsAdmin?: boolean;
   pinned: boolean;
   createdAt: string;
   status: string;
@@ -765,6 +766,9 @@ export default function NewsPage() {
                         <span className="flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors" onClick={() => setProfileUsername(post.authorName)}>
                           <User className="w-3 h-3" /> {post.authorName}
                         </span>
+                        {post.authorIsAdmin && (
+                          <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white border-0 flex items-center gap-0.5" data-testid="news-admin-tag"><ShieldCheck className="w-2.5 h-2.5" /> ADMIN</span>
+                        )}
                         {post.authorIsVip && (
                           <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/40">VIP</span>
                         )}

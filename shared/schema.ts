@@ -334,6 +334,7 @@ export const newsPosts = pgTable("news_posts", {
   category: text("category").notNull().default("update"),
   authorId: integer("author_id").notNull(),
   authorName: text("author_name").notNull(),
+  authorIsAdmin: boolean("author_is_admin").notNull().default(false),
   pinned: boolean("pinned").notNull().default(false),
   createdAt: text("created_at").notNull(),
   status: text("status").notNull().default("approved"),
@@ -738,3 +739,62 @@ export const suspiciousActivity = pgTable("suspicious_activity", {
   createdAt: text("created_at").notNull(),
   reviewed: boolean("reviewed").notNull().default(false),
 });
+
+// ─── Quests: players post a paid task; others accept and chat to bargain ────────
+export const questPosts = pgTable("quest_posts", {
+  id: serial("id").primaryKey(),
+  posterId: integer("poster_id").notNull(),
+  posterName: text("poster_name").notNull(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  rewardCoins: integer("reward_coins").notNull().default(0),
+  rewardGems: integer("reward_gems").notNull().default(0),
+  status: text("status").notNull().default("open"), // open | assigned | completed | cancelled
+  assigneeId: integer("assignee_id"),
+  assigneeName: text("assignee_name"),
+  createdAt: text("created_at").notNull(),
+  completedAt: text("completed_at"),
+});
+export const insertQuestPostSchema = createInsertSchema(questPosts).omit({ id: true });
+export type InsertQuestPost = z.infer<typeof insertQuestPostSchema>;
+export type QuestPost = typeof questPosts.$inferSelect;
+
+export const questMessages = pgTable("quest_messages", {
+  id: serial("id").primaryKey(),
+  questId: integer("quest_id").notNull(),
+  senderId: integer("sender_id").notNull(),
+  senderName: text("sender_name").notNull(),
+  content: text("content").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+export const insertQuestMessageSchema = createInsertSchema(questMessages).omit({ id: true });
+export type InsertQuestMessage = z.infer<typeof insertQuestMessageSchema>;
+export type QuestMessage = typeof questMessages.$inferSelect;
+
+// ─── Trade chat: bargain with the trade's owner ─────────────────────────────────
+export const tradeMessages = pgTable("trade_messages", {
+  id: serial("id").primaryKey(),
+  tradeId: integer("trade_id").notNull(),
+  senderId: integer("sender_id").notNull(),
+  senderName: text("sender_name").notNull(),
+  content: text("content").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+export const insertTradeMessageSchema = createInsertSchema(tradeMessages).omit({ id: true });
+export type InsertTradeMessage = z.infer<typeof insertTradeMessageSchema>;
+export type TradeMessage = typeof tradeMessages.$inferSelect;
+
+// ─── Temporary login codes: 10-minute restricted guest access to an account ─────
+export const loginCodes = pgTable("login_codes", {
+  id: serial("id").primaryKey(),
+  code: text("code").notNull().unique(),
+  userId: integer("user_id").notNull(),       // the account this code grants access to
+  createdById: integer("created_by_id").notNull(),
+  createdByName: text("created_by_name").notNull(),
+  expiresAt: text("expires_at").notNull(),     // ISO — code/session both die at this time
+  usedAt: text("used_at"),
+  createdAt: text("created_at").notNull(),
+});
+export const insertLoginCodeSchema = createInsertSchema(loginCodes).omit({ id: true });
+export type InsertLoginCode = z.infer<typeof insertLoginCodeSchema>;
+export type LoginCode = typeof loginCodes.$inferSelect;

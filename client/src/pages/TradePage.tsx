@@ -8,10 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  ArrowLeftRight, Gift, Plus, X, Coins, Check, Loader2, ArrowRight, PackageOpen, Search, Trash2, ShoppingBag, Gem, Zap, FlaskConical, Users, Lock
+  ArrowLeftRight, Gift, Plus, X, Coins, Check, Loader2, ArrowRight, PackageOpen, Search, Trash2, ShoppingBag, Gem, Zap, FlaskConical, Users, Lock, MessageSquare
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { POTIONS } from "@/lib/gameData";
+import { ChatPanel } from "@/components/ChatPanel";
 import UserProfileModal from "@/components/UserProfileModal";
 import type { Trade, ShopItem } from "@shared/schema";
 
@@ -685,6 +686,7 @@ function TradeCard({ trade, itemMap, isOwn, userId, onAccept, onCancel, isPendin
   userGems?: number;
   onViewProfile?: (username: string) => void;
 }) {
+  const [chatOpen, setChatOpen] = useState(false);
   const getItemName = (id: string) => itemMap[id]?.name || id;
   const getRarity = (id: string) => itemMap[id]?.rarity || "common";
 
@@ -804,7 +806,16 @@ function TradeCard({ trade, itemMap, isOwn, userId, onAccept, onCancel, isPendin
           </div>
         </div>
 
-        <div className="mt-3 flex justify-end">
+        <div className="mt-3 flex justify-between items-center gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="font-bold gap-1"
+            onClick={() => setChatOpen(o => !o)}
+            data-testid={`button-chat-trade-${trade.id}`}
+          >
+            <MessageSquare className="w-3.5 h-3.5" /> {chatOpen ? "Hide Chat" : (isOwn ? "Messages" : "Chat / Bargain")}
+          </Button>
           {isOwn ? (
             <Button
               size="sm"
@@ -830,6 +841,17 @@ function TradeCard({ trade, itemMap, isOwn, userId, onAccept, onCancel, isPendin
             </Button>
           )}
         </div>
+
+        <AnimatePresence>
+          {chatOpen && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden mt-3">
+              <p className="text-[10px] text-muted-foreground font-medium mb-1.5">
+                {isOwn ? "Messages from interested traders:" : `Bargain with ${trade.sellerName} before you accept.`}
+              </p>
+              <ChatPanel endpoint={`/api/trades/${trade.id}/messages`} meId={userId} emptyHint="No messages yet — start the conversation!" />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </Card>
     </motion.div>
   );

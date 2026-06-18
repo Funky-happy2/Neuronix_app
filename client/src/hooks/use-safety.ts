@@ -5,6 +5,7 @@ export const SAFETY_KEYS = [
   "disableMultiplayer",
   "disableStreaming",
   "hideTrade",
+  "hideQuests",
   "hideCommunityPacks",
   "hideNews",
   "hideClans",
@@ -30,6 +31,10 @@ export const SAFETY_LABELS: Record<SafetyKey, { label: string; description: stri
     label: "Disable Trading",
     description: "Remove the player-to-player trading feature.",
   },
+  hideQuests: {
+    label: "Disable Quests",
+    description: "Remove the Quest Board where players post paid tasks and chat to bargain.",
+  },
   hideCommunityPacks: {
     label: "Hide Community Packs",
     description: "Hide the community question hub (content created by other players).",
@@ -53,6 +58,7 @@ export const SAFETY_DEFAULTS: Record<SafetyKey, boolean> = {
   disableMultiplayer: false,
   disableStreaming: false,
   hideTrade: false,
+  hideQuests: false,
   hideCommunityPacks: false,
   hideNews: false,
   hideClans: false,
@@ -80,6 +86,7 @@ export function useSafety() {
     effective.disableMultiplayer = true;
     effective.disableStreaming = true;
     effective.hideTrade = true;
+    effective.hideQuests = true;
     effective.hideCommunityPacks = true;
     effective.hideNews = true;
     effective.hideClans = true;
@@ -92,6 +99,7 @@ export function useSafety() {
   if (effective.disableMultiplayer) { hiddenPaths.add("/lobby"); hiddenPaths.add("/pvp"); hiddenPaths.add("/ranked"); hiddenPaths.add("/party"); }
   if (effective.disableStreaming || effective.disableMultiplayer) { hiddenPaths.add("/stream"); }
   if (effective.hideTrade) hiddenPaths.add("/trade");
+  if (effective.hideQuests) hiddenPaths.add("/quests");
   if (effective.hideCommunityPacks) hiddenPaths.add("/community");
   if (effective.hideNews) hiddenPaths.add("/news");
   if (effective.hideClans) { hiddenPaths.add("/clans"); hiddenPaths.add("/clan-battles"); }

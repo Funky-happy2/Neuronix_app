@@ -9,7 +9,7 @@ import {
   Zap, Rocket, Bot, Sparkles, Wand2, Flame, Bird, Diamond, Star, RefreshCw, Beaker, Medal,
   Snowflake, Orbit, Crown, ArrowLeftRight, Skull, Map,
   Telescope, Mountain, Wind, Hexagon, Footprints, Cpu, Waves, TreePine, Atom,
-  TrendingUp, GraduationCap, Calendar, Gift, Radio, Gavel,
+  TrendingUp, GraduationCap, Calendar, Gift, Radio, Gavel, ScrollText,
   type LucideIcon
 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -42,6 +42,7 @@ const NAV_ITEMS = [
   { path: "/rebirth", label: "Rebirth", tKey: "nav.rebirth", icon: RefreshCw },
   { path: "/potions", label: "Potions", tKey: "nav.potions", icon: Beaker },
   { path: "/trade", label: "Trade", tKey: "nav.trade", icon: ArrowLeftRight },
+  { path: "/quests", label: "Quests", tKey: "", icon: ScrollText },
   { path: "/friends", label: "Friends", tKey: "", icon: Users },
   { path: "/redeem", label: "Redeem", tKey: "", icon: Gift },
   { path: "/invite", label: "Invite", tKey: "", icon: Users },

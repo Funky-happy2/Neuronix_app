@@ -35,8 +35,9 @@ import type { DimensionDef } from "@shared/dimensions";
 export {
   DIMENSIONS, DIMENSION_GROUPS, getDimension, getDimensionGroup,
   getGroupForDimension, hasFullStoneSet, dimensionBuffMultipliers,
+  isDimensionCleared, dimensionUnlockState,
 } from "@shared/dimensions";
-export type { DimensionDef, DimensionGroupDef, DimensionStone, DimensionEngine, WorldDef, WorldParams } from "@shared/dimensions";
+export type { DimensionDef, DimensionGroupDef, DimensionStone, DimensionEngine, WorldDef, WorldParams, DimensionUnlockState } from "@shared/dimensions";
 export type DimensionInfo = DimensionDef;
 
 export const GRAND_TOURNAMENT_EVENTS = {

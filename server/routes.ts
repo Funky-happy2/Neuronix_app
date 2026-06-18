@@ -1,9 +1,12 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage, db } from "./storage";
+import { questPosts, questMessages, tradeMessages, loginCodes } from "@shared/schema";
+import { eq, and, desc } from "drizzle-orm";
+import { randomBytes } from "crypto";
 import { setupAuth, hashPassword, comparePasswords } from "./auth";
 import { WebSocketServer, WebSocket } from "ws";
-import { getDimension, getDimensionGroup, hasFullStoneSet, dimensionBuffMultipliers, type DimensionDef } from "@shared/dimensions";
+import { getDimension, getDimensionGroup, hasFullStoneSet, dimensionBuffMultipliers, dimensionUnlockState, type DimensionDef } from "@shared/dimensions";
 
 interface LobbyPlayer {
   id: number;
@@ -304,6 +307,34 @@ export async function registerRoutes(
   app.use((req, _res, next) => {
     if (req.isAuthenticated() && req.user) {
       lastActive.set(req.user.id, Date.now());
+    }
+    next();
+  });
+
+  // Temporary login codes: force-logout once the 10-minute guest window elapses.
+  app.use((req, res, next) => {
+    const exp = (req.session as any)?.tempExpiresAt;
+    if (exp && Date.now() > Number(exp)) {
+      return req.logout(() => {
+        req.session?.destroy(() => {
+          if (req.path.startsWith("/api/")) return res.status(401).json({ message: "Guest pass expired" });
+          next();
+        });
+      });
+    }
+    next();
+  });
+
+  // Guest passes are read-mostly: block spending and trading.
+  const RESTRICTED_BLOCK_PREFIXES = [
+    "/api/shop/buy", "/api/shop/refund", "/api/shop/mystery-box", "/api/shop/upgrade-item",
+    "/api/potions/buy", "/api/rebirth", "/api/trades", "/api/quests",
+  ];
+  app.use((req, res, next) => {
+    if ((req.session as any)?.restricted && req.method !== "GET" && req.method !== "HEAD") {
+      if (RESTRICTED_BLOCK_PREFIXES.some((p) => req.path.startsWith(p))) {
+        return res.status(403).json({ message: "Guest passes can't spend coins or trade." });
+      }
     }
     next();
   });
@@ -1398,7 +1429,7 @@ export async function registerRoutes(
     }
   });
 
-  const SAFETY_KEYS = ["hideLeaderboard", "disableMultiplayer", "hideTrade", "hideCommunityPacks", "hideNews", "hideClans", "focusMode"];
+  const SAFETY_KEYS = ["hideLeaderboard", "disableMultiplayer", "hideTrade", "hideQuests", "hideCommunityPacks", "hideNews", "hideClans", "focusMode"];
 
   app.patch("/api/user/safety", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
@@ -4929,7 +4960,11 @@ export async function registerRoutes(
 
   // ─── DIMENSIONS: entry sacrifices, rewards, stones, set completion ──────────
   const dimUnlocked = (user: any, dim: DimensionDef) =>
-    (user.xp || 0) >= dim.unlockXp || (user.inventory || []).includes("dimunlock-" + dim.id);
+    dimensionUnlockState(dim, {
+      xp: user.xp || 0,
+      inventory: user.inventory || [],
+      badges: user.badges || [],
+    }).unlocked;
 
   app.post("/api/dimensions/enter", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
@@ -5042,6 +5077,204 @@ export async function registerRoutes(
       const { password: _p, ...safe } = fresh as any;
       res.json({ ...result, user: safe });
     } catch (e) { console.error("dimension complete", e); res.status(500).json({ message: "Failed to complete dimension" }); }
+  });
+
+  // === TEMPORARY LOGIN CODES (10-minute restricted guest access) ===
+  const TEMP_CODE_MS = 10 * 60 * 1000;
+
+  app.post("/api/login-codes", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if ((req.session as any)?.restricted) return res.status(403).json({ message: "Guest passes can't create codes." });
+    try {
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.sendStatus(401);
+      const code = randomBytes(4).toString("hex").toUpperCase(); // 8-char code
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + TEMP_CODE_MS).toISOString();
+      const [created] = await db.insert(loginCodes).values({
+        code, userId: user.id, createdById: user.id, createdByName: user.username,
+        expiresAt, createdAt: now.toISOString(),
+      } as any).returning();
+      res.json({ code: created.code, expiresAt: created.expiresAt, validForMs: TEMP_CODE_MS });
+    } catch (e) { console.error("create login code", e); res.status(500).json({ message: "Failed to create code" }); }
+  });
+
+  app.post("/api/login-codes/redeem", async (req, res, next) => {
+    try {
+      const code = String(req.body?.code || "").trim().toUpperCase();
+      if (!code) return res.status(400).json({ message: "Enter a code." });
+      const [lc] = await db.select().from(loginCodes).where(eq(loginCodes.code, code));
+      if (!lc) return res.status(404).json({ message: "Invalid code." });
+      if (lc.usedAt) return res.status(400).json({ message: "This code was already used." });
+      if (Date.now() > Date.parse(lc.expiresAt)) return res.status(400).json({ message: "This code has expired." });
+      const target = await storage.getUser(lc.userId);
+      if (!target) return res.status(404).json({ message: "Account not found." });
+      await db.update(loginCodes).set({ usedAt: new Date().toISOString() }).where(eq(loginCodes.id, lc.id));
+      const sessionExpiry = Date.now() + TEMP_CODE_MS; // 10 minutes from redemption
+      req.login(target, (err) => {
+        if (err) return next(err);
+        (req.session as any).restricted = true;
+        (req.session as any).tempExpiresAt = sessionExpiry;
+        const { password: _p, ...safe } = target as any;
+        res.json({ ...safe, restricted: true, tempExpiresAt: sessionExpiry });
+      });
+    } catch (e) { console.error("redeem login code", e); res.status(500).json({ message: "Failed to redeem code" }); }
+  });
+
+  // === TRADE CHAT (bargain with the trade's owner) ===
+  app.get("/api/trades/:id/messages", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const tradeId = Number(req.params.id);
+      const msgs = await db.select().from(tradeMessages).where(eq(tradeMessages.tradeId, tradeId)).orderBy(tradeMessages.id);
+      res.json(msgs);
+    } catch (e) { res.status(500).json({ message: "Failed to load messages" }); }
+  });
+
+  app.post("/api/trades/:id/messages", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const tradeId = Number(req.params.id);
+      const content = String(req.body?.content || "").trim();
+      if (!content) return res.status(400).json({ message: "Message can't be empty." });
+      if (content.length > 500) return res.status(400).json({ message: "Message is too long." });
+      const trade = await storage.getTrade(tradeId);
+      if (!trade) return res.status(404).json({ message: "Trade not found." });
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.sendStatus(401);
+      const [created] = await db.insert(tradeMessages).values({
+        tradeId, senderId: user.id, senderName: user.username, content, createdAt: new Date().toISOString(),
+      }).returning();
+      res.json(created);
+    } catch (e) { res.status(500).json({ message: "Failed to send message" }); }
+  });
+
+  // === QUESTS (player-posted paid tasks + bargaining chat) ===
+  app.get("/api/quests", async (_req, res) => {
+    try {
+      const all = await db.select().from(questPosts).orderBy(desc(questPosts.id));
+      res.json(all);
+    } catch (e) { res.status(500).json({ message: "Failed to load quests" }); }
+  });
+
+  app.post("/api/quests", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.sendStatus(401);
+      const title = String(req.body?.title || "").trim().slice(0, 100);
+      const description = String(req.body?.description || "").trim().slice(0, 1000);
+      const rewardCoins = Math.max(0, Math.floor(Number(req.body?.rewardCoins) || 0));
+      const rewardGems = Math.max(0, Math.floor(Number(req.body?.rewardGems) || 0));
+      if (!title || !description) return res.status(400).json({ message: "Title and description are required." });
+      if (rewardCoins === 0 && rewardGems === 0) return res.status(400).json({ message: "Offer some payment (coins or gems)." });
+      if ((user.coins || 0) < rewardCoins) return res.status(400).json({ message: "You don't have enough Neuros to fund this quest." });
+      if (((user as any).gems || 0) < rewardGems) return res.status(400).json({ message: "You don't have enough gems to fund this quest." });
+      // Escrow the reward up-front so an accepted quest is always payable.
+      await storage.updateUser(user.id, {
+        coins: (user.coins || 0) - rewardCoins,
+        gems: ((user as any).gems || 0) - rewardGems,
+      } as any);
+      const [created] = await db.insert(questPosts).values({
+        posterId: user.id, posterName: user.username, title, description,
+        rewardCoins, rewardGems, status: "open", createdAt: new Date().toISOString(),
+      } as any).returning();
+      res.json(created);
+    } catch (e) { console.error("create quest", e); res.status(500).json({ message: "Failed to create quest" }); }
+  });
+
+  app.post("/api/quests/:id/accept", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const id = Number(req.params.id);
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.sendStatus(401);
+      const [q] = await db.select().from(questPosts).where(eq(questPosts.id, id));
+      if (!q) return res.status(404).json({ message: "Quest not found." });
+      if (q.status !== "open") return res.status(400).json({ message: "This quest isn't open." });
+      if (q.posterId === user.id) return res.status(400).json({ message: "You can't accept your own quest." });
+      const [updated] = await db.update(questPosts)
+        .set({ status: "assigned", assigneeId: user.id, assigneeName: user.username })
+        .where(and(eq(questPosts.id, id), eq(questPosts.status, "open")))
+        .returning();
+      if (!updated) return res.status(400).json({ message: "This quest was just taken." });
+      res.json(updated);
+    } catch (e) { res.status(500).json({ message: "Failed to accept quest" }); }
+  });
+
+  app.post("/api/quests/:id/complete", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const id = Number(req.params.id);
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.sendStatus(401);
+      const [q] = await db.select().from(questPosts).where(eq(questPosts.id, id));
+      if (!q) return res.status(404).json({ message: "Quest not found." });
+      if (q.posterId !== user.id) return res.status(403).json({ message: "Only the quest poster can mark it complete." });
+      if (q.status !== "assigned") return res.status(400).json({ message: "The quest must be accepted first." });
+      const assignee = q.assigneeId ? await storage.getUser(q.assigneeId) : null;
+      if (assignee) {
+        await storage.updateUser(assignee.id, {
+          coins: (assignee.coins || 0) + q.rewardCoins,
+          gems: ((assignee as any).gems || 0) + q.rewardGems,
+        } as any);
+      }
+      const [updated] = await db.update(questPosts)
+        .set({ status: "completed", completedAt: new Date().toISOString() })
+        .where(eq(questPosts.id, id)).returning();
+      res.json(updated);
+    } catch (e) { console.error("complete quest", e); res.status(500).json({ message: "Failed to complete quest" }); }
+  });
+
+  app.post("/api/quests/:id/cancel", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const id = Number(req.params.id);
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.sendStatus(401);
+      const [q] = await db.select().from(questPosts).where(eq(questPosts.id, id));
+      if (!q) return res.status(404).json({ message: "Quest not found." });
+      if (q.posterId !== user.id) return res.status(403).json({ message: "Only the poster can cancel this quest." });
+      if (q.status === "completed" || q.status === "cancelled") return res.status(400).json({ message: "This quest is already closed." });
+      // Refund the escrowed reward to the poster.
+      await storage.updateUser(user.id, {
+        coins: (user.coins || 0) + q.rewardCoins,
+        gems: ((user as any).gems || 0) + q.rewardGems,
+      } as any);
+      const [updated] = await db.update(questPosts).set({ status: "cancelled" }).where(eq(questPosts.id, id)).returning();
+      res.json(updated);
+    } catch (e) { res.status(500).json({ message: "Failed to cancel quest" }); }
+  });
+
+  app.get("/api/quests/:id/messages", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const id = Number(req.params.id);
+      const msgs = await db.select().from(questMessages).where(eq(questMessages.questId, id)).orderBy(questMessages.id);
+      res.json(msgs);
+    } catch (e) { res.status(500).json({ message: "Failed to load messages" }); }
+  });
+
+  app.post("/api/quests/:id/messages", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const id = Number(req.params.id);
+      const content = String(req.body?.content || "").trim();
+      if (!content) return res.status(400).json({ message: "Message can't be empty." });
+      if (content.length > 500) return res.status(400).json({ message: "Message is too long." });
+      const [q] = await db.select().from(questPosts).where(eq(questPosts.id, id));
+      if (!q) return res.status(404).json({ message: "Quest not found." });
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.sendStatus(401);
+      // While open, anyone can bargain; once assigned only the poster and helper may chat.
+      if ((q.status === "assigned" || q.status === "completed") && user.id !== q.posterId && user.id !== q.assigneeId) {
+        return res.status(403).json({ message: "Only the poster and the helper can chat now." });
+      }
+      const [created] = await db.insert(questMessages).values({
+        questId: id, senderId: user.id, senderName: user.username, content, createdAt: new Date().toISOString(),
+      } as any).returning();
+      res.json(created);
+    } catch (e) { res.status(500).json({ message: "Failed to send message" }); }
   });
 
   // === FEEDBACK ROUTES ===
@@ -6522,6 +6755,7 @@ export async function registerRoutes(
         category: category || "update",
         authorId: user.id,
         authorName: user.username,
+        authorIsAdmin: isAdmin,
         pinned: isAdmin ? (pinned || false) : false,
         createdAt: new Date().toISOString(),
         status: isAdmin ? "approved" : "pending",

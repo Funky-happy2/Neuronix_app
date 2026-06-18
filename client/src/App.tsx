@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/use-auth";
 import NotFound from "@/pages/not-found";
 import Navbar from "@/components/Navbar";
+import { GuestPassBanner } from "@/components/GuestPassBanner";
 import HomePage from "@/pages/HomePage";
 import ArcadePage from "@/pages/ArcadePage";
 import LabPage from "@/pages/LabPage";
@@ -30,6 +31,7 @@ import RebirthPage from "@/pages/RebirthPage";
 import PotionsPage from "@/pages/PotionsPage";
 import TournamentsPage from "@/pages/TournamentsPage";
 import TradePage from "@/pages/TradePage";
+import QuestsPage from "@/pages/QuestsPage";
 import FriendsPage from "@/pages/FriendsPage";
 import ClanBattlePage from "@/pages/ClanBattlePage";
 import WorldsPage from "@/pages/WorldsPage";
@@ -252,6 +254,7 @@ function Router() {
       <ScreenDecorations />
       <GlobalMusicController isMuted={progress.isMuted} />
       <Navbar isMuted={progress.isMuted} onToggleMute={toggleMute} />
+      <GuestPassBanner />
       <SuspendedOverlay />
       <div className="pt-14 md:pt-0 min-h-screen sidebar-content" id="main-content">
       <Switch>
@@ -297,6 +300,7 @@ function Router() {
         <Route path="/rebirth" component={RebirthPage} />
         <Route path="/potions" component={PotionsPage} />
         <Route path="/trade" component={TradePage} />
+        <Route path="/quests" component={QuestsPage} />
         <Route path="/friends" component={FriendsPage} />
         <Route path="/worlds" component={WorldsPage} />
         <Route path="/dimensions">

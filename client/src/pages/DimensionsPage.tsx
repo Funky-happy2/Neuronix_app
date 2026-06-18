@@ -8,11 +8,11 @@ import {
   Swords, Map as MapIcon, Puzzle, Skull, ArrowLeft, Heart, Timer, Zap,
   Trophy, Star, CheckCircle, XCircle, Play, Lock, Coins, RotateCcw, Flame,
   Orbit, Atom, Sparkles, Gem, Hexagon, AlertTriangle, Loader2, TrendingUp,
-  Waves, Mountain, Wind, Sun, Moon, Telescope, ChevronRight, Layers,
+  Waves, Mountain, Wind, Sun, Moon, Telescope, ChevronRight, Layers, Crown,
 } from "lucide-react";
 import {
   DIMENSIONS, DIMENSION_GROUPS, DISTRICTS, getDistrict, getDimensionGroup,
-  yearToDifficulty, type DimensionDef, type DimensionGroupDef, type DimensionStone,
+  yearToDifficulty, dimensionUnlockState, type DimensionDef, type DimensionGroupDef, type DimensionStone,
   type WorldDef, type WorldParams,
 } from "@/lib/gameData";
 import { BOSS_BATTLES } from "@/lib/gameData";
@@ -24,7 +24,7 @@ import { useMutation } from "@tanstack/react-query";
 
 const DIM_ICONS: Record<string, typeof Swords> = {
   Swords, Map: MapIcon, Puzzle, Skull, Zap, Timer, Orbit, Atom, Sparkles, Flame, Gem, Hexagon,
-  Waves, Mountain, Wind, Sun, Moon, Telescope, Layers,
+  Waves, Mountain, Wind, Sun, Moon, Telescope, Layers, Crown,
 };
 
 interface DimensionsPageProps {
@@ -459,6 +459,10 @@ function ColosseumGame({ yearLevel, params, onComplete }: WorldGameProps) {
 
   const boss = bossesRef.current[bossIdx];
   const q = poolRef.current[qiRef.current % poolRef.current.length];
+  // A named boss appears as the LAST fight of the world (the dimension's final boss).
+  const isFinalFight = !!params.bossName && bossIdx + 1 >= bossCount;
+  const bossName = isFinalFight ? params.bossName! : boss.name;
+  const bossTitle = isFinalFight ? "★ FINAL BOSS" : boss.title;
 
   const finish = useCallback((won: boolean) => {
     if (doneRef.current) return;
@@ -500,15 +504,15 @@ function ColosseumGame({ yearLevel, params, onComplete }: WorldGameProps) {
           ))}
         </div>
       </div>
-      <Card className="p-4 mb-4 border-rose-500/40 bg-gradient-to-br from-rose-950/40 to-slate-900/40">
+      <Card className={`p-4 mb-4 ${isFinalFight ? "border-amber-400/70 bg-gradient-to-br from-amber-950/50 to-rose-950/50 shadow-[0_0_24px_rgba(251,191,36,0.25)]" : "border-rose-500/40 bg-gradient-to-br from-rose-950/40 to-slate-900/40"}`}>
         <div className="flex items-center justify-between mb-2">
-          <span className="font-black text-lg">{boss.name}</span>
-          <Badge variant="secondary" className="text-[10px]">{boss.title}</Badge>
+          <span className="font-black text-lg flex items-center gap-1.5">{isFinalFight && <Crown className="w-5 h-5 text-amber-300" />}{bossName}</span>
+          <Badge variant="secondary" className={`text-[10px] ${isFinalFight ? "bg-amber-400/30 text-amber-200" : ""}`}>{bossTitle}</Badge>
         </div>
         <div className="flex items-center gap-1">
-          <span className="text-xs font-bold text-rose-400 mr-1">Boss HP</span>
+          <span className={`text-xs font-bold mr-1 ${isFinalFight ? "text-amber-300" : "text-rose-400"}`}>Boss HP</span>
           {Array.from({ length: bossHpMax }).map((_, i) => (
-            <div key={i} className={`h-2.5 flex-1 rounded-full ${i < bossHp ? "bg-rose-500" : "bg-muted"}`} />
+            <div key={i} className={`h-2.5 flex-1 rounded-full ${i < bossHp ? (isFinalFight ? "bg-amber-400" : "bg-rose-500") : "bg-muted"}`} />
           ))}
         </div>
       </Card>
@@ -616,15 +620,17 @@ function DimensionRun({ dim, yearLevel, reward, resolving, onResolve, onExit, on
       <div className="bg-background/95 backdrop-blur rounded-3xl p-5 shadow-2xl">
         {phase === "intro" && (
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="text-center py-8 max-w-md mx-auto">
-            <div className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-2">World {worldIdx + 1} of {worlds.length}</div>
-            <WorldIcon className="w-14 h-14 mx-auto mb-3 text-fuchsia-500" />
+            <div className={`text-xs font-black uppercase tracking-widest mb-2 ${world.final ? "text-amber-500" : "text-muted-foreground"}`}>
+              {world.final ? "⚔️ Final Boss" : `World ${worldIdx + 1} of ${worlds.length}`}
+            </div>
+            <WorldIcon className={`w-14 h-14 mx-auto mb-3 ${world.final ? "text-amber-400" : "text-fuchsia-500"}`} />
             <h2 className="text-3xl font-black mb-1">{world.name}</h2>
             <p className="text-muted-foreground font-semibold mb-1">{world.tagline}</p>
             <p className="text-xs text-red-500 font-bold mb-6 flex items-center justify-center gap-1">
               <AlertTriangle className="w-3.5 h-3.5" /> Lose here and the whole dimension resets.
             </p>
-            <Button size="lg" onClick={startWorld} className="gap-2 font-black" data-testid="start-world">
-              <Play className="w-5 h-5" /> {worldIdx === 0 ? "Begin Campaign" : "Enter World"}
+            <Button size="lg" onClick={startWorld} className={`gap-2 font-black ${world.final ? "bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-600 hover:to-rose-700" : ""}`} data-testid="start-world">
+              <Play className="w-5 h-5" /> {world.final ? "Face the Final Boss" : worldIdx === 0 ? "Begin Campaign" : "Enter World"}
             </Button>
           </motion.div>
         )}
@@ -723,7 +729,8 @@ export default function DimensionsPage({ onAddXP, onAddCoins, onEarnBadge, yearL
   const pickYear = (y: number) => { setYear(y); onSetYearLevel?.(y); };
 
   const shardsOf = (g?: DimensionGroupDef) => (g?.currencyId ? (exp[g.currencyId] || 0) : 0);
-  const isUnlocked = (dim: DimensionDef) => userXp >= dim.unlockXp || inventory.includes("dimunlock-" + dim.id);
+  const unlockStateOf = (dim: DimensionDef) => dimensionUnlockState(dim, { xp: userXp, inventory, badges: userBadges });
+  const isUnlocked = (dim: DimensionDef) => unlockStateOf(dim).unlocked;
   const isInfinity = (dim: DimensionDef) => dim.groupId !== "core";
   const hasSacrificeItem = () => inventory.some(i => i.startsWith("potion-") || i.startsWith("powerup-") || i.startsWith("battle-powerup-"));
   const canAfford = (dim: DimensionDef): boolean => {
@@ -912,7 +919,8 @@ export default function DimensionsPage({ onAddXP, onAddCoins, onEarnBadge, yearL
             <div className="grid md:grid-cols-2 gap-5">
               {groupDims.map((dim) => {
                 const Icon = DIM_ICONS[dim.icon] || Swords;
-                const unlocked = isUnlocked(dim);
+                const unlock = unlockStateOf(dim);
+                const unlocked = unlock.unlocked;
                 const ownsStone = dim.stoneId ? inventory.includes(dim.stoneId) : false;
                 const earnedBadge = dim.badgeId ? userBadges.includes(dim.badgeId) : false;
                 const chips = sacrificeChips(dim, group);
@@ -927,7 +935,12 @@ export default function DimensionsPage({ onAddXP, onAddCoins, onEarnBadge, yearL
                       <div className={`bg-gradient-to-br ${dim.gradient} p-6 text-white relative`}>
                         <div className="flex items-start justify-between">
                           <Icon className="w-10 h-10 mb-3" />
-                          <Badge className="bg-white/20 text-white border-0 font-bold text-[11px]">{dim.structure}</Badge>
+                          <div className="flex flex-col items-end gap-1">
+                            {dim.keystone && (
+                              <Badge className="bg-amber-400/30 text-amber-100 border-0 font-black text-[10px] gap-1"><Crown className="w-3 h-3" /> Keystone</Badge>
+                            )}
+                            <Badge className="bg-white/20 text-white border-0 font-bold text-[11px]">{dim.structure}</Badge>
+                          </div>
                         </div>
                         <h3 className="text-2xl font-black flex items-center gap-2">{dim.name}{ownsStone && <Gem className="w-5 h-5 text-amber-300" />}</h3>
                         <p className="text-white/80 text-sm font-semibold italic">{dim.tagline}</p>
@@ -964,8 +977,19 @@ export default function DimensionsPage({ onAddXP, onAddCoins, onEarnBadge, yearL
                           </div>
                         )}
                         {!unlocked ? (
-                          <div className="flex items-center gap-2 text-sm font-bold text-amber-600 dark:text-amber-400">
-                            <Lock className="w-4 h-4" /> Unlocks at {dim.unlockXp.toLocaleString()} XP <span className="text-muted-foreground font-medium">(or admin grant)</span>
+                          <div className="space-y-1.5 text-sm font-bold text-amber-600 dark:text-amber-400">
+                            {unlock.missing.length > 0 && (
+                              <div className="flex items-start gap-2">
+                                <Lock className="w-4 h-4 mt-0.5 shrink-0" />
+                                <span>Defeat first: {unlock.missing.map(m => m.name).join(", ")}</span>
+                              </div>
+                            )}
+                            {unlock.xpShort > 0 && (
+                              <div className="flex items-center gap-2">
+                                {unlock.missing.length === 0 && <Lock className="w-4 h-4 shrink-0" />}
+                                <span className={unlock.missing.length > 0 ? "ml-6" : ""}>Reach {dim.unlockXp.toLocaleString()} XP <span className="text-muted-foreground font-medium">({unlock.xpShort.toLocaleString()} to go)</span></span>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <Button className={`w-full gap-2 font-bold ${!affordable ? "opacity-60" : ""}`} data-testid={`enter-${dim.id}`}>
