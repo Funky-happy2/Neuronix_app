@@ -32,6 +32,8 @@ import PotionsPage from "@/pages/PotionsPage";
 import TournamentsPage from "@/pages/TournamentsPage";
 import TradePage from "@/pages/TradePage";
 import QuestsPage from "@/pages/QuestsPage";
+import BrainBlitzPage from "@/pages/BrainBlitzPage";
+import StoryPage from "@/pages/StoryPage";
 import FriendsPage from "@/pages/FriendsPage";
 import ClanBattlePage from "@/pages/ClanBattlePage";
 import WorldsPage from "@/pages/WorldsPage";
@@ -301,6 +303,10 @@ function Router() {
         <Route path="/potions" component={PotionsPage} />
         <Route path="/trade" component={TradePage} />
         <Route path="/quests" component={QuestsPage} />
+        <Route path="/brain-blitz">
+          <BrainBlitzPage yearLevel={progress.yearLevel} onSetYearLevel={setYearLevel} />
+        </Route>
+        <Route path="/story" component={StoryPage} />
         <Route path="/friends" component={FriendsPage} />
         <Route path="/worlds" component={WorldsPage} />
         <Route path="/dimensions">

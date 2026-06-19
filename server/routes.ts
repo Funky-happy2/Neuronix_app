@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage, db } from "./storage";
 import { questPosts, questMessages, tradeMessages, loginCodes } from "@shared/schema";
+import { STORY_FLAGS, getNode as getStoryNode, isNodeReachable as isStoryNodeReachable } from "@shared/story";
 import { eq, and, desc } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { setupAuth, hashPassword, comparePasswords } from "./auth";
@@ -5275,6 +5276,81 @@ export async function registerRoutes(
       } as any).returning();
       res.json(created);
     } catch (e) { res.status(500).json({ message: "Failed to send message" }); }
+  });
+
+  // === STORY CAMPAIGN (The Spark Saga) — playable, level-based ===
+  // Completes a node (dialogue read, or level beaten) the first time, granting its
+  // reward. Level results are client-asserted (same trust model as /api/game/result).
+  async function completeStoryNode(req: any, res: any, expectKind: "dialogue" | "level", flagFor: (id: string) => string) {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const nodeId = String(req.body?.nodeId || "");
+      const found = getStoryNode(nodeId);
+      if (!found) return res.status(404).json({ message: "Unknown story step" });
+      if (found.node.kind !== expectKind) return res.status(400).json({ message: `That step isn't a ${expectKind}.` });
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.sendStatus(401);
+      const inventory: string[] = user.inventory || [];
+      const flag = flagFor(nodeId);
+      if (!isStoryNodeReachable(nodeId, inventory)) return res.status(400).json({ message: "Finish earlier steps first." });
+      if (inventory.includes(flag)) { // already done — no double reward
+        const { password: _p, ...safe } = user as any;
+        return res.json({ ok: true, alreadyDone: true, reward: null, user: safe });
+      }
+      const r = found.node.reward || {};
+      const updates: any = {};
+      const inv = [...inventory, flag];
+      if (r.item && !inv.includes(r.item)) inv.push(r.item);
+      for (const it of r.items || []) if (!inv.includes(it)) inv.push(it);
+      updates.inventory = inv;
+      if (r.xp) { const nx = (user.xp || 0) + r.xp; updates.xp = nx; updates.level = computeLevel(nx); }
+      if (r.coins) updates.coins = (user.coins || 0) + r.coins;
+      if (r.gems) updates.gems = ((user as any).gems || 0) + r.gems;
+      if (r.badgeId) { const b = user.badges || []; if (!b.includes(r.badgeId)) updates.badges = [...b, r.badgeId]; }
+      await storage.updateUser(user.id, updates);
+      const fresh = await storage.getUser(user.id);
+      const { password: _p, ...safe } = fresh as any;
+      res.json({ ok: true, reward: r, user: safe });
+    } catch (e) { console.error("story complete", e); res.status(500).json({ message: "Failed to advance the story" }); }
+  }
+
+  // Read a dialogue beat.
+  app.post("/api/story/ack", (req, res) => completeStoryNode(req, res, "dialogue", STORY_FLAGS.ackFlag));
+  // Report a playable level as beaten.
+  app.post("/api/story/clear", (req, res) => completeStoryNode(req, res, "level", STORY_FLAGS.clearFlag));
+
+  // Make a branching choice.
+  app.post("/api/story/choose", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const nodeId = String(req.body?.nodeId || "");
+      const optionId = String(req.body?.optionId || "");
+      const found = getStoryNode(nodeId);
+      if (!found || found.node.kind !== "choice") return res.status(404).json({ message: "Unknown choice" });
+      const option = found.node.options.find((o) => o.id === optionId);
+      if (!option) return res.status(400).json({ message: "Invalid choice" });
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.sendStatus(401);
+      const inventory: string[] = user.inventory || [];
+      if (!isStoryNodeReachable(nodeId, inventory)) return res.status(400).json({ message: "Finish earlier steps first." });
+      if (inventory.some((x) => x.startsWith(STORY_FLAGS.choicePrefix(nodeId)))) {
+        const { password: _p, ...safe } = user as any;
+        return res.json({ ok: true, alreadyChosen: true, reward: null, user: safe });
+      }
+      const r = option.reward || {};
+      const updates: any = {};
+      const inv = [...inventory, STORY_FLAGS.choiceFlag(nodeId, optionId)];
+      if (r.item && !inv.includes(r.item)) inv.push(r.item);
+      updates.inventory = inv;
+      if (r.xp) { const nx = (user.xp || 0) + r.xp; updates.xp = nx; updates.level = computeLevel(nx); }
+      if (r.coins) updates.coins = (user.coins || 0) + r.coins;
+      if (r.gems) updates.gems = ((user as any).gems || 0) + r.gems;
+      if (r.badgeId) { const b = user.badges || []; if (!b.includes(r.badgeId)) updates.badges = [...b, r.badgeId]; }
+      await storage.updateUser(user.id, updates);
+      const fresh = await storage.getUser(user.id);
+      const { password: _p, ...safe } = fresh as any;
+      res.json({ ok: true, reward: r, user: safe });
+    } catch (e) { console.error("story choose", e); res.status(500).json({ message: "Failed to make choice" }); }
   });
 
   // === FEEDBACK ROUTES ===

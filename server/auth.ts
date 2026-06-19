@@ -6,6 +6,7 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
+import { DIMENSION_GROUPS, hasFullStoneSet } from "@shared/dimensions";
 
 declare global {
   namespace Express {
@@ -219,6 +220,29 @@ export function setupAuth(app: Express) {
       }
     } catch (err) {
       console.error("Retroactive reward check failed:", err);
+    }
+
+    // Catch-up: if a dimension stone-set is complete, make sure its cosmetics
+    // (avatar, border, badge) were actually granted — not just the live buff.
+    try {
+      const inv = [...(freshUser.inventory || [])];
+      const bdg = [...((freshUser.badges as string[]) || [])];
+      let changed = false;
+      for (const g of DIMENSION_GROUPS) {
+        if (g.grandReward && hasFullStoneSet(g, inv)) {
+          const gr = g.grandReward;
+          for (const it of [gr.completeFlag, gr.avatarId, gr.borderId]) {
+            if (!inv.includes(it)) { inv.push(it); changed = true; }
+          }
+          if (!bdg.includes(gr.badgeId)) { bdg.push(gr.badgeId); changed = true; }
+        }
+      }
+      if (changed) {
+        await storage.updateUser(freshUser.id, { inventory: inv, badges: bdg } as any);
+        freshUser = await storage.getUser(freshUser.id) as typeof freshUser;
+      }
+    } catch (err) {
+      console.error("Dimension cosmetic catch-up failed:", err);
     }
 
     const { password, ...safeUser } = freshUser as any;

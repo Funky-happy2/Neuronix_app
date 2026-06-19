@@ -2364,6 +2364,7 @@ export const GAME_BADGE_THRESHOLD = 200;
 
 export const BADGES: BadgeInfo[] = [
   { id: "first-quest", name: "First Quest", description: "Complete your first game", icon: "Star", color: "hsl(45, 95%, 50%)", requirement: "Play any game", rarity: "common", topic: "games" },
+  { id: "saga-hero", name: "Spark Eternal", description: "Complete The Spark Saga story campaign", icon: "Sparkles", color: "hsl(290, 90%, 60%)", requirement: "Finish the whole Spark Saga", rarity: "legendary", topic: "special" },
   { id: "gravity-master", name: "Gravity Master", description: "Score 200+ in Gravity Dash", icon: "Rocket", color: "hsl(270, 85%, 55%)", requirement: "Score 200 or more in Gravity Dash", rarity: "uncommon", topic: "games" },
   { id: "gene-genius", name: "Gene Genius", description: "Score 200+ in DNA Decoder", icon: "Dna", color: "hsl(160, 70%, 45%)", requirement: "Score 200 or more in DNA Decoder", rarity: "uncommon", topic: "games" },
   { id: "circuit-wizard", name: "Circuit Wizard", description: "Score 200+ in Circuit Crafter", icon: "Zap", color: "hsl(45, 95%, 50%)", requirement: "Score 200 or more in Circuit Crafter", rarity: "uncommon", topic: "games" },
@@ -2613,6 +2614,7 @@ export const SHOP_AVATARS: { id: string; name: string; icon: string; source?: st
   { id: "avatar-infinity", name: "Infinity Bearer", icon: "Gem", source: "Collect all 6 Infinity Stones", category: "achievement" },
   { id: "avatar-elemental-lord", name: "Elemental Lord", icon: "Flame", source: "Claim the Elemental Crown", category: "achievement" },
   { id: "avatar-cosmos-sovereign", name: "Cosmos Sovereign", icon: "Telescope", source: "Claim the Cosmic Crown", category: "achievement" },
+  { id: "avatar-spark-eternal", name: "Spark Eternal", icon: "Sparkles", source: "Complete The Spark Saga", category: "achievement" },
 ];
 
 export function getXPForLevel(level: number): number {

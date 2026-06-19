@@ -691,7 +691,19 @@ export default function ShopPage() {
         rewardSource: "pvp:admin-beater",
       } as ShopItem;
     });
-  const allItems = [...items, ...adminBeaterItems];
+  // Story-campaign titles owned via inventory get a (free) shop entry so they can be equipped.
+  const storyTitleDefs: { id: string; name: string }[] = [
+    { id: "title-spark-eternal", name: "Spark Eternal" },
+  ];
+  const storyTitleItems: ShopItem[] = storyTitleDefs
+    .filter((t) => (userInventory as string[]).includes(t.id) && !items.find((i) => i.id === t.id))
+    .map((t) => ({
+      id: t.id, name: t.name, description: "Earned by completing The Spark Saga story campaign",
+      category: "title", price: 0, icon: "Sparkles", rarity: "legendary",
+      requiredLevel: 1, requiredRebirth: 0, requiredXp: 0, rewardSource: "story:saga",
+    } as ShopItem));
+
+  const allItems = [...items, ...adminBeaterItems, ...storyTitleItems];
 
   const filteredItems = allItems
     .filter((item) => !WORLD_EXCLUSIVE_IDS.has(item.id))

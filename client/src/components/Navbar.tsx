@@ -9,7 +9,7 @@ import {
   Zap, Rocket, Bot, Sparkles, Wand2, Flame, Bird, Diamond, Star, RefreshCw, Beaker, Medal,
   Snowflake, Orbit, Crown, ArrowLeftRight, Skull, Map,
   Telescope, Mountain, Wind, Hexagon, Footprints, Cpu, Waves, TreePine, Atom,
-  TrendingUp, GraduationCap, Calendar, Gift, Radio, Gavel, ScrollText,
+  TrendingUp, GraduationCap, Calendar, Gift, Radio, Gavel, ScrollText, Brain,
   type LucideIcon
 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -20,7 +20,9 @@ import { useTranslation } from "@/lib/i18n";
 
 const NAV_ITEMS = [
   { path: "/", label: "Home", tKey: "nav.home", icon: Home },
+  { path: "/story", label: "Story", tKey: "", icon: BookOpen },
   { path: "/arcade", label: "Arcade", tKey: "nav.arcade", icon: Gamepad2 },
+  { path: "/brain-blitz", label: "Brain Blitz", tKey: "", icon: Brain },
   { path: "/worlds", label: "Worlds", tKey: "nav.worlds", icon: Map },
   { path: "/dimensions", label: "Dimensions", tKey: "", icon: Hexagon },
   { path: "/lobby", label: "Multiplayer", tKey: "nav.lobby", icon: Users },

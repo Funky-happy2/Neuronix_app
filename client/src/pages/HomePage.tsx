@@ -11,6 +11,7 @@ import {
   type LucideIcon
 } from "lucide-react";
 import { GAME_MODES, BADGES, WORLDS, BOSS_BATTLES } from "@/lib/gameData";
+import { StoryBanner } from "@/components/StoryBanner";
 import { useAuth } from "@/hooks/use-auth";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
@@ -117,6 +118,9 @@ export default function HomePage({ xp, level, streak, badges, totalGamesPlayed }
   return (
     <div className="min-h-screen">
       <MessageBanner />
+      <div className="max-w-5xl mx-auto px-4 pt-4">
+        <StoryBanner />
+      </div>
       <section className="relative py-16 md:py-24 px-4 overflow-visible">
         <div className="absolute inset-0 bg-gradient-to-br from-purple-600/20 via-blue-600/10 to-emerald-600/10 dark:from-purple-600/30 dark:via-blue-600/20 dark:to-emerald-600/10" />
         <div className="absolute inset-0 overflow-visible">
