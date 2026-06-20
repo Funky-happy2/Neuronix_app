@@ -5,18 +5,10 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { Heart, Timer, ArrowLeft, CheckCircle, XCircle, RotateCcw, Zap, Flag, Swords, Lock, Users } from "lucide-react";
-import { BOSS_QUESTIONS_BY_YEAR, type BossQ } from "@/lib/bossQuestions";
+import { type BossQ } from "@/lib/bossQuestions";
+import { buildTopicPool } from "@/lib/questionTopics";
 import type { StoryLevelSpec } from "@shared/story";
 
-function buildPool(tier: number): BossQ[] {
-  const pool: BossQ[] = [];
-  for (const id of Object.keys(BOSS_QUESTIONS_BY_YEAR)) {
-    const banks = BOSS_QUESTIONS_BY_YEAR[id];
-    const qs = banks[tier] || banks[6] || banks[4] || banks[8];
-    if (qs) pool.push(...qs);
-  }
-  return pool.sort(() => Math.random() - 0.5);
-}
 const shuffle = <T,>(a: T[]) => [...a].sort(() => Math.random() - 0.5);
 
 interface MCQ { q: string; options: string[]; correct: number; explanation: string }
@@ -33,7 +25,7 @@ export function StoryLevel({ level, title, gradient, onWin, onExit }: {
   onWin: () => void;
   onExit: () => void;
 }) {
-  const poolRef = useRef(buildPool(level.yearTier));
+  const poolRef = useRef(buildTopicPool(level.yearTier, level.topic));
   const idxRef = useRef(0);
   const [runKey, setRunKey] = useState(0);
 
@@ -56,7 +48,7 @@ export function StoryLevel({ level, title, gradient, onWin, onExit }: {
   const baseTime = Math.max(4, level.timeSec - (enraged ? 2 : 0));
 
   const reset = () => {
-    poolRef.current = buildPool(level.yearTier);
+    poolRef.current = buildTopicPool(level.yearTier, level.topic);
     idxRef.current = 0;
     lockRef.current = false;
     doneRef.current = false;

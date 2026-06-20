@@ -2,13 +2,16 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { BookOpen, ChevronRight, Sparkles } from "lucide-react";
-import { STORY_CHAPTERS, isChapterUnlocked, isNodeComplete, totalStoryNodes, type StoryChapter, type StoryNode } from "@shared/story";
+import { STORIES, isChapterUnlocked, isNodeComplete, totalStoryNodes, storyNodesDone, type Story, type StoryChapter, type StoryNode } from "@shared/story";
 
-function nextStep(inventory: string[]): { chapter: StoryChapter; node: StoryNode } | null {
-  for (const c of STORY_CHAPTERS) {
-    if (!isChapterUnlocked(c, inventory)) break;
-    const node = c.nodes.find((n) => !isNodeComplete(n, inventory));
-    if (node) return { chapter: c, node };
+// The next thing to play across all stories (first story with an open step).
+function nextStep(inventory: string[]): { story: Story; chapter: StoryChapter; node: StoryNode } | null {
+  for (const story of STORIES) {
+    for (const c of story.chapters) {
+      if (!isChapterUnlocked(c, inventory)) break;
+      const node = c.nodes.find((n) => !isNodeComplete(n, inventory));
+      if (node) return { story, chapter: c, node };
+    }
   }
   return null;
 }
@@ -19,18 +22,19 @@ export function StoryBanner() {
   if (!user) return null;
   const inventory: string[] = user.inventory || [];
 
-  const total = totalStoryNodes();
-  const done = STORY_CHAPTERS.reduce((s, c) => s + c.nodes.filter((n) => isNodeComplete(n, inventory)).length, 0);
+  const total = STORIES.reduce((s, st) => s + totalStoryNodes(st), 0);
+  const done = STORIES.reduce((s, st) => s + storyNodesDone(st, inventory), 0);
   const step = nextStep(inventory);
   const complete = !step;
   const fresh = done === 0;
 
   const gradient = complete ? "from-fuchsia-600 via-purple-700 to-amber-500" : step!.chapter.gradient;
-  const heading = complete ? "The Spark Saga — Complete!" : fresh ? "Begin Your Story" : step!.chapter.title;
+  const heading = complete ? "All Stories Complete!" : fresh ? "Begin Your Story" : step!.chapter.title;
+  const label = complete ? "Story Mode" : step ? step.story.title : "Story Mode";
   const sub = complete
-    ? "You are a Spark Eternal. Replay any chapter anytime."
+    ? "You've finished every adventure. Replay any story anytime."
     : fresh
-      ? "An original adventure — play through chapters and beat Guardians to save the world's curiosity."
+      ? "Original adventures — play through chapters and beat Guardians."
       : `Up next: ${step!.node.title}`;
 
   return (
@@ -47,7 +51,7 @@ export function StoryBanner() {
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-[11px] font-black uppercase tracking-widest opacity-80 flex items-center gap-1">
-              <Sparkles className="w-3 h-3" /> The Spark Saga
+              <Sparkles className="w-3 h-3" /> {label}
             </div>
             <div className="text-lg font-black leading-tight truncate">{heading}</div>
             <div className="text-sm font-semibold text-white/85 truncate">{sub}</div>

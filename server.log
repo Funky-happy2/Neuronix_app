@@ -4,30 +4,3 @@
 
 SESSION_SECRET not set — generated an ephemeral dev secret. Sessions will not survive a restart.
 WebSocket server error: Port 24678 is already in use
-8:50:34 AM [tsx] change in ./server/auth.ts Rerunning...
-cSESSION_SECRET not set — generated an ephemeral dev secret. Sessions will not survive a restart.
-WebSocket server error: Port 24678 is already in use
-8:50:45 AM [tsx] change in ./server/auth.ts Rerunning...
-cSESSION_SECRET not set — generated an ephemeral dev secret. Sessions will not survive a restart.
-WebSocket server error: Port 24678 is already in use
-8:51:18 AM [tsx] change in ./shared/story.ts Rerunning...
-cSESSION_SECRET not set — generated an ephemeral dev secret. Sessions will not survive a restart.
-WebSocket server error: Port 24678 is already in use
-8:51:29 AM [tsx] change in ./shared/story.ts Rerunning...
-cSESSION_SECRET not set — generated an ephemeral dev secret. Sessions will not survive a restart.
-WebSocket server error: Port 24678 is already in use
-8:51:36 AM [tsx] change in ./server/routes.ts Rerunning...
-cSESSION_SECRET not set — generated an ephemeral dev secret. Sessions will not survive a restart.
-WebSocket server error: Port 24678 is already in use
-8:52:18 AM [tsx] change in ./shared/story.ts Rerunning...
-cSESSION_SECRET not set — generated an ephemeral dev secret. Sessions will not survive a restart.
-WebSocket server error: Port 24678 is already in use
-8:52:27 AM [tsx] change in ./shared/story.ts Rerunning...
-cSESSION_SECRET not set — generated an ephemeral dev secret. Sessions will not survive a restart.
-WebSocket server error: Port 24678 is already in use
-8:52:40 AM [tsx] change in ./shared/story.ts Rerunning...
-cSESSION_SECRET not set — generated an ephemeral dev secret. Sessions will not survive a restart.
-WebSocket server error: Port 24678 is already in use
-8:52:54 AM [tsx] change in ./shared/story.ts Rerunning...
-cSESSION_SECRET not set — generated an ephemeral dev secret. Sessions will not survive a restart.
-WebSocket server error: Port 24678 is already in use

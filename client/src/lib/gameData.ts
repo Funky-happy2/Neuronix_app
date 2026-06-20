@@ -2364,7 +2364,9 @@ export const GAME_BADGE_THRESHOLD = 200;
 
 export const BADGES: BadgeInfo[] = [
   { id: "first-quest", name: "First Quest", description: "Complete your first game", icon: "Star", color: "hsl(45, 95%, 50%)", requirement: "Play any game", rarity: "common", topic: "games" },
-  { id: "saga-hero", name: "Spark Eternal", description: "Complete The Spark Saga story campaign", icon: "Sparkles", color: "hsl(290, 90%, 60%)", requirement: "Finish the whole Spark Saga", rarity: "legendary", topic: "special" },
+  { id: "saga-hero", name: "Spark Eternal", description: "Complete The Spark Saga story campaign", icon: "Sparkles", color: "hsl(290, 90%, 60%)", requirement: "Finish the whole Spark Saga", rarity: "legendary", topic: "story" },
+  { id: "chrono-caper", name: "Time Detective", description: "Complete The Chrono Caper story", icon: "Clock", color: "hsl(35, 90%, 55%)", requirement: "Catch The Curator across time", rarity: "epic", topic: "story" },
+  { id: "body-brigade", name: "Micro Medic", description: "Complete the Body Brigade story", icon: "Heart", color: "hsl(340, 80%, 55%)", requirement: "Cure the patient from within", rarity: "epic", topic: "story" },
   { id: "gravity-master", name: "Gravity Master", description: "Score 200+ in Gravity Dash", icon: "Rocket", color: "hsl(270, 85%, 55%)", requirement: "Score 200 or more in Gravity Dash", rarity: "uncommon", topic: "games" },
   { id: "gene-genius", name: "Gene Genius", description: "Score 200+ in DNA Decoder", icon: "Dna", color: "hsl(160, 70%, 45%)", requirement: "Score 200 or more in DNA Decoder", rarity: "uncommon", topic: "games" },
   { id: "circuit-wizard", name: "Circuit Wizard", description: "Score 200+ in Circuit Crafter", icon: "Zap", color: "hsl(45, 95%, 50%)", requirement: "Score 200 or more in Circuit Crafter", rarity: "uncommon", topic: "games" },
@@ -2556,13 +2558,14 @@ export const BADGES: BadgeInfo[] = [
   { id: "event-horizon-survivor", name: "Event Horizon Survivor", description: "Defeat The Black Hole Maw (mutated)", icon: "Orbit", color: "hsl(265, 80%, 50%)", requirement: "Beat the mutated Space Boss", rarity: "epic", topic: "bosses" },
   { id: "cosmos-master", name: "Cosmos Master", description: "Defeat The Galactic End (omega)", icon: "Orbit", color: "hsl(275, 80%, 45%)", requirement: "Beat the omega Space Boss", rarity: "legendary", topic: "bosses" },
   // Dimensions
-  { id: "gauntlet-champion", name: "Gauntlet Champion", description: "Reach Wave 5 in The Gauntlet", icon: "Swords", color: "hsl(15, 85%, 50%)", requirement: "Survive to wave 5 in the Gauntlet dimension", rarity: "rare", topic: "special" },
-  { id: "labyrinth-master", name: "Labyrinth Master", description: "Escape The Labyrinth", icon: "Map", color: "hsl(265, 70%, 55%)", requirement: "Complete a run in the Labyrinth dimension", rarity: "epic", topic: "special" },
-  { id: "nexus-ascendant", name: "Nexus Ascendant", description: "Top the ladder in The Nexus", icon: "Sparkles", color: "hsl(190, 85%, 50%)", requirement: "Reach the top rung in the Nexus dimension", rarity: "epic", topic: "special" },
-  { id: "colosseum-victor", name: "Colosseum Victor", description: "Beat all 3 bosses in The Colosseum", icon: "Skull", color: "hsl(340, 80%, 50%)", requirement: "Defeat all three bosses in the Colosseum dimension", rarity: "legendary", topic: "special" },
-  { id: "infinity-master", name: "Infinity Master", description: "Collect all 6 Infinity Stones", icon: "Gem", color: "hsl(280, 90%, 55%)", requirement: "Complete every Infinity Rift and claim the Infinity Gauntlet", rarity: "legendary", topic: "special" },
-  { id: "elemental-sovereign", name: "Elemental Sovereign", description: "Collect all 4 Elemental Cores", icon: "Flame", color: "hsl(25, 90%, 55%)", requirement: "Complete every Elemental trial and claim the Elemental Crown", rarity: "legendary", topic: "special" },
-  { id: "cosmic-sovereign", name: "Cosmic Sovereign", description: "Collect all 4 Star Fragments", icon: "Telescope", color: "hsl(250, 80%, 60%)", requirement: "Complete every Cosmic trial and claim the Cosmic Crown", rarity: "legendary", topic: "special" },
+  { id: "gauntlet-champion", name: "Gauntlet Champion", description: "Reach Wave 5 in The Gauntlet", icon: "Swords", color: "hsl(15, 85%, 50%)", requirement: "Survive to wave 5 in the Gauntlet dimension", rarity: "rare", topic: "dimensions" },
+  { id: "labyrinth-master", name: "Labyrinth Master", description: "Escape The Labyrinth", icon: "Map", color: "hsl(265, 70%, 55%)", requirement: "Complete a run in the Labyrinth dimension", rarity: "epic", topic: "dimensions" },
+  { id: "nexus-ascendant", name: "Nexus Ascendant", description: "Top the ladder in The Nexus", icon: "Sparkles", color: "hsl(190, 85%, 50%)", requirement: "Reach the top rung in the Nexus dimension", rarity: "epic", topic: "dimensions" },
+  { id: "colosseum-victor", name: "Colosseum Victor", description: "Beat all 3 bosses in The Colosseum", icon: "Skull", color: "hsl(340, 80%, 50%)", requirement: "Defeat all three bosses in the Colosseum dimension", rarity: "legendary", topic: "bosses" },
+  { id: "infinity-master", name: "Infinity Master", description: "Collect all 6 Infinity Stones", icon: "Gem", color: "hsl(280, 90%, 55%)", requirement: "Complete every Infinity Rift and claim the Infinity Gauntlet", rarity: "legendary", topic: "dimensions" },
+  { id: "elemental-sovereign", name: "Elemental Sovereign", description: "Collect all 4 Elemental Cores", icon: "Flame", color: "hsl(25, 90%, 55%)", requirement: "Complete every Elemental trial and claim the Elemental Crown", rarity: "legendary", topic: "dimensions" },
+  { id: "cosmic-sovereign", name: "Cosmic Sovereign", description: "Collect all 4 Star Fragments", icon: "Telescope", color: "hsl(250, 80%, 60%)", requirement: "Complete every Cosmic trial and claim the Cosmic Crown", rarity: "legendary", topic: "dimensions" },
+  { id: "quantum-sovereign", name: "Quantum Sage", description: "Collect all 4 Qubit Shards", icon: "Atom", color: "hsl(190, 85%, 55%)", requirement: "Complete every Quantum trial and forge the Quantum Codex", rarity: "legendary", topic: "dimensions" },
 ];
 
 export const AVATARS: AvatarInfo[] = [
@@ -2606,15 +2609,17 @@ export const SHOP_AVATARS: { id: string; name: string; icon: string; source?: st
   { id: "avatar-rebirth-phoenix", name: "Rebirth Phoenix", icon: "RefreshCw", source: "Complete First Rebirth", category: "achievement" },
   { id: "avatar-rebirth-titan", name: "Rebirth Titan", icon: "Shield", source: "Reach Rebirth Level 5", category: "achievement" },
   { id: "avatar-news-star", name: "News Star", icon: "Newspaper", source: "Receive 10 Boosts on Your Posts", category: "achievement" },
-  { id: "avatar-viral-scientist", name: "Viral Scientist", icon: "Sparkles", source: "Receive 50 Boosts on Your Posts", category: "achievement" },
+  { id: "avatar-viral-scientist", name: "Viral Scientist", icon: "Microscope", source: "Receive 50 Boosts on Your Posts", category: "achievement" },
   { id: "reward-tournament-avatar", name: "Tournament Victor", icon: "Medal", source: "Win a Tournament", category: "tournament" },
   { id: "avatar-clan-champion", name: "Clan Champion", icon: "Globe", source: "Lead the #1 Ranked Clan", category: "leaderboard" },
   { id: "avatar-team-champion", name: "Team Champion", icon: "Users", source: "Lead the #1 Ranked Team", category: "leaderboard" },
   { id: "avatar-supreme-champion", name: "Supreme Champion", icon: "Spark", source: "Reach #1 on Leaderboard", category: "leaderboard" },
   { id: "avatar-infinity", name: "Infinity Bearer", icon: "Gem", source: "Collect all 6 Infinity Stones", category: "achievement" },
-  { id: "avatar-elemental-lord", name: "Elemental Lord", icon: "Flame", source: "Claim the Elemental Crown", category: "achievement" },
-  { id: "avatar-cosmos-sovereign", name: "Cosmos Sovereign", icon: "Telescope", source: "Claim the Cosmic Crown", category: "achievement" },
-  { id: "avatar-spark-eternal", name: "Spark Eternal", icon: "Sparkles", source: "Complete The Spark Saga", category: "achievement" },
+  { id: "avatar-elemental-lord", name: "Elemental Lord", icon: "Tornado", source: "Claim the Elemental Crown", category: "achievement" },
+  { id: "avatar-cosmos-sovereign", name: "Cosmos Sovereign", icon: "Satellite", source: "Claim the Cosmic Crown", category: "achievement" },
+  { id: "avatar-spark-eternal", name: "Spark Eternal", icon: "Infinity", source: "Complete The Spark Saga", category: "achievement" },
+  { id: "avatar-quantum-sage", name: "Quantum Sage", icon: "Brain", source: "Forge the Quantum Codex", category: "achievement" },
+  { id: "avatar-core-master", name: "Dimension Walker", icon: "Layers", source: "Beat all 4 Core Dimensions", category: "achievement" },
 ];
 
 export function getXPForLevel(level: number): number {

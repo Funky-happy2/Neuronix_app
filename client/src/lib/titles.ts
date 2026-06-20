@@ -47,6 +47,7 @@ export const FRAME_MINI_STYLES: Record<string, string> = {
   "frame-infinity":          "ring-[4px] ring-fuchsia-500 animate-frame-galaxy rounded-xl",
   "frame-elemental":         "ring-[4px] ring-orange-500 animate-frame-fire rounded-lg",
   "frame-cosmos":            "ring-[4px] ring-indigo-400 animate-frame-galaxy rounded-xl",
+  "frame-quantum":           "ring-[4px] ring-cyan-400 animate-frame-void rounded-xl",
 };
 
 export const TITLE_DISPLAY: Record<string, string> = {

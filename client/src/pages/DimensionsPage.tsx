@@ -8,7 +8,7 @@ import {
   Swords, Map as MapIcon, Puzzle, Skull, ArrowLeft, Heart, Timer, Zap,
   Trophy, Star, CheckCircle, XCircle, Play, Lock, Coins, RotateCcw, Flame,
   Orbit, Atom, Sparkles, Gem, Hexagon, AlertTriangle, Loader2, TrendingUp,
-  Waves, Mountain, Wind, Sun, Moon, Telescope, ChevronRight, Layers, Crown,
+  Waves, Mountain, Wind, Sun, Moon, Telescope, ChevronRight, Layers, Crown, ShoppingBag,
 } from "lucide-react";
 import {
   DIMENSIONS, DIMENSION_GROUPS, DISTRICTS, getDistrict, getDimensionGroup,
@@ -16,7 +16,8 @@ import {
   type WorldDef, type WorldParams,
 } from "@/lib/gameData";
 import { BOSS_BATTLES } from "@/lib/gameData";
-import { BOSS_QUESTIONS_BY_YEAR, type BossQ } from "@/lib/bossQuestions";
+import { type BossQ } from "@/lib/bossQuestions";
+import { buildTopicPool } from "@/lib/questionTopics";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -44,22 +45,13 @@ function yearTier(year: number): number {
   return 8;
 }
 
-function buildPool(year: number): BossQ[] {
-  const tier = yearTier(year);
-  const pool: BossQ[] = [];
-  for (const bossId of Object.keys(BOSS_QUESTIONS_BY_YEAR)) {
-    const banks = BOSS_QUESTIONS_BY_YEAR[bossId];
-    const tierQs = banks[tier] || banks[6] || banks[4] || banks[8];
-    if (tierQs) pool.push(...tierQs);
-  }
-  // Shuffle questions and their options so runs feel fresh.
-  return pool
-    .map((q) => {
-      const correctAns = q.options[q.correct];
-      const opts = [...q.options].sort(() => Math.random() - 0.5);
-      return { ...q, options: opts, correct: opts.indexOf(correctAns) };
-    })
-    .sort(() => Math.random() - 0.5);
+// Topic-aware pool (questions stay on-theme) with shuffled answer options.
+function buildPool(year: number, topic?: string): BossQ[] {
+  return buildTopicPool(yearTier(year), topic).map((q) => {
+    const correctAns = q.options[q.correct];
+    const opts = [...q.options].sort(() => Math.random() - 0.5);
+    return { ...q, options: opts, correct: opts.indexOf(correctAns) };
+  });
 }
 
 // Year-level / district picker shared across dimension games.
@@ -162,13 +154,14 @@ interface WorldGameProps {
   yearLevel: number;
   params: WorldParams;
   onComplete: (won: boolean, score: number) => void;
+  topic?: string;
 }
 
 // ─── 1. GAUNTLET — escalating waves, reach the target wave to clear ───────────
-function GauntletGame({ yearLevel, params, onComplete }: WorldGameProps) {
+function GauntletGame({ yearLevel, params, onComplete, topic }: WorldGameProps) {
   const winWave = params.winWave ?? 10;
-  const startLives = params.lives ?? 2;
-  const poolRef = useRef<BossQ[]>(buildPool(yearLevel));
+  const startLives = (params.lives ?? 2) + 1; // a little more forgiving
+  const poolRef = useRef<BossQ[]>(buildPool(yearLevel, topic));
   const [qi, setQi] = useState(0);
   const [wave, setWave] = useState(1);
   const [lives, setLives] = useState(startLives);
@@ -180,8 +173,8 @@ function GauntletGame({ yearLevel, params, onComplete }: WorldGameProps) {
   scoreRef.current = score;
 
   const q = poolRef.current[qi % poolRef.current.length];
-  // Punishing, fast timers that tighten every wave.
-  const baseTime = Math.max(3, 9 - (wave - 1)) + Math.max(0, 5 - yearLevel);
+  // Fast but fair — never drops below ~5s, with extra time for lower years.
+  const baseTime = Math.max(5, 11 - (wave - 1)) + Math.max(0, 7 - yearLevel);
 
   const finish = useCallback((won: boolean) => {
     if (doneRef.current) return;
@@ -253,10 +246,10 @@ function randomNodes(): NodeType[] {
   return [a, b];
 }
 
-function LabyrinthGame({ yearLevel, params, onComplete }: WorldGameProps) {
+function LabyrinthGame({ yearLevel, params, onComplete, topic }: WorldGameProps) {
   const totalSteps = params.steps ?? 14;
   const startHp = params.hp ?? 3;
-  const poolRef = useRef<BossQ[]>(buildPool(yearLevel));
+  const poolRef = useRef<BossQ[]>(buildPool(yearLevel, topic));
   const qiRef = useRef(0);
   const [step, setStep] = useState(0);
   const [maxHp, setMaxHp] = useState(startHp);
@@ -374,11 +367,11 @@ function LabyrinthGame({ yearLevel, params, onComplete }: WorldGameProps) {
 }
 
 // ─── 3. NEXUS — beat-the-clock ladder ─────────────────────────────────────────
-function NexusGame({ yearLevel, params, onComplete }: WorldGameProps) {
+function NexusGame({ yearLevel, params, onComplete, topic }: WorldGameProps) {
   const totalRungs = params.rungs ?? 16;
   const totalTime = params.timeSec ?? 55;
   const drop = params.dropOnWrong ?? 2;
-  const poolRef = useRef<BossQ[]>(buildPool(yearLevel));
+  const poolRef = useRef<BossQ[]>(buildPool(yearLevel, topic));
   const [qi, setQi] = useState(0);
   const [rung, setRung] = useState(0);
   const [score, setScore] = useState(0);
@@ -436,11 +429,11 @@ function NexusGame({ yearLevel, params, onComplete }: WorldGameProps) {
 }
 
 // ─── 4. COLOSSEUM — boss rush duel, one shared health bar ─────────────────────
-function ColosseumGame({ yearLevel, params, onComplete }: WorldGameProps) {
+function ColosseumGame({ yearLevel, params, onComplete, topic }: WorldGameProps) {
   const bossCount = params.bosses ?? 4;
   const bossHpMax = params.bossHp ?? 5;
   const playerHpMax = params.playerHp ?? 3;
-  const poolRef = useRef<BossQ[]>(buildPool(yearLevel));
+  const poolRef = useRef<BossQ[]>(buildPool(yearLevel, topic));
   const qiRef = useRef(0);
   // Build exactly `bossCount` bosses, cycling the bank if needed.
   const bossesRef = useRef(
@@ -455,7 +448,9 @@ function ColosseumGame({ yearLevel, params, onComplete }: WorldGameProps) {
   const [qKey, setQKey] = useState(0);
   const [done, setDone] = useState(false);
   const doneRef = useRef(false);
+  const lockRef = useRef(false);
   const defeatedRef = useRef(0);
+  useEffect(() => { lockRef.current = false; }, [qKey]); // unlock each new question
 
   const boss = bossesRef.current[bossIdx];
   const q = poolRef.current[qiRef.current % poolRef.current.length];
@@ -470,8 +465,12 @@ function ColosseumGame({ yearLevel, params, onComplete }: WorldGameProps) {
     onComplete(won, defeatedRef.current * 100);
   }, [onComplete]);
 
+  // The boss attacks if you're too slow — a real clock, tighter for tougher bosses.
+  const bossTime = Math.max(6, 12 - bossIdx) + Math.max(0, 6 - yearLevel);
+
   const onAnswer = (correct: boolean) => {
-    if (doneRef.current) return;
+    if (doneRef.current || lockRef.current) return;
+    lockRef.current = true;
     qiRef.current += 1;
     if (correct) {
       const nb = bossHp - 1;
@@ -494,10 +493,14 @@ function ColosseumGame({ yearLevel, params, onComplete }: WorldGameProps) {
     setQKey((k) => k + 1);
   };
 
+  const timeLeft = useCountdown(bossTime, () => onAnswer(false), qKey, !done);
+  const urgent = timeLeft <= 4;
+
   return (
     <div className="max-w-xl mx-auto">
       <div className="flex items-center justify-between mb-2">
         <Badge className="bg-rose-700 text-white border-0 font-black">Boss {bossIdx + 1}/{bossCount}</Badge>
+        <Badge className={`border-0 font-black gap-1 ${urgent ? "bg-red-600 text-white animate-pulse" : "bg-slate-700 text-white"}`}><Timer className="w-4 h-4" /> {timeLeft}s</Badge>
         <div className="flex items-center gap-1" data-testid="player-hp">
           {Array.from({ length: playerHpMax }).map((_, i) => (
             <Heart key={i} className={`w-4 h-4 ${i < playerHp ? "text-green-500 fill-green-500" : "text-muted-foreground/30"}`} />
@@ -522,8 +525,8 @@ function ColosseumGame({ yearLevel, params, onComplete }: WorldGameProps) {
 }
 
 // Render the right engine for a world.
-function WorldGame({ world, yearLevel, onComplete }: { world: WorldDef; yearLevel: number; onComplete: (won: boolean, score: number) => void }) {
-  const common = { yearLevel, params: world.params, onComplete };
+function WorldGame({ world, yearLevel, onComplete, topic }: { world: WorldDef; yearLevel: number; onComplete: (won: boolean, score: number) => void; topic?: string }) {
+  const common = { yearLevel, params: world.params, onComplete, topic };
   switch (world.engine) {
     case "gauntlet": return <GauntletGame {...common} />;
     case "roguelike": return <LabyrinthGame {...common} />;
@@ -636,7 +639,7 @@ function DimensionRun({ dim, yearLevel, reward, resolving, onResolve, onExit, on
         )}
 
         {phase === "playing" && (
-          <WorldGame key={`${dim.id}-${worldIdx}-${runKey}`} world={world} yearLevel={yearLevel} onComplete={handleWorldComplete} />
+          <WorldGame key={`${dim.id}-${worldIdx}-${runKey}`} world={world} yearLevel={yearLevel} topic={dim.topic} onComplete={handleWorldComplete} />
         )}
 
         {phase === "cleared" && (
@@ -770,6 +773,18 @@ export default function DimensionsPage({ onAddXP, onAddCoins, onEarnBadge, yearL
       else if (data.stoneEarned) toast({ title: "Stone claimed!", description: "You cleared every world and seized the stone." });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const shopMutation = useMutation({
+    mutationFn: async ({ groupId, itemId }: { groupId: string; itemId: string }) => {
+      const res = await apiRequest("POST", "/api/dimensions/shop/buy", { groupId, itemId });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      toast({ title: "Purchased!", description: "Spent in the exchange." });
+    },
+    onError: (e: any) => toast({ title: "Can't buy that", description: e.message, variant: "destructive" }),
   });
 
   // Resolve a finished campaign run. Stone dimensions report to the server;
@@ -913,6 +928,45 @@ export default function DimensionsPage({ onAddXP, onAddCoins, onEarnBadge, yearL
                     Collect all {group.stones.length} stones to forge <span className="font-bold text-foreground">{group.grandReward.title}</span> — permanent buffs, a legendary avatar &amp; border, and a {group.grandReward.coins.toLocaleString()} Neuro payout.
                   </p>
                 )}
+              </Card>
+            )}
+
+            {/* Group exchange — spend the group's currency */}
+            {group.shop && group.currencyId && (
+              <Card className="p-4 mb-5 border-2 border-amber-400/30 bg-gradient-to-br from-amber-500/5 to-fuchsia-500/5">
+                <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+                  <div className="flex items-center gap-2 font-black">
+                    <ShoppingBag className="w-5 h-5 text-amber-500" /> {group.currencyName} Exchange
+                  </div>
+                  <Badge variant="secondary" className="font-bold gap-1">
+                    {group.currencyEmoji} {shardsOf(group).toLocaleString()} {group.currencyName}
+                  </Badge>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-2.5">
+                  {group.shop.map((item) => {
+                    const balance = shardsOf(group);
+                    const allStonesOwned = item.effect.type === "forge" && group.stones.every(s => inventory.includes(s.id));
+                    const affordable = balance >= item.cost && !allStonesOwned;
+                    return (
+                      <div key={item.id} className="flex items-center gap-3 rounded-xl border border-border bg-card p-3" data-testid={`dim-shop-${group.id}-${item.id}`}>
+                        <div className="text-2xl shrink-0">{item.emoji}</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-bold text-sm">{item.name}</div>
+                          <div className="text-[11px] text-muted-foreground leading-tight">{allStonesOwned ? "You own every stone already!" : item.description}</div>
+                        </div>
+                        <Button
+                          size="sm"
+                          className="font-bold gap-1 shrink-0"
+                          disabled={!affordable || shopMutation.isPending}
+                          onClick={() => shopMutation.mutate({ groupId: group.id, itemId: item.id })}
+                          data-testid={`dim-shop-buy-${group.id}-${item.id}`}
+                        >
+                          {group.currencyEmoji} {item.cost}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
               </Card>
             )}
 

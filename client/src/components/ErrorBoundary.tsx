@@ -1,11 +1,13 @@
 import { Component, type ReactNode } from "react";
 
-interface Props { children: ReactNode }
+interface Props { children: ReactNode; fallback?: ReactNode }
 interface State { error: Error | null }
 
-// Top-level safety net. Without this, any render-time error unmounts the whole
-// React tree and leaves a blank (black, in dark mode) screen with no information.
-// Now a crash shows a readable message + recovery actions instead.
+// Safety net. Without this, any render-time error unmounts the whole React tree
+// and leaves a blank (black, in dark mode) screen with no information.
+// • Top-level (no `fallback`): shows a full-screen error + recovery actions.
+// • Inline (with `fallback`): shows the fallback so one broken item (e.g. a single
+//   news post) can't blank the entire page.
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { error: null };
 
@@ -20,6 +22,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (!this.state.error) return this.props.children;
+    if (this.props.fallback !== undefined) return this.props.fallback;
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-background text-foreground">
         <div className="max-w-md w-full text-center space-y-4">

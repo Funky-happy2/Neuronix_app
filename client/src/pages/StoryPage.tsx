@@ -8,14 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { motion } from "framer-motion";
 import {
-  BookOpen, Lock, CheckCircle2, ChevronRight, MessageCircle, Swords, Trophy,
+  BookOpen, Lock, CheckCircle2, ChevronRight, ChevronLeft, MessageCircle, Swords, Trophy,
   Zap, Coins, Gem, Loader2, Flag, Play, Footprints, GitBranch, Users, KeyRound,
 } from "lucide-react";
 import { StoryLevel } from "@/components/StoryLevel";
 import {
-  STORY_CHAPTERS, isNodeComplete, isChapterUnlocked, totalStoryNodes,
+  STORIES, isNodeComplete, isChapterUnlocked, totalStoryNodes, storyNodesDone,
   resolveDialogueText, getChosenOptionId,
-  type StoryChapter, type StoryNode, type StoryReward,
+  type Story, type StoryChapter, type StoryNode, type StoryReward,
 } from "@shared/story";
 
 export default function StoryPage() {
@@ -25,6 +25,8 @@ export default function StoryPage() {
 
   // Active playable level (rendered full-screen).
   const [playing, setPlaying] = useState<{ node: StoryNode; chapter: StoryChapter } | null>(null);
+  // Which story is open (null = the story-selection hub).
+  const [storyId, setStoryId] = useState<string | null>(null);
 
   const rewardToast = (reward?: StoryReward | null) => {
     if (!reward) return;
@@ -54,9 +56,11 @@ export default function StoryPage() {
   // ── Full-screen playable level ──────────────────────────────────────────────
   if (playing && playing.node.kind === "level") {
     const node = playing.node;
+    // Default the level's question theme to its chapter's topic.
+    const lvl = { ...node.level, topic: node.level.topic ?? playing.chapter.topic };
     return (
       <StoryLevel
-        level={node.level}
+        level={lvl}
         title={node.title}
         gradient={playing.chapter.gradient}
         onExit={() => setPlaying(null)}
@@ -65,21 +69,76 @@ export default function StoryPage() {
     );
   }
 
-  const totalNodes = totalStoryNodes();
-  const doneCount = STORY_CHAPTERS.reduce((s, c) => s + c.nodes.filter((n) => isNodeComplete(n, inventory)).length, 0);
-  const sagaComplete = doneCount >= totalNodes;
-
   if (isLoading) {
     return <div className="min-h-screen flex justify-center pt-24"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>;
   }
 
+  const story = STORIES.find((s) => s.id === storyId);
+
+  // ── Story-selection hub ─────────────────────────────────────────────────────
+  if (!story) {
+    return (
+      <div className="min-h-screen max-w-3xl mx-auto px-4 py-8">
+        <div className="text-center mb-6">
+          <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-sky-400 via-fuchsia-500 to-amber-400 bg-clip-text text-transparent flex items-center justify-center gap-2">
+            <BookOpen className="w-9 h-9 text-fuchsia-500" /> Story Mode
+          </h1>
+          <p className="text-muted-foreground font-medium mt-1">Pick an adventure and play through it — region by region, boss by boss. More stories to come!</p>
+        </div>
+        <div className="space-y-4">
+          {STORIES.map((s) => {
+            const total = totalStoryNodes(s);
+            const done = storyNodesDone(s, inventory);
+            const complete = done >= total;
+            const pct = Math.round((done / total) * 100);
+            return (
+              <motion.button
+                key={s.id}
+                whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
+                onClick={() => setStoryId(s.id)}
+                data-testid={`story-pick-${s.id}`}
+                className="w-full text-left rounded-2xl overflow-hidden border-2 border-border hover:border-transparent hover:shadow-2xl transition-all"
+              >
+                <div className={`bg-gradient-to-r ${s.gradient} p-5 text-white flex items-center gap-4`}>
+                  <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-3xl shrink-0">{s.emoji}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xl font-black leading-tight">{s.title}</div>
+                    <div className="text-sm font-semibold text-white/85">{s.subtitle}</div>
+                  </div>
+                  <div className="inline-flex items-center gap-1 bg-white/20 rounded-full px-3 py-1.5 font-black text-sm shrink-0">
+                    {complete ? "Replay" : done === 0 ? "Start" : "Continue"} <ChevronRight className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="p-4 bg-card">
+                  <p className="text-sm text-muted-foreground font-medium mb-3">{s.blurb}</p>
+                  <div className="flex items-center gap-2">
+                    <Progress value={pct} className="h-2 flex-1" />
+                    <span className="text-xs font-bold text-muted-foreground shrink-0">{done}/{total}{complete ? " ✓" : ""}</span>
+                  </div>
+                </div>
+              </motion.button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // ── A single story ──────────────────────────────────────────────────────────
+  const totalNodes = totalStoryNodes(story);
+  const doneCount = storyNodesDone(story, inventory);
+  const storyComplete = doneCount >= totalNodes;
+
   return (
     <div className="min-h-screen max-w-3xl mx-auto px-4 py-8">
+      <button onClick={() => setStoryId(null)} className="flex items-center gap-1 text-sm font-bold text-muted-foreground hover:text-foreground mb-3" data-testid="story-back">
+        <ChevronLeft className="w-4 h-4" /> All Stories
+      </button>
       <div className="text-center mb-5">
-        <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-sky-400 via-fuchsia-500 to-amber-400 bg-clip-text text-transparent flex items-center justify-center gap-2">
-          <BookOpen className="w-9 h-9 text-fuchsia-500" /> The Spark Saga
+        <h1 className={`text-4xl md:text-5xl font-black bg-gradient-to-r ${story.gradient} bg-clip-text text-transparent flex items-center justify-center gap-2`}>
+          <span>{story.emoji}</span> {story.title}
         </h1>
-        <p className="text-muted-foreground font-medium mt-1">Play through your story — cross each region and beat its Guardian to push back The Static. It gets harder as you go!</p>
+        <p className="text-muted-foreground font-medium mt-1">{story.subtitle}</p>
       </div>
 
       <Card className="p-4 mb-6">
@@ -88,15 +147,15 @@ export default function StoryPage() {
           <span className="font-bold text-sm text-muted-foreground">{doneCount}/{totalNodes} steps</span>
         </div>
         <Progress value={(doneCount / totalNodes) * 100} className="h-3" />
-        {sagaComplete && (
+        {storyComplete && (
           <p className="mt-3 text-center font-black text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 to-amber-500 flex items-center justify-center gap-1">
-            <Trophy className="w-5 h-5 text-amber-500" /> Saga complete — you are a Spark Eternal! 🌟
+            <Trophy className="w-5 h-5 text-amber-500" /> Story complete — amazing work! 🌟
           </p>
         )}
       </Card>
 
       <div className="space-y-5">
-        {STORY_CHAPTERS.map((chapter) => (
+        {story.chapters.map((chapter) => (
           <ChapterSection
             key={chapter.id}
             chapter={chapter}

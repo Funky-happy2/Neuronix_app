@@ -22,11 +22,12 @@ export interface StoryReward {
 }
 
 // A playable level's rules. yearTier (4/6/8) picks the question difficulty.
+// `topic` (optional) keeps questions on-theme (see questionTopics.ts).
 export type StoryLevelSpec =
-  | { type: "traverse"; steps: number; hp: number; yearTier: number; timeSec: number; hazard: string }
-  | { type: "boss"; bossName: string; bossEmoji: string; bossHp: number; hp: number; yearTier: number; timeSec: number; phaseLine?: string }
-  | { type: "swarm"; enemies: number; hp: number; yearTier: number; timeSec: number; enemyName: string; enemyEmoji: string }
-  | { type: "lock"; tumblers: number; hp: number; yearTier: number; timeSec: number; lockName: string };
+  | { type: "traverse"; steps: number; hp: number; yearTier: number; timeSec: number; hazard: string; topic?: string }
+  | { type: "boss"; bossName: string; bossEmoji: string; bossHp: number; hp: number; yearTier: number; timeSec: number; phaseLine?: string; topic?: string }
+  | { type: "swarm"; enemies: number; hp: number; yearTier: number; timeSec: number; enemyName: string; enemyEmoji: string; topic?: string }
+  | { type: "lock"; tumblers: number; hp: number; yearTier: number; timeSec: number; lockName: string; topic?: string };
 
 // A line of dialogue can change based on earlier branching choices.
 // `needs` is one choice flag, or several that must ALL be present (compounding).
@@ -46,6 +47,7 @@ export interface StoryChapter {
   subtitle: string;
   emoji: string;
   gradient: string;
+  topic?: string;   // default question theme for this chapter's levels
   nodes: StoryNode[];
 }
 
@@ -65,8 +67,8 @@ const swarm = (id: string, title: string, text: string, level: Omit<Extract<Stor
 const lock = (id: string, title: string, text: string, level: Omit<Extract<StoryLevelSpec, { type: "lock" }>, "type">, reward?: StoryReward): LevelNode =>
   ({ kind: "level", id, title, text, level: { type: "lock", ...level }, reward });
 
-// ─── The campaign (7 chapters, escalating) ──────────────────────────────────────
-export const STORY_CHAPTERS: StoryChapter[] = [
+// ─── Story 1: The Spark Saga (10 chapters, escalating) ──────────────────────────
+const SPARK_SAGA: StoryChapter[] = [
   {
     id: "ch1", index: 1, title: "The Spark Awakens", subtitle: "Neuronix Academy",
     emoji: "✨", gradient: "from-sky-500 to-indigo-600",
@@ -86,7 +88,7 @@ export const STORY_CHAPTERS: StoryChapter[] = [
     ],
   },
   {
-    id: "ch2", index: 2, title: "The Storm Frontier", subtitle: "Where the skies forgot the rules",
+    id: "ch2", index: 2, topic: "weather", title: "The Storm Frontier", subtitle: "Where the skies forgot the rules",
     emoji: "⛈️", gradient: "from-cyan-600 to-blue-800",
     nodes: [
       talk("c2-intro", "Bit", "Static in the Sky",
@@ -100,7 +102,7 @@ export const STORY_CHAPTERS: StoryChapter[] = [
     ],
   },
   {
-    id: "ch3", index: 3, title: "The Living Labs", subtitle: "Where life forgot to grow",
+    id: "ch3", index: 3, topic: "biology", title: "The Living Labs", subtitle: "Where life forgot to grow",
     emoji: "🧬", gradient: "from-emerald-600 to-green-800",
     nodes: [
       talk("c3-intro", "Bit", "Tangled Code",
@@ -116,7 +118,7 @@ export const STORY_CHAPTERS: StoryChapter[] = [
     ],
   },
   {
-    id: "ch4", index: 4, title: "The Cosmic Reaches", subtitle: "Where the stars went dark",
+    id: "ch4", index: 4, topic: "space", title: "The Cosmic Reaches", subtitle: "Where the stars went dark",
     emoji: "🌌", gradient: "from-violet-600 to-purple-900",
     nodes: [
       talk("c4-intro", "Bit", "Falling Stars",
@@ -130,7 +132,7 @@ export const STORY_CHAPTERS: StoryChapter[] = [
     ],
   },
   {
-    id: "ch5", index: 5, title: "The Deep Code", subtitle: "The Static's birthplace",
+    id: "ch5", index: 5, topic: "tech", title: "The Deep Code", subtitle: "The Static's birthplace",
     emoji: "⚡", gradient: "from-amber-600 to-rose-800",
     nodes: [
       talk("c5-intro", "Bit", "Into the Dark",
@@ -144,7 +146,7 @@ export const STORY_CHAPTERS: StoryChapter[] = [
     ],
   },
   {
-    id: "ch6", index: 6, title: "The Frozen Archive", subtitle: "Where memory turns to ice",
+    id: "ch6", index: 6, topic: "ice", title: "The Frozen Archive", subtitle: "Where memory turns to ice",
     emoji: "❄️", gradient: "from-sky-400 to-cyan-800",
     nodes: [
       talk("c6-intro", "Bit", "A Frozen Library",
@@ -191,7 +193,7 @@ export const STORY_CHAPTERS: StoryChapter[] = [
     ],
   },
   {
-    id: "ch9", index: 9, title: "The Mirror Mind", subtitle: "A maze of your own thoughts",
+    id: "ch9", index: 9, topic: "physics", title: "The Mirror Mind", subtitle: "A maze of your own thoughts",
     emoji: "🪞", gradient: "from-indigo-600 to-fuchsia-900",
     nodes: [
       talk("c9-intro", "Bit", "Reflections",
@@ -234,6 +236,157 @@ export const STORY_CHAPTERS: StoryChapter[] = [
   },
 ];
 
+// ─── Story 2: The Chrono Caper (a shorter time-travel mystery) ──────────────────
+const CHRONO_CAPER: StoryChapter[] = [
+  {
+    id: "cc1", index: 1, title: "The Stolen Blueprint", subtitle: "Neuronix Time Lab",
+    emoji: "⏳", gradient: "from-amber-500 to-yellow-700",
+    nodes: [
+      talk("cc1-intro", "Professor Lumen", "A Theft Across Time",
+        "Neuronaut! Someone's stolen the Academy's greatest treasure — the master blueprint of curiosity itself — and fled into the past using our experimental Time Gate. A masked figure who calls themselves The Curator. Step through the Gate and chase them down!"),
+      talk("cc1-bit", "Bit", "Mind the Paradoxes",
+        "Time travel is tricky! If you answer wrong, history pushes back. Keep your facts straight and we'll catch The Curator. The Gate is charging — first stop, a wild thunderstorm era!"),
+      traverse("cc1-gate", "Through the Gate", "The Time Gate flings you into a storm-lashed past. Steady your footing across the centuries — answer to leap each time-rift!",
+        { steps: 6, hp: 4, yearTier: 6, timeSec: 14, hazard: "Time Rift", topic: "weather" }, { xp: 250, coins: 150 }),
+    ],
+  },
+  {
+    id: "cc2", index: 2, topic: "ice", title: "The Frozen Past", subtitle: "The last Ice Age",
+    emoji: "🧊", gradient: "from-cyan-500 to-blue-800",
+    nodes: [
+      talk("cc2-intro", "Bit", "Cold Trail",
+        "The Curator's tracks lead into the Ice Age! It's freezing — and they've left frost-guardians to slow us down. Bundle up your brain and push through!"),
+      swarm("cc2-frost", "Frost Guardians", "The Curator's icy minions surround you. Melt each one with a correct answer before the cold sets in!",
+        { enemies: 7, hp: 4, yearTier: 6, timeSec: 12, enemyName: "Frost Guardian", enemyEmoji: "❄️" }, { xp: 350, coins: 200 }),
+      choose("cc2-fork", "Bit", "Which Trail?", "The Curator's tracks split at a glacier. Which way?", [
+        { id: "cave", label: "🕳️ Into the ice cave", response: "Brrr — the cave route! Dark and cold, but it cuts off their escape.", reward: { xp: 200, coins: 150 } },
+        { id: "ridge", label: "⛰️ Over the frozen ridge", response: "The high road! Risky footing, but you'll spot The Curator from above.", reward: { xp: 200, gems: 5 } },
+      ]),
+    ],
+  },
+  {
+    id: "cc3", index: 3, topic: "space", title: "The Star Vault", subtitle: "A future among the stars",
+    emoji: "🛰️", gradient: "from-indigo-600 to-violet-900",
+    nodes: [
+      talk("cc3-intro", "Bit", "Too Far Forward",
+        "The Curator overshot — we're in the FUTURE now, a space station orbiting Earth! They've locked the blueprint in a star-vault. Crack the cosmic lock to reach it!"),
+      lock("cc3-vault", "The Star Vault", "A vault sealed with riddles of the cosmos. Answer correctly to align each star-lock — a wrong answer spins one back!",
+        { tumblers: 7, hp: 4, yearTier: 8, timeSec: 11, lockName: "The Star Vault" }, { xp: 450, coins: 300 }),
+      talk("cc3-outro", "Professor Lumen", "Cornered",
+        "The vault's open — but The Curator is right there, blueprint in hand, with nowhere left to run. Whatever happens next, Neuronaut… end this."),
+    ],
+  },
+  {
+    id: "cc4", index: 4, title: "The Curator Unmasked", subtitle: "The final confrontation",
+    emoji: "🎭", gradient: "from-fuchsia-600 via-amber-500 to-rose-600",
+    nodes: [
+      talkV("cc4-intro", "The Curator", "Behind the Mask", "You're persistent, I'll give you that. The mask comes off — and underneath? A future version of a student who gave up on curiosity. I took the blueprint to keep it SAFE, locked away where no one could lose it. Let me show you why questions are dangerous!",
+        [
+          { needs: "story-choice-cc2-fork-cave", text: "You took the cave — clever, cutting me off in the dark. The mask comes off: underneath is a future student who gave up on curiosity. I hid the blueprint to keep it SAFE. Let me show you why questions are dangerous!" },
+          { needs: "story-choice-cc2-fork-ridge", text: "You took the ridge and saw me coming — bold. The mask comes off: underneath is a future student who gave up on curiosity. I hid the blueprint to keep it SAFE. Let me show you why questions are dangerous!" },
+        ]),
+      boss("cc4-boss", "The Curator", "The Curator fights with stolen knowledge from every era. Prove that curiosity shared is stronger than curiosity hoarded — and win the blueprint back!",
+        { bossName: "The Curator", bossEmoji: "🎭", bossHp: 12, hp: 4, yearTier: 8, timeSec: 10, phaseLine: "The Curator rewinds time — answer faster!", topic: "physics" }, { xp: 1200, coins: 800, gems: 25 }),
+      talk("cc4-finale", "Professor Lumen", "Curiosity Restored",
+        "The blueprint is back where it belongs — open, shared, and free for everyone. You showed The Curator that a question kept secret helps no one; a question shared lights up the world. The timeline is safe, thanks to you. What a caper! 🕵️",
+        { xp: 1500, coins: 1000, gems: 30, badgeId: "chrono-caper", item: "title-time-detective" }),
+    ],
+  },
+];
+
+// ─── Story 3: Body Brigade (a microscopic medical adventure) ────────────────────
+const BODY_BRIGADE: StoryChapter[] = [
+  {
+    id: "md1", index: 1, topic: "biology", title: "Shrink Down!", subtitle: "Neuronix Medical Wing",
+    emoji: "🔬", gradient: "from-rose-500 to-pink-700",
+    nodes: [
+      talk("md1-intro", "Doctor Mara", "A Tiny Mission",
+        "Neuronaut! A patient is very sick, and the medicine can't reach the problem. So we're sending YOU — shrunk to the size of a cell — inside their body to fix it from within. It's never been done. Ready to make history?"),
+      talk("md1-bit", "Bit", "Cell-Sized Sidekick",
+        "I've shrunk down too! Inside the body, your science smarts are your tools. Answer right and we move; answer wrong and the body's defenses push us back. Let's dive into the bloodstream!"),
+      traverse("md1-dive", "Into the Bloodstream", "You're injected into a vein! Ride the bloodstream and dodge the body's own defenses — answer to navigate each current.",
+        { steps: 6, hp: 4, yearTier: 4, timeSec: 15, hazard: "White Blood Cell" }, { xp: 200, coins: 150 }),
+    ],
+  },
+  {
+    id: "md2", index: 2, topic: "biology", title: "The Bloodstream Rapids", subtitle: "A river of cells",
+    emoji: "🩸", gradient: "from-red-500 to-rose-800",
+    nodes: [
+      talk("md2-intro", "Bit", "Germs Ahead!",
+        "The infection's getting closer — and a horde of germs just spotted us! We have to clear a path. Use everything you know about the human body!"),
+      swarm("md2-germs", "Germ Swarm", "Invading germs swarm the bloodstream. Zap each one with a correct answer before they overwhelm you!",
+        { enemies: 8, hp: 4, yearTier: 6, timeSec: 12, enemyName: "Germ", enemyEmoji: "🦠" }, { xp: 350, coins: 200 }),
+      choose("md2-fork", "Bit", "Which Route?", "Two paths to the infected organ. How do we get there fastest?", [
+        { id: "heart", label: "❤️ Through the heart", response: "Hold on tight — the heart's a wild ride, but it's the fast lane!", reward: { xp: 200, coins: 150 } },
+        { id: "lungs", label: "🫁 Through the lungs", response: "Smart — we'll grab fresh oxygen on the way and arrive stronger.", reward: { xp: 200, gems: 5 } },
+      ]),
+    ],
+  },
+  {
+    id: "md3", index: 3, topic: "disease", title: "Infection Outbreak", subtitle: "Ground zero",
+    emoji: "🦠", gradient: "from-fuchsia-600 to-purple-900",
+    nodes: [
+      talk("md3-intro", "Doctor Mara", "The Source",
+        "You've reached the infection! At its center is a mutated super-germ commanding the whole outbreak. Defeat it and the rest will scatter. Be careful — it adapts fast!"),
+      lock("md3-defenses", "Break the Biofilm", "The super-germ hides behind a slimy biofilm shield. Answer correctly to dissolve each layer — a wrong answer lets it reform!",
+        { tumblers: 6, hp: 4, yearTier: 6, timeSec: 12, lockName: "The Biofilm" }, { xp: 450, coins: 300 }),
+      boss("md3-boss", "The Super-Germ", "The mutated super-germ rears up, dividing and adapting. Out-science it to break the infection apart!",
+        { bossName: "The Super-Germ", bossEmoji: "🦠", bossHp: 11, hp: 4, yearTier: 8, timeSec: 11, phaseLine: "The Super-Germ mutates — it fights back harder!", topic: "disease" }, { xp: 800, coins: 500, gems: 15 }),
+    ],
+  },
+  {
+    id: "md4", index: 4, topic: "biology", title: "The Cure", subtitle: "Saving the patient",
+    emoji: "💊", gradient: "from-emerald-500 via-teal-500 to-sky-500",
+    nodes: [
+      talkV("md4-intro", "Doctor Mara", "Almost There", "Brilliant work! The infection is collapsing. Now guide the medicine to every last germ and finish the cure. The patient is counting on you!",
+        [
+          { needs: "story-choice-md2-fork-heart", text: "Brilliant! That heart shortcut bought us precious time. The infection's collapsing — now guide the medicine to every last germ and finish the cure!" },
+          { needs: "story-choice-md2-fork-lungs", text: "Brilliant! All that fresh oxygen kept us strong. The infection's collapsing — now guide the medicine to every last germ and finish the cure!" },
+        ]),
+      traverse("md4-cure", "Deliver the Cure", "Carry the medicine through the healing body to every infected corner. One last push — answer to deliver each dose!",
+        { steps: 10, hp: 4, yearTier: 8, timeSec: 11, hazard: "Stray Germ" }, { xp: 700, coins: 450 }),
+      talk("md4-finale", "Doctor Mara", "A Life Saved",
+        "Their fever's breaking… the patient is going to be okay — because of YOU. You went where no medicine could and proved that a curious mind is the most powerful medicine of all. Welcome to the Body Brigade, Neuronaut. 🩺",
+        { xp: 1500, coins: 1000, gems: 30, badgeId: "body-brigade", item: "title-micro-medic" }),
+    ],
+  },
+];
+
+// ─── The collection of stories ──────────────────────────────────────────────────
+export interface Story {
+  id: string;
+  title: string;
+  subtitle: string;
+  emoji: string;
+  gradient: string;
+  blurb: string;
+  chapters: StoryChapter[];
+}
+
+export const STORIES: Story[] = [
+  {
+    id: "spark-saga", title: "The Spark Saga", subtitle: "Save the world's curiosity",
+    emoji: "🌟", gradient: "from-sky-500 via-fuchsia-500 to-amber-400",
+    blurb: "A creeping silence is erasing the world's curiosity. Journey through 10 chapters, free corrupted Guardians, and face The Static — and beyond.",
+    chapters: SPARK_SAGA,
+  },
+  {
+    id: "chrono-caper", title: "The Chrono Caper", subtitle: "A time-travel mystery",
+    emoji: "⏳", gradient: "from-amber-500 via-orange-500 to-rose-600",
+    blurb: "A masked thief stole the Academy's master blueprint and fled into the past. Chase The Curator through time across 4 chapters to set history right.",
+    chapters: CHRONO_CAPER,
+  },
+  {
+    id: "body-brigade", title: "Body Brigade", subtitle: "A microscopic medical mission",
+    emoji: "🔬", gradient: "from-rose-500 via-fuchsia-500 to-emerald-500",
+    blurb: "Shrink to the size of a cell and journey inside a sick patient — through the bloodstream, past germ swarms, to defeat a super-germ and deliver the cure across 4 chapters.",
+    chapters: BODY_BRIGADE,
+  },
+];
+
+// Flat list of every chapter across all stories.
+export const STORY_CHAPTERS: StoryChapter[] = STORIES.flatMap((s) => s.chapters);
+
 // ─── Progress (pure, inventory-flag based) ──────────────────────────────────────
 const ackFlag = (id: string) => `story-ack-${id}`;
 const clearFlag = (id: string) => `story-clear-${id}`;
@@ -266,17 +419,27 @@ export function resolveDialogueText(node: StoryNode, inventory: string[]): strin
   return node.text;
 }
 
-export function isChapterUnlocked(chapter: StoryChapter, inventory: string[]): boolean {
-  if (chapter.index <= 1) return true;
-  const prev = STORY_CHAPTERS.find((c) => c.index === chapter.index - 1);
-  if (!prev) return true;
-  return prev.nodes.every((n) => isNodeComplete(n, inventory));
+// Find the story that contains a given chapter.
+export function getStoryOfChapter(chapterId: string): Story | undefined {
+  return STORIES.find((s) => s.chapters.some((c) => c.id === chapterId));
 }
 
-export function getNode(nodeId: string): { chapter: StoryChapter; node: StoryNode } | undefined {
-  for (const chapter of STORY_CHAPTERS) {
-    const node = chapter.nodes.find((n) => n.id === nodeId);
-    if (node) return { chapter, node };
+// A chapter is unlocked once every node of the PREVIOUS chapter in the SAME story
+// is complete (the first chapter of each story is always open).
+export function isChapterUnlocked(chapter: StoryChapter, inventory: string[]): boolean {
+  const story = getStoryOfChapter(chapter.id);
+  if (!story) return true;
+  const i = story.chapters.findIndex((c) => c.id === chapter.id);
+  if (i <= 0) return true;
+  return story.chapters[i - 1].nodes.every((n) => isNodeComplete(n, inventory));
+}
+
+export function getNode(nodeId: string): { story: Story; chapter: StoryChapter; node: StoryNode } | undefined {
+  for (const story of STORIES) {
+    for (const chapter of story.chapters) {
+      const node = chapter.nodes.find((n) => n.id === nodeId);
+      if (node) return { story, chapter, node };
+    }
   }
   return undefined;
 }
@@ -291,6 +454,12 @@ export function isNodeReachable(nodeId: string, inventory: string[]): boolean {
   return chapter.nodes.slice(0, i).every((n) => isNodeComplete(n, inventory));
 }
 
-export function totalStoryNodes(): number {
-  return STORY_CHAPTERS.reduce((s, c) => s + c.nodes.length, 0);
+// Node count for one story, or for everything when no story is given.
+export function totalStoryNodes(story?: Story): number {
+  const chapters = story ? story.chapters : STORY_CHAPTERS;
+  return chapters.reduce((s, c) => s + c.nodes.length, 0);
+}
+
+export function storyNodesDone(story: Story, inventory: string[]): number {
+  return story.chapters.reduce((s, c) => s + c.nodes.filter((n) => isNodeComplete(n, inventory)).length, 0);
 }

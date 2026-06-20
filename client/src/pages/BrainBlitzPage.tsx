@@ -10,7 +10,8 @@ import {
   ArrowLeft, Scissors, Snowflake, SkipForward, Coins, Loader2, Keyboard, ToggleLeft,
 } from "lucide-react";
 import { DISTRICTS, getDistrict, yearToDifficulty } from "@/lib/gameData";
-import { BOSS_QUESTIONS_BY_YEAR, type BossQ } from "@/lib/bossQuestions";
+import { type BossQ } from "@/lib/bossQuestions";
+import { buildTopicPool, yearToTier } from "@/lib/questionTopics";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -19,22 +20,21 @@ interface BrainBlitzPageProps {
   onSetYearLevel?: (yearLevel: number) => void;
 }
 
-// ─── Question pool (year-scaled, drawn from every boss bank) ──────────────────
-function yearTier(year: number): number {
-  if (year <= 4) return 4;
-  if (year <= 6) return 6;
-  return 8;
+// ─── Question pool (year-scaled, optionally filtered to a subject) ────────────
+function buildPool(year: number, topic?: string): BossQ[] {
+  return buildTopicPool(yearToTier(year), topic);
 }
-function buildPool(year: number): BossQ[] {
-  const tier = yearTier(year);
-  const pool: BossQ[] = [];
-  for (const bossId of Object.keys(BOSS_QUESTIONS_BY_YEAR)) {
-    const banks = BOSS_QUESTIONS_BY_YEAR[bossId];
-    const tierQs = banks[tier] || banks[6] || banks[4] || banks[8];
-    if (tierQs) pool.push(...tierQs);
-  }
-  return pool.sort(() => Math.random() - 0.5);
-}
+
+// Subjects the player can blitz (uses the shared topic→bosses map).
+const SUBJECTS: { id?: string; label: string; emoji: string }[] = [
+  { id: undefined, label: "Everything", emoji: "🎲" },
+  { id: "physics", label: "Physics", emoji: "🪐" },
+  { id: "chemistry", label: "Chemistry", emoji: "⚗️" },
+  { id: "biology", label: "Biology", emoji: "🧬" },
+  { id: "space", label: "Space", emoji: "🌌" },
+  { id: "weather", label: "Weather", emoji: "⛈️" },
+  { id: "electricity", label: "Energy", emoji: "⚡" },
+];
 
 const shuffle = <T,>(arr: T[]): T[] => [...arr].sort(() => Math.random() - 0.5);
 const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/\s+/g, " ").trim();
@@ -87,6 +87,9 @@ const MUTATORS: Mutator[] = [
   { id: "time-attack", name: "Time Attack", emoji: "⚡", blurb: "Snappy timers, +35% points. Think fast!", lives: 3, baseTime: 7, pointMult: 1.35, livesLostOnWrong: 1, color: "from-amber-500 to-orange-600" },
   { id: "sudden-death", name: "Sudden Death", emoji: "💀", blurb: "ONE life, double points. How far can you go?", lives: 1, baseTime: 11, pointMult: 2, livesLostOnWrong: 1, color: "from-rose-600 to-red-800" },
   { id: "combo-frenzy", name: "Combo Frenzy", emoji: "🔥", blurb: "Combos build faster & score huge — but mistakes cost 2 lives.", lives: 4, baseTime: 10, pointMult: 1.2, livesLostOnWrong: 2, color: "from-fuchsia-500 to-purple-700" },
+  { id: "glass-cannon", name: "Glass Cannon", emoji: "💎", blurb: "One life, but 2.5× points. High risk, high reward!", lives: 1, baseTime: 12, pointMult: 2.5, livesLostOnWrong: 1, color: "from-pink-500 to-rose-700" },
+  { id: "speedrun", name: "Speedrun", emoji: "🏃", blurb: "Blink-and-you-miss-it timers, +50% points.", lives: 2, baseTime: 5, pointMult: 1.5, livesLostOnWrong: 1, color: "from-yellow-500 to-amber-600" },
+  { id: "iron-will", name: "Iron Will", emoji: "🛡️", blurb: "6 lives, easy timer. The friendliest way to learn.", lives: 6, baseTime: 18, pointMult: 0.7, livesLostOnWrong: 1, color: "from-slate-500 to-gray-700" },
 ];
 
 const MAX_QUESTIONS = 60; // safety bound for an endless run
@@ -101,6 +104,7 @@ export default function BrainBlitzPage({ yearLevel, onSetYearLevel }: BrainBlitz
   const [phase, setPhase] = useState<"menu" | "playing">("menu");
   const [year, setYear] = useState(yearLevel);
   const [mutator, setMutator] = useState<Mutator>(MUTATORS[0]);
+  const [topic, setTopic] = useState<string | undefined>(undefined);
   const [runKey, setRunKey] = useState(0);
 
   useEffect(() => { setYear(yearLevel); }, [yearLevel]);
@@ -116,6 +120,7 @@ export default function BrainBlitzPage({ yearLevel, onSetYearLevel }: BrainBlitz
         key={runKey}
         year={year}
         mutator={mutator}
+        topic={topic}
         onExit={() => setPhase("menu")}
         onReplay={() => setRunKey(k => k + 1)}
       />
@@ -147,6 +152,20 @@ export default function BrainBlitzPage({ yearLevel, onSetYearLevel }: BrainBlitz
           </button>
         ))}
         <Badge variant="secondary" className="font-bold">{district.emoji} {district.name} · {yearToDifficulty(year)}</Badge>
+      </div>
+
+      <h2 className="font-black text-lg mb-2 text-center">Pick a subject</h2>
+      <div className="flex items-center justify-center gap-2 mb-6 flex-wrap">
+        {SUBJECTS.map((s) => (
+          <button
+            key={s.label}
+            onClick={() => setTopic(s.id)}
+            data-testid={`blitz-subject-${s.id ?? "all"}`}
+            className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${topic === s.id ? "bg-blue-600 text-white scale-105" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}
+          >
+            {s.emoji} {s.label}
+          </button>
+        ))}
       </div>
 
       <h2 className="font-black text-lg mb-3 text-center">Pick your twist</h2>
@@ -183,9 +202,9 @@ export default function BrainBlitzPage({ yearLevel, onSetYearLevel }: BrainBlitz
 }
 
 // ─── A single Brain Blitz run ─────────────────────────────────────────────────
-function BlitzRun({ year, mutator, onExit, onReplay }: { year: number; mutator: Mutator; onExit: () => void; onReplay: () => void }) {
+function BlitzRun({ year, mutator, topic, onExit, onReplay }: { year: number; mutator: Mutator; topic?: string; onExit: () => void; onReplay: () => void }) {
   const { toast } = useToast();
-  const poolRef = useRef<BossQ[]>(buildPool(year));
+  const poolRef = useRef<BossQ[]>(buildPool(year, topic));
   const idxRef = useRef(0);
   const frenzy = mutator.id === "combo-frenzy";
 

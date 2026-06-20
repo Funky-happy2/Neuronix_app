@@ -9,6 +9,7 @@ import {
   BarChart3, Vote, ShieldCheck
 } from "lucide-react";
 import UserProfileModal from "@/components/UserProfileModal";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -87,8 +88,8 @@ function PostPoll({ post }: { post: NewsPost }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const currentUserId = (user as any)?.id;
-  const options = post.pollOptions ?? [];
-  const votes = post.pollVotes ?? {};
+  const options = Array.isArray(post.pollOptions) ? post.pollOptions : [];
+  const votes = (post.pollVotes && typeof post.pollVotes === "object") ? post.pollVotes : {};
   const myVote = currentUserId != null ? votes[String(currentUserId)] : undefined;
   const hasVoted = myVote !== undefined;
   const counts = options.map((_, i) => Object.values(votes).filter(v => v === i).length);
@@ -733,8 +734,8 @@ export default function NewsPage() {
             const isPending = post.status === "pending";
             const isMyPendingPost = isPending && post.authorId === currentUserId && !isAdmin;
             return (
+              <ErrorBoundary key={post.id} fallback={<Card className="p-4 border-dashed text-sm text-muted-foreground" data-testid={`news-post-error-${post.id}`}>This post couldn't be displayed.</Card>}>
               <motion.div
-                key={post.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
@@ -809,6 +810,7 @@ export default function NewsPage() {
                   </div>
                 </Card>
               </motion.div>
+              </ErrorBoundary>
             );
           })}
         </div>

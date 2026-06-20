@@ -5080,6 +5080,57 @@ export async function registerRoutes(
     } catch (e) { console.error("dimension complete", e); res.status(500).json({ message: "Failed to complete dimension" }); }
   });
 
+  // Spend a dimension group's currency in its shop.
+  app.post("/api/dimensions/shop/buy", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const { groupId, itemId } = req.body;
+      const group = getDimensionGroup(String(groupId || ""));
+      if (!group || !group.shop || !group.currencyId) return res.status(404).json({ message: "Shop not found" });
+      const item = group.shop.find((s) => s.id === itemId);
+      if (!item) return res.status(404).json({ message: "Item not found" });
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.sendStatus(401);
+
+      const exp = { ...(((user as any).upgradeExpirations as Record<string, number>) || {}) };
+      const balance = exp[group.currencyId] || 0;
+      if (balance < item.cost) return res.status(400).json({ message: `Not enough ${group.currencyName}.` });
+
+      const inventory = [...(user.inventory || [])];
+      const updates: any = {};
+
+      switch (item.effect.type) {
+        case "forge": {
+          const missing = group.stones.filter((s) => !inventory.includes(s.id));
+          if (missing.length === 0) return res.status(400).json({ message: "You already own every stone in this set." });
+          inventory.push(missing[0].id);
+          updates.inventory = inventory;
+          break;
+        }
+        case "cosmetic": {
+          if (!inventory.includes(item.effect.item)) inventory.push(item.effect.item);
+          updates.inventory = inventory;
+          break;
+        }
+        case "boost": {
+          exp[item.effect.upgradeId] = Date.now() + item.effect.hours * 3600 * 1000;
+          break;
+        }
+        case "gems": {
+          updates.gems = ((user as any).gems || 0) + item.effect.gems;
+          break;
+        }
+      }
+
+      exp[group.currencyId] = balance - item.cost; // pay
+      updates.upgradeExpirations = exp;
+      await storage.updateUser(user.id, updates);
+      const fresh = await storage.getUser(user.id);
+      const { password: _p, ...safe } = fresh as any;
+      res.json({ ok: true, bought: item.id, user: safe });
+    } catch (e) { console.error("dimension shop buy", e); res.status(500).json({ message: "Failed to buy" }); }
+  });
+
   // === TEMPORARY LOGIN CODES (10-minute restricted guest access) ===
   const TEMP_CODE_MS = 10 * 60 * 1000;
 

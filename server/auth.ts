@@ -237,6 +237,11 @@ export function setupAuth(app: Express) {
           if (!bdg.includes(gr.badgeId)) { bdg.push(gr.badgeId); changed = true; }
         }
       }
+      // Beating all four Core Dimensions grants the Dimension Walker avatar.
+      const CORE_BADGES = ["gauntlet-champion", "labyrinth-master", "nexus-ascendant", "colosseum-victor"];
+      if (CORE_BADGES.every((b) => bdg.includes(b)) && !inv.includes("avatar-core-master")) {
+        inv.push("avatar-core-master"); changed = true;
+      }
       if (changed) {
         await storage.updateUser(freshUser.id, { inventory: inv, badges: bdg } as any);
         freshUser = await storage.getUser(freshUser.id) as typeof freshUser;

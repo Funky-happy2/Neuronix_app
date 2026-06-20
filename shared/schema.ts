@@ -252,7 +252,7 @@ export interface LabExperiment {
 }
 
 export type BadgeRarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
-export type BadgeTopic = "games" | "bosses" | "progression" | "coins" | "collection" | "competitive" | "special" | "social";
+export type BadgeTopic = "games" | "bosses" | "progression" | "coins" | "collection" | "competitive" | "special" | "social" | "story" | "dimensions";
 
 export interface BadgeInfo {
   id: string;

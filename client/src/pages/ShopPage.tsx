@@ -12,7 +12,7 @@ import {
   Gamepad2, Mountain, Droplets, Anchor, Bug, Settings,
   Calendar, Package, Box, PartyPopper, CircleDot, HelpCircle,
   Heart, Minus, Plus, EyeOff, Hourglass, TrendingUp, Wallet,
-  Search, ShieldCheck
+  Search, ShieldCheck, BookOpen, Hexagon
 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -65,6 +65,8 @@ const REWARD_GROUPS: { key: string; label: string; icon: any; match: (src: strin
   { key: "admin", label: "Special Admin Awards", icon: Heart, match: (s) => s.startsWith("admin:") },
   { key: "boost", label: "Influencer Rewards", icon: Star, match: (s) => s.startsWith("boost:") },
   { key: "pvp", label: "PvP Duel Rewards", icon: Swords, match: (s) => s.startsWith("pvp:") },
+  { key: "story", label: "Story Rewards", icon: BookOpen, match: (s) => s.startsWith("story:") },
+  { key: "dimensions", label: "Dimension Rewards", icon: Hexagon, match: (s) => s.startsWith("dimension:") },
 ];
 
 const REWARD_SOURCE_LABELS: Record<string, string> = {
@@ -694,6 +696,8 @@ export default function ShopPage() {
   // Story-campaign titles owned via inventory get a (free) shop entry so they can be equipped.
   const storyTitleDefs: { id: string; name: string }[] = [
     { id: "title-spark-eternal", name: "Spark Eternal" },
+    { id: "title-time-detective", name: "Time Detective" },
+    { id: "title-micro-medic", name: "Micro Medic" },
   ];
   const storyTitleItems: ShopItem[] = storyTitleDefs
     .filter((t) => (userInventory as string[]).includes(t.id) && !items.find((i) => i.id === t.id))
@@ -703,7 +707,22 @@ export default function ShopPage() {
       requiredLevel: 1, requiredRebirth: 0, requiredXp: 0, rewardSource: "story:saga",
     } as ShopItem));
 
-  const allItems = [...items, ...adminBeaterItems, ...storyTitleItems];
+  // Dimension stone-set frames (owned via inventory) appear under Dimension Rewards.
+  const dimFrameDefs: { id: string; name: string }[] = [
+    { id: "frame-infinity", name: "Infinity Frame" },
+    { id: "frame-elemental", name: "Elemental Frame" },
+    { id: "frame-cosmos", name: "Cosmos Frame" },
+    { id: "frame-quantum", name: "Quantum Frame" },
+  ];
+  const dimensionRewardItems: ShopItem[] = dimFrameDefs
+    .filter((d) => (userInventory as string[]).includes(d.id) && !items.find((i) => i.id === d.id))
+    .map((d) => ({
+      id: d.id, name: d.name, description: "Earned by completing a Dimension stone-set",
+      category: "frame", price: 0, icon: "Frame", rarity: "legendary",
+      requiredLevel: 1, requiredRebirth: 0, requiredXp: 0, rewardSource: "dimension:frame",
+    } as ShopItem));
+
+  const allItems = [...items, ...adminBeaterItems, ...storyTitleItems, ...dimensionRewardItems];
 
   const filteredItems = allItems
     .filter((item) => !WORLD_EXCLUSIVE_IDS.has(item.id))

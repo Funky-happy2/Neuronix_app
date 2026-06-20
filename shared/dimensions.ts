@@ -62,6 +62,7 @@ export interface DimensionDef {
   unlockXp: number;
   requires?: string[]; // dimension ids that must be cleared first
   keystone?: boolean;  // a major / "important" dimension (group entry or finale)
+  topic?: string;      // question theme (see questionTopics.ts); keeps Qs on-theme
   badgeId?: string;
   stoneId?: string;    // collectible stone awarded for clearing every world (if part of a set)
   // Entry sacrifices (any combination, paid ONCE at entry):
@@ -83,6 +84,20 @@ export interface DimensionStone {
   color: string; // hex for glow
 }
 
+// An item you can buy in a dimension group's shop using that group's currency.
+export interface DimensionShopItem {
+  id: string;
+  name: string;
+  description: string;
+  emoji: string;
+  cost: number; // in the group's currency
+  effect:
+    | { type: "forge" }                                   // grant a missing group stone
+    | { type: "cosmetic"; item: string }                  // grant an inventory cosmetic
+    | { type: "boost"; upgradeId: string; hours: number } // a temporary upgrade
+    | { type: "gems"; gems: number };                     // convert currency to gems
+}
+
 export interface DimensionGroupDef {
   id: string;
   name: string;
@@ -94,6 +109,7 @@ export interface DimensionGroupDef {
   currencyName?: string;
   currencyEmoji?: string;
   forgeShardCost?: number; // shards to forge a missing stone directly
+  shop?: DimensionShopItem[]; // spend the group currency here
   dimensionIds: string[];
   stones: DimensionStone[];
   grandReward?: {
@@ -109,6 +125,16 @@ export interface DimensionGroupDef {
     completeFlag: string; // inventory marker so it grants once
   };
 }
+
+// ─── Dimension-shop item factories ──────────────────────────────────────────────
+const shopForge = (currencyName: string, cost: number): DimensionShopItem =>
+  ({ id: "forge", name: "Forge a Stone", description: `Forge a random missing stone for this set — a shortcut to completion.`, emoji: "⚒️", cost, effect: { type: "forge" } });
+const shopXp = (cost: number): DimensionShopItem =>
+  ({ id: "boost-xp", name: "XP Surge", description: "Double your XP from games for 2 hours.", emoji: "⚡", cost, effect: { type: "boost", upgradeId: "upgrade-xp-boost", hours: 2 } });
+const shopCoins = (cost: number): DimensionShopItem =>
+  ({ id: "boost-coins", name: "Coin Surge", description: "Double your Neuros from games for 2 hours.", emoji: "💰", cost, effect: { type: "boost", upgradeId: "upgrade-double-coins", hours: 2 } });
+const shopGems = (cost: number, gems: number): DimensionShopItem =>
+  ({ id: "gems", name: `Exchange for ${gems} Gems`, description: `Trade your currency for ${gems} gems.`, emoji: "💎", cost, effect: { type: "gems", gems } });
 
 // ─── World factories ──────────────────────────────────────────────────────────
 // Keep the (many) world definitions terse and readable.
@@ -191,7 +217,7 @@ const INFINITY_STONES: DimensionStone[] = [
 
 const INFINITY_DIMENSIONS: DimensionDef[] = [
   {
-    id: "power-rift", groupId: "infinity", name: "Power Rift", structure: "4 Worlds · BRUTAL",
+    id: "power-rift", groupId: "infinity", topic: "energy", name: "Power Rift", structure: "4 Worlds · BRUTAL",
     tagline: "Raw power. No mercy.",
     description: "The gateway to the Rifts (unlocks at 2,000 XP). Pay the toll in Neuros, then conquer four brutal worlds ending with the Titan of Power. Fall and the toll — and all progress — is gone.",
     icon: "Zap", color: "#a855f7", gradient: "from-fuchsia-600 to-purple-900",
@@ -205,7 +231,7 @@ const INFINITY_DIMENSIONS: DimensionDef[] = [
     ],
   },
   {
-    id: "time-rift", groupId: "infinity", name: "Time Rift", structure: "4 Worlds · BRUTAL",
+    id: "time-rift", groupId: "infinity", topic: "time", name: "Time Rift", structure: "4 Worlds · BRUTAL",
     tagline: "Wager your time itself.",
     description: "Requires the Power Stone. Risk your XP across four time-trials ending against Chronos. Clear them all to win it back with interest — fail and the XP is gone forever.",
     icon: "Timer", color: "#22c55e", gradient: "from-emerald-600 to-teal-900",
@@ -219,7 +245,7 @@ const INFINITY_DIMENSIONS: DimensionDef[] = [
     ],
   },
   {
-    id: "space-rift", groupId: "infinity", name: "Space Rift", structure: "4 Worlds · BRUTAL",
+    id: "space-rift", groupId: "infinity", topic: "space", name: "Space Rift", structure: "4 Worlds · BRUTAL",
     tagline: "Fold space with gems.",
     description: "Requires the Power Stone. Spend gems to tear open a labyrinth across space, surviving four warped worlds and the Void Leviathan to seize the Space Stone.",
     icon: "Orbit", color: "#3b82f6", gradient: "from-blue-600 to-indigo-900",
@@ -233,7 +259,7 @@ const INFINITY_DIMENSIONS: DimensionDef[] = [
     ],
   },
   {
-    id: "mind-rift", groupId: "infinity", name: "Mind Rift", structure: "5 Worlds · BOSS GAUNTLET",
+    id: "mind-rift", groupId: "infinity", topic: "mind", name: "Mind Rift", structure: "5 Worlds · BOSS GAUNTLET",
     tagline: "Sacrifice to enter the mind.",
     description: "Requires both the Time and Space Stones. A relentless boss gauntlet — give up a consumable, then outfight three rounds of foes and the Overmind across five worlds for the Mind Stone.",
     icon: "Atom", color: "#eab308", gradient: "from-yellow-500 to-amber-800",
@@ -248,7 +274,7 @@ const INFINITY_DIMENSIONS: DimensionDef[] = [
     ],
   },
   {
-    id: "reality-rift", groupId: "infinity", name: "Reality Rift", structure: "4 Worlds · BRUTAL",
+    id: "reality-rift", groupId: "infinity", topic: "quantum", name: "Reality Rift", structure: "4 Worlds · BRUTAL",
     tagline: "Bend reality with Shards.",
     description: "Requires the Mind Stone. Only Rift Shards can warp reality — spend them, then survive four reality-bending worlds and the Paradox Engine to claim the Reality Stone.",
     icon: "Sparkles", color: "#ef4444", gradient: "from-red-600 to-rose-900",
@@ -288,7 +314,7 @@ const ELEMENTAL_CORES: DimensionStone[] = [
 
 const ELEMENTAL_DIMENSIONS: DimensionDef[] = [
   {
-    id: "inferno-trial", groupId: "elemental", name: "Inferno Trial", structure: "3 Worlds · BRUTAL",
+    id: "inferno-trial", groupId: "elemental", topic: "fire", name: "Inferno Trial", structure: "3 Worlds · BRUTAL",
     tagline: "Forged in fire.",
     description: "The Forge's gateway (unlocks at 2,200 XP). Pay the toll in Neuros and survive three blazing worlds, then the Magma Colossus, to claim the Ember Core.",
     icon: "Flame", color: "#f97316", gradient: "from-orange-600 to-red-800",
@@ -301,7 +327,7 @@ const ELEMENTAL_DIMENSIONS: DimensionDef[] = [
     ],
   },
   {
-    id: "tidal-trial", groupId: "elemental", name: "Tidal Trial", structure: "4 Worlds · BRUTAL",
+    id: "tidal-trial", groupId: "elemental", topic: "water", name: "Tidal Trial", structure: "4 Worlds · BRUTAL",
     tagline: "Ride the rising tide.",
     description: "Requires the Ember Core. Wager your XP against the current across four surging worlds, ending with the Kraken, to win the Tide Core.",
     icon: "Waves", color: "#0ea5e9", gradient: "from-sky-600 to-blue-900",
@@ -315,7 +341,7 @@ const ELEMENTAL_DIMENSIONS: DimensionDef[] = [
     ],
   },
   {
-    id: "tremor-trial", groupId: "elemental", name: "Tremor Trial", structure: "4 Worlds · BOSS HEAVY",
+    id: "tremor-trial", groupId: "elemental", topic: "earth", name: "Tremor Trial", structure: "4 Worlds · BOSS HEAVY",
     tagline: "Stand on shifting ground.",
     description: "Requires the Ember Core. Sacrifice a consumable, then topple wave after wave of earthen titans — and finally the Mountain King — to seize the Stone Core.",
     icon: "Mountain", color: "#a16207", gradient: "from-amber-700 to-stone-900",
@@ -329,7 +355,7 @@ const ELEMENTAL_DIMENSIONS: DimensionDef[] = [
     ],
   },
   {
-    id: "tempest-trial", groupId: "elemental", name: "Tempest Trial", structure: "4 Worlds · BRUTAL",
+    id: "tempest-trial", groupId: "elemental", topic: "air", name: "Tempest Trial", structure: "4 Worlds · BRUTAL",
     tagline: "Eye of the storm.",
     description: "Requires both the Tide and Stone Cores. Only Ember Sparks can calm the tempest — spend your Sparks and brave four storm-worlds and the Storm Sovereign for the Gale Core.",
     icon: "Wind", color: "#14b8a6", gradient: "from-teal-600 to-emerald-900",
@@ -354,7 +380,7 @@ const COSMIC_FRAGMENTS: DimensionStone[] = [
 
 const COSMIC_DIMENSIONS: DimensionDef[] = [
   {
-    id: "solar-trial", groupId: "cosmic", name: "Solar Trial", structure: "4 Worlds · NIGHTMARE",
+    id: "solar-trial", groupId: "cosmic", topic: "space", name: "Solar Trial", structure: "4 Worlds · NIGHTMARE",
     tagline: "Touch the Sun.",
     description: "The true end-game — requires the Soul Stone (the whole Infinity set is best). Endure four searing worlds and the Solar Phoenix to claim the Sun Fragment.",
     icon: "Sun", color: "#facc15", gradient: "from-amber-500 to-orange-800",
@@ -368,7 +394,7 @@ const COSMIC_DIMENSIONS: DimensionDef[] = [
     ],
   },
   {
-    id: "lunar-trial", groupId: "cosmic", name: "Lunar Trial", structure: "4 Worlds · NIGHTMARE",
+    id: "lunar-trial", groupId: "cosmic", topic: "space", name: "Lunar Trial", structure: "4 Worlds · NIGHTMARE",
     tagline: "Climb to the Moon.",
     description: "Requires the Sun Fragment. Only Stardust opens the lunar gate — spend it and conquer four lunar worlds and the Lunar Specter for the Moon Fragment.",
     icon: "Moon", color: "#94a3b8", gradient: "from-slate-500 to-indigo-900",
@@ -382,7 +408,7 @@ const COSMIC_DIMENSIONS: DimensionDef[] = [
     ],
   },
   {
-    id: "nebula-trial", groupId: "cosmic", name: "Nebula Trial", structure: "5 Worlds · NIGHTMARE",
+    id: "nebula-trial", groupId: "cosmic", topic: "space", name: "Nebula Trial", structure: "5 Worlds · NIGHTMARE",
     tagline: "Drift through the void.",
     description: "Requires the Sun Fragment. Wager your XP and navigate five nebula-worlds and the Nebula Wyrm without a single failure to capture the Nebula Fragment.",
     icon: "Sparkles", color: "#8b5cf6", gradient: "from-violet-600 to-purple-950",
@@ -397,7 +423,7 @@ const COSMIC_DIMENSIONS: DimensionDef[] = [
     ],
   },
   {
-    id: "comet-trial", groupId: "cosmic", name: "Comet Trial", structure: "5 Worlds · FINAL",
+    id: "comet-trial", groupId: "cosmic", topic: "space", name: "Comet Trial", structure: "5 Worlds · FINAL",
     tagline: "Outrun the comet.",
     description: "The final dimension — requires both the Moon and Nebula Fragments. Spend gems to chase the comet through five worlds and defeat the Celestial Devourer for the last Comet Fragment.",
     icon: "Orbit", color: "#38bdf8", gradient: "from-sky-500 to-blue-950",
@@ -413,8 +439,72 @@ const COSMIC_DIMENSIONS: DimensionDef[] = [
   },
 ];
 
+// ─── Group 5: The Quantum Codex (4 qubit shards + Qubits) ──────────────────────
+const QUANTUM_STONES: DimensionStone[] = [
+  { id: "qbit-superposition", name: "Superposition Shard", emoji: "🌓", color: "#22d3ee" },
+  { id: "qbit-entanglement",  name: "Entanglement Shard",  emoji: "🔗", color: "#a78bfa" },
+  { id: "qbit-tunneling",     name: "Tunneling Shard",     emoji: "🕳️", color: "#34d399" },
+  { id: "qbit-collapse",      name: "Collapse Shard",      emoji: "💠", color: "#f472b6" },
+];
+
+const QUANTUM_DIMENSIONS: DimensionDef[] = [
+  {
+    id: "superposition-rift", groupId: "quantum", name: "Superposition Rift", structure: "3 Worlds · BRUTAL",
+    tagline: "Be everywhere at once.",
+    description: "The gateway to the Codex (unlocks at 9,000 XP). Pay in Neuros, then clear three quantum worlds and the Schrödinger Sentinel to claim the Superposition Shard.",
+    icon: "Atom", color: "#22d3ee", gradient: "from-cyan-500 to-sky-800",
+    unlockXp: 9000, keystone: true, topic: "quantum", stoneId: "qbit-superposition",
+    costCoins: 14000, rewardXp: 1000, rewardCoins: 700, rewardShards: 30,
+    worlds: [
+      W("sp-w1", "Probability Field", "Endless waves — reach Wave 11.", "Atom", "gauntlet", { winWave: 11, lives: 2 }),
+      W("sp-w2", "Wave Function", "Beat the clock — 18 rungs.", "Puzzle", "puzzle", { rungs: 18, timeSec: 50, dropOnWrong: 3 }),
+      FB("sp-boss", "The Observer", "The Schrödinger Sentinel", { bossHp: 11, playerHp: 3 }),
+    ],
+  },
+  {
+    id: "entangle-rift", groupId: "quantum", name: "Entanglement Rift", structure: "3 Worlds · BRUTAL",
+    tagline: "Linked across all space.",
+    description: "Requires the Superposition Shard. Wager your XP and navigate two entangled labyrinths and the Twin Paradox to seize the Entanglement Shard.",
+    icon: "Orbit", color: "#a78bfa", gradient: "from-violet-500 to-purple-900",
+    unlockXp: 0, requires: ["superposition-rift"], topic: "quantum", stoneId: "qbit-entanglement",
+    wagerXp: 3000, rewardXp: 1000, rewardCoins: 700, rewardShards: 30,
+    worlds: [
+      W("en-w1", "Spooky Distance", "Roguelike run — 15 steps.", "Map", "roguelike", { steps: 15, hp: 3 }),
+      W("en-w2", "Linked Pair", "Roguelike run — 17 steps.", "Map", "roguelike", { steps: 17, hp: 3 }),
+      FB("en-boss", "Mirror of Twins", "The Twin Paradox", { bosses: 2, bossHp: 10, playerHp: 3 }),
+    ],
+  },
+  {
+    id: "tunnel-rift", groupId: "quantum", name: "Tunneling Rift", structure: "3 Worlds · BRUTAL",
+    tagline: "Walk through walls.",
+    description: "Requires the Entanglement Shard. Spend gems to phase through barriers, then defeat the Barrier Breaker for the Tunneling Shard.",
+    icon: "Zap", color: "#34d399", gradient: "from-emerald-500 to-green-900",
+    unlockXp: 0, requires: ["entangle-rift"], topic: "physics", stoneId: "qbit-tunneling",
+    costGems: 12, rewardXp: 1100, rewardCoins: 750, rewardShards: 30,
+    worlds: [
+      W("tu-w1", "Barrier Field", "Boss rush — 4 bosses.", "Skull", "boss-rush", { bosses: 4, bossHp: 6, playerHp: 3 }),
+      W("tu-w2", "Phase Climb", "Beat the clock — 18 rungs.", "Puzzle", "puzzle", { rungs: 18, timeSec: 48, dropOnWrong: 3 }),
+      FB("tu-boss", "The Wall", "The Barrier Breaker", { bossHp: 12, playerHp: 3 }),
+    ],
+  },
+  {
+    id: "collapse-rift", groupId: "quantum", name: "Collapse Rift", structure: "4 Worlds · NIGHTMARE",
+    tagline: "Where all possibilities end.",
+    description: "Requires the Tunneling Shard — the Codex's finale. Spend Qubits, then survive four collapsing worlds and the Wavefunction Devourer for the final Collapse Shard.",
+    icon: "Sparkles", color: "#f472b6", gradient: "from-fuchsia-500 via-rose-600 to-indigo-700",
+    unlockXp: 0, requires: ["tunnel-rift"], keystone: true, topic: "quantum", stoneId: "qbit-collapse",
+    costShards: 60, rewardXp: 1400, rewardCoins: 950, rewardShards: 0,
+    worlds: [
+      W("co-w1", "Decoherence", "Endless waves — reach Wave 12.", "Sparkles", "gauntlet", { winWave: 12, lives: 1 }),
+      W("co-w2", "Collapsing Maze", "Roguelike run — 17 steps.", "Map", "roguelike", { steps: 17, hp: 3 }),
+      W("co-w3", "Final Measurement", "Beat the clock — 18 rungs.", "Puzzle", "puzzle", { rungs: 18, timeSec: 46, dropOnWrong: 3 }),
+      FB("co-boss", "The Last Possibility", "The Wavefunction Devourer", { bosses: 2, bossHp: 13, playerHp: 3 }),
+    ],
+  },
+];
+
 export const DIMENSIONS: DimensionDef[] = [
-  ...CORE_DIMENSIONS, ...INFINITY_DIMENSIONS, ...ELEMENTAL_DIMENSIONS, ...COSMIC_DIMENSIONS,
+  ...CORE_DIMENSIONS, ...INFINITY_DIMENSIONS, ...ELEMENTAL_DIMENSIONS, ...COSMIC_DIMENSIONS, ...QUANTUM_DIMENSIONS,
 ];
 
 export const DIMENSION_GROUPS: DimensionGroupDef[] = [
@@ -439,6 +529,7 @@ export const DIMENSION_GROUPS: DimensionGroupDef[] = [
     currencyName: "Rift Shards",
     currencyEmoji: "💠",
     forgeShardCost: 120,
+    shop: [shopForge("Rift Shards", 120), shopXp(40), shopCoins(40), shopGems(60, 10)],
     dimensionIds: INFINITY_DIMENSIONS.map(d => d.id),
     stones: INFINITY_STONES,
     grandReward: {
@@ -465,6 +556,7 @@ export const DIMENSION_GROUPS: DimensionGroupDef[] = [
     currencyName: "Ember Sparks",
     currencyEmoji: "🔥",
     forgeShardCost: 100,
+    shop: [shopForge("Ember Sparks", 100), shopXp(35), shopGems(50, 8)],
     dimensionIds: ELEMENTAL_DIMENSIONS.map(d => d.id),
     stones: ELEMENTAL_CORES,
     grandReward: {
@@ -491,6 +583,7 @@ export const DIMENSION_GROUPS: DimensionGroupDef[] = [
     currencyName: "Stardust",
     currencyEmoji: "✨",
     forgeShardCost: 150,
+    shop: [shopForge("Stardust", 150), shopXp(45), shopGems(70, 12)],
     dimensionIds: COSMIC_DIMENSIONS.map(d => d.id),
     stones: COSMIC_FRAGMENTS,
     grandReward: {
@@ -504,6 +597,33 @@ export const DIMENSION_GROUPS: DimensionGroupDef[] = [
       buffXpPct: 20,
       buffCoinPct: 20,
       completeFlag: "cosmic-complete",
+    },
+  },
+  {
+    id: "quantum",
+    name: "The Quantum Codex",
+    tagline: "Master the impossible.",
+    description: "The deepest rifts of all — where particles are everywhere and nowhere at once. Four mind-bending trials gated behind the Codex gateway, each yielding a Qubit Shard and Qubits. Collect all four to forge the Quantum Codex and bend reality itself.",
+    gradient: "from-cyan-500 via-violet-600 to-fuchsia-500",
+    icon: "Atom",
+    currencyId: "dim-shards-quantum",
+    currencyName: "Qubits",
+    currencyEmoji: "🔬",
+    forgeShardCost: 140,
+    shop: [shopForge("Qubits", 140), shopXp(45), shopCoins(45), shopGems(70, 14)],
+    dimensionIds: QUANTUM_DIMENSIONS.map(d => d.id),
+    stones: QUANTUM_STONES,
+    grandReward: {
+      title: "The Quantum Codex",
+      badgeId: "quantum-sovereign",
+      avatarId: "avatar-quantum-sage",
+      borderId: "frame-quantum",
+      coins: 100000,
+      gems: 200,
+      xp: 20000,
+      buffXpPct: 25,
+      buffCoinPct: 25,
+      completeFlag: "quantum-complete",
     },
   },
 ];

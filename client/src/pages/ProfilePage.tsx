@@ -12,7 +12,8 @@ import {
   Snowflake, Orbit, Skull, Moon, Globe, Gem, Waves, Cpu, Heart,
   Gamepad2, Diamond, ShoppingBag, MapPin, TrendingUp, Coins,
   Square, Circle, Rainbow, Palette, Frame, Eye,
-  Telescope, Mountain, Wind, Sun, Hexagon, Footprints, RefreshCw, Users, Pencil, KeyRound
+  Telescope, Mountain, Wind, Sun, Hexagon, Footprints, RefreshCw, Users, Pencil, KeyRound,
+  Infinity as InfinityIcon, Satellite, Brain, Tornado, Layers
 } from "lucide-react";
 import { BADGES, AVATARS, SHOP_AVATARS, getXPForLevel, type AvatarCategory } from "@/lib/gameData";
 import { motion } from "framer-motion";
@@ -47,6 +48,7 @@ const FRAME_STYLES: Record<string, { border: string; shadow: string; animation?:
   "frame-infinity": { border: "ring-[4px] ring-fuchsia-500 rounded-xl", shadow: "shadow-2xl shadow-fuchsia-500/60", animation: "animate-frame-galaxy" },
   "frame-elemental": { border: "ring-[4px] ring-orange-500 rounded-lg", shadow: "shadow-2xl shadow-orange-500/60", animation: "animate-frame-fire" },
   "frame-cosmos": { border: "ring-[4px] ring-indigo-400 rounded-xl", shadow: "shadow-2xl shadow-indigo-400/60", animation: "animate-frame-galaxy" },
+  "frame-quantum": { border: "ring-[4px] ring-cyan-400 rounded-xl", shadow: "shadow-2xl shadow-cyan-400/60", animation: "animate-frame-void" },
 };
 
 const BORDER_UPGRADE_IDS = ["upgrade-golden-profile", "upgrade-diamond-profile", "upgrade-elite-border"];
@@ -92,6 +94,7 @@ const AVATAR_ICONS: Record<string, any> = {
   Waves, Zap, Cpu, Atom, TreePine, Award, Gamepad2, Heart,
   Telescope, Mountain, Wind, Sun, Hexagon, Footprints, TrendingUp, GraduationCap,
   Calendar, RefreshCw, Users,
+  Microscope, Infinity: InfinityIcon, Satellite, Brain, Tornado, Layers,
 };
 
 const BADGE_ICONS: Record<string, any> = {

@@ -9,7 +9,7 @@ import {
   CloudLightning, Bug, Orbit, Timer, Crown, Calendar, GraduationCap,
   Sparkles, Pickaxe, Globe, Clock, Microscope, Moon, Cpu, Gamepad2,
   ShoppingCart, RotateCcw, Coins, Mountain, Link, Settings, Heart,
-  Magnet, TrendingUp, Waves, Snowflake, Skull, Map as MapIcon
+  Magnet, TrendingUp, Waves, Snowflake, Skull, Map as MapIcon, BookOpen, Hexagon
 } from "lucide-react";
 import { BADGES } from "@/lib/gameData";
 import { useAuth } from "@/hooks/use-auth";
@@ -59,6 +59,8 @@ const TOPIC_CATEGORIES: { id: BadgeTopic | "all"; label: string; icon: any }[] =
   { id: "collection", label: "Collection", icon: GraduationCap },
   { id: "competitive", label: "Competitive", icon: Shield },
   { id: "social", label: "Social", icon: Heart },
+  { id: "story", label: "Story", icon: BookOpen },
+  { id: "dimensions", label: "Dimensions", icon: Hexagon },
   { id: "special", label: "Special", icon: Star },
 ];
 
