@@ -40,6 +40,39 @@ function ensureAdminDecisionsTable(): Promise<void> {
   return adminDecisionsTableReady;
 }
 
+// Additive schema for features shipped without a `db:push` (news admin tag,
+// quests + quest chat, trade chat, temporary login codes). Idempotent — safe to
+// run on every boot, and it makes the live DB self-heal on deploy.
+let featureSchemaReady: Promise<void> | null = null;
+export function ensureFeatureSchema(): Promise<void> {
+  if (!featureSchemaReady) {
+    featureSchemaReady = pool.query(`
+      ALTER TABLE news_posts ADD COLUMN IF NOT EXISTS author_is_admin boolean NOT NULL DEFAULT false;
+      CREATE TABLE IF NOT EXISTS quest_posts (
+        id serial PRIMARY KEY, poster_id integer NOT NULL, poster_name text NOT NULL,
+        title text NOT NULL, description text NOT NULL,
+        reward_coins integer NOT NULL DEFAULT 0, reward_gems integer NOT NULL DEFAULT 0,
+        status text NOT NULL DEFAULT 'open', assignee_id integer, assignee_name text,
+        created_at text NOT NULL, completed_at text
+      );
+      CREATE TABLE IF NOT EXISTS quest_messages (
+        id serial PRIMARY KEY, quest_id integer NOT NULL, sender_id integer NOT NULL,
+        sender_name text NOT NULL, content text NOT NULL, created_at text NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS trade_messages (
+        id serial PRIMARY KEY, trade_id integer NOT NULL, sender_id integer NOT NULL,
+        sender_name text NOT NULL, content text NOT NULL, created_at text NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS login_codes (
+        id serial PRIMARY KEY, code text NOT NULL UNIQUE, user_id integer NOT NULL,
+        created_by_id integer NOT NULL, created_by_name text NOT NULL,
+        expires_at text NOT NULL, used_at text, created_at text NOT NULL
+      );
+    `).then(() => undefined).catch((e) => { featureSchemaReady = null; throw e; });
+  }
+  return featureSchemaReady;
+}
+
 const PostgresSessionStore = connectPg(session);
 
 function mapProposalRow(row: any) {

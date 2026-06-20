@@ -2,5 +2,27 @@
 > rest-express@1.0.0 dev
 > NODE_ENV=development tsx watch server/index.ts
 
+ensureFeatureSchema failed (continuing): error: database "facaishu" does not exist
+    at /Users/facaishu/Documents/Code/Github Repos/Websites/Neuronix_app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async <anonymous> (/Users/facaishu/Documents/Code/Github Repos/Websites/Neuronix_app/server/index.ts:66:5) {
+  length: 94,
+  severity: 'FATAL',
+  code: '3D000',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'postinit.c',
+  line: '1023',
+  routine: 'InitPostgres'
+}
 SESSION_SECRET not set — generated an ephemeral dev secret. Sessions will not survive a restart.
 WebSocket server error: Port 24678 is already in use

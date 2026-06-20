@@ -60,6 +60,14 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Make sure feature tables/columns exist (so the live DB self-heals on deploy).
+  try {
+    const { ensureFeatureSchema } = await import("./storage");
+    await ensureFeatureSchema();
+  } catch (e) {
+    console.error("ensureFeatureSchema failed (continuing):", e);
+  }
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
