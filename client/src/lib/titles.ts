@@ -48,6 +48,11 @@ export const FRAME_MINI_STYLES: Record<string, string> = {
   "frame-elemental":         "ring-[4px] ring-orange-500 animate-frame-fire rounded-lg",
   "frame-cosmos":            "ring-[4px] ring-indigo-400 animate-frame-galaxy rounded-xl",
   "frame-quantum":           "ring-[4px] ring-cyan-400 animate-frame-void rounded-xl",
+  "frame-rift-shard":        "ring-[3px] ring-fuchsia-400 animate-frame-galaxy rounded-xl",
+  "frame-ember-forge":       "ring-[3px] ring-orange-400 animate-frame-fire",
+  "frame-starforge":         "ring-[3px] ring-sky-300 animate-frame-galaxy rounded-xl",
+  "frame-qubit-core":        "ring-[3px] ring-cyan-300 animate-frame-ice rounded-xl",
+  "frame-core-walker":       "ring-[4px] ring-purple-500 animate-frame-galaxy rounded-xl",
 };
 
 export const TITLE_DISPLAY: Record<string, string> = {

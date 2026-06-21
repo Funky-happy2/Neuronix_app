@@ -127,8 +127,12 @@ export interface DimensionGroupDef {
 }
 
 // ─── Dimension-shop item factories ──────────────────────────────────────────────
-const shopForge = (currencyName: string, cost: number): DimensionShopItem =>
-  ({ id: "forge", name: "Forge a Stone", description: `Forge a random missing stone for this set — a shortcut to completion.`, emoji: "⚒️", cost, effect: { type: "forge" } });
+const shopFrame = (cost: number, frameId: string, name: string): DimensionShopItem =>
+  ({ id: "frame", name, description: "A unique animated profile border — equip it from your Profile.", emoji: "🖼️", cost, effect: { type: "cosmetic", item: frameId } });
+const shopProfileAnim = (cost: number, animId: string, name: string): DimensionShopItem =>
+  ({ id: "profile-anim", name, description: "An animated aura around your profile picture — equip it from your Profile.", emoji: "✨", cost, effect: { type: "cosmetic", item: animId } });
+const shopNameAnim = (cost: number, animId: string, name: string): DimensionShopItem =>
+  ({ id: "name-anim", name, description: "An animated effect on your username — equip it from your Profile.", emoji: "🔤", cost, effect: { type: "cosmetic", item: animId } });
 const shopXp = (cost: number): DimensionShopItem =>
   ({ id: "boost-xp", name: "XP Surge", description: "Double your XP from games for 2 hours.", emoji: "⚡", cost, effect: { type: "boost", upgradeId: "upgrade-xp-boost", hours: 2 } });
 const shopCoins = (cost: number): DimensionShopItem =>
@@ -517,6 +521,18 @@ export const DIMENSION_GROUPS: DimensionGroupDef[] = [
     icon: "Hexagon",
     dimensionIds: CORE_DIMENSIONS.map(d => d.id),
     stones: [],
+    grandReward: {
+      title: "The Dimension Walker",
+      badgeId: "core-master",
+      avatarId: "avatar-core-master",
+      borderId: "frame-core-walker",
+      coins: 5000,
+      gems: 10,
+      xp: 3000,
+      buffXpPct: 10,
+      buffCoinPct: 10,
+      completeFlag: "core-complete",
+    },
   },
   {
     id: "infinity",
@@ -529,7 +545,7 @@ export const DIMENSION_GROUPS: DimensionGroupDef[] = [
     currencyName: "Rift Shards",
     currencyEmoji: "💠",
     forgeShardCost: 120,
-    shop: [shopForge("Rift Shards", 120), shopXp(40), shopCoins(40), shopGems(60, 10)],
+    shop: [shopFrame(80, "frame-rift-shard", "Rift Shard Border"), shopNameAnim(70, "name-anim-cosmic", "Cosmic Name"), shopXp(40), shopGems(60, 10)],
     dimensionIds: INFINITY_DIMENSIONS.map(d => d.id),
     stones: INFINITY_STONES,
     grandReward: {
@@ -556,7 +572,7 @@ export const DIMENSION_GROUPS: DimensionGroupDef[] = [
     currencyName: "Ember Sparks",
     currencyEmoji: "🔥",
     forgeShardCost: 100,
-    shop: [shopForge("Ember Sparks", 100), shopXp(35), shopGems(50, 8)],
+    shop: [shopFrame(70, "frame-ember-forge", "Ember Forge Border"), shopProfileAnim(70, "profile-anim-fire", "Fire Aura"), shopXp(35), shopGems(50, 8)],
     dimensionIds: ELEMENTAL_DIMENSIONS.map(d => d.id),
     stones: ELEMENTAL_CORES,
     grandReward: {
@@ -583,7 +599,7 @@ export const DIMENSION_GROUPS: DimensionGroupDef[] = [
     currencyName: "Stardust",
     currencyEmoji: "✨",
     forgeShardCost: 150,
-    shop: [shopForge("Stardust", 150), shopXp(45), shopGems(70, 12)],
+    shop: [shopProfileAnim(85, "profile-anim-cosmic", "Cosmic Aura"), shopFrame(90, "frame-starforge", "Starforge Border"), shopGems(70, 12)],
     dimensionIds: COSMIC_DIMENSIONS.map(d => d.id),
     stones: COSMIC_FRAGMENTS,
     grandReward: {
@@ -610,7 +626,7 @@ export const DIMENSION_GROUPS: DimensionGroupDef[] = [
     currencyName: "Qubits",
     currencyEmoji: "🔬",
     forgeShardCost: 140,
-    shop: [shopForge("Qubits", 140), shopXp(45), shopCoins(45), shopGems(70, 14)],
+    shop: [shopNameAnim(85, "name-anim-electric", "Electric Name"), shopFrame(90, "frame-qubit-core", "Qubit Border"), shopXp(45), shopGems(70, 14)],
     dimensionIds: QUANTUM_DIMENSIONS.map(d => d.id),
     stones: QUANTUM_STONES,
     grandReward: {
@@ -677,11 +693,19 @@ export function hasFullStoneSet(group: DimensionGroupDef, inventory: string[]): 
   return group.stones.every(s => inventory.includes(s.id));
 }
 
-// Permanent buff multipliers from any completed stone set the user holds.
+// Is a group "completed"? Stone groups → all stones held. Stoneless groups (Core) →
+// the completion flag is in inventory (granted once all member dimensions are beaten).
+export function isGroupComplete(group: DimensionGroupDef, inventory: string[]): boolean {
+  if (!group.grandReward) return false;
+  if (group.stones.length > 0) return hasFullStoneSet(group, inventory);
+  return (inventory || []).includes(group.grandReward.completeFlag);
+}
+
+// Permanent buff multipliers from any completed dimension group the user holds.
 export function dimensionBuffMultipliers(inventory: string[]): { xp: number; coins: number } {
   let xp = 1, coins = 1;
   for (const g of DIMENSION_GROUPS) {
-    if (g.grandReward && hasFullStoneSet(g, inventory)) {
+    if (g.grandReward && isGroupComplete(g, inventory)) {
       xp += g.grandReward.buffXpPct / 100;
       coins += g.grandReward.buffCoinPct / 100;
     }

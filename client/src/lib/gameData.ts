@@ -2367,6 +2367,8 @@ export const BADGES: BadgeInfo[] = [
   { id: "saga-hero", name: "Spark Eternal", description: "Complete The Spark Saga story campaign", icon: "Sparkles", color: "hsl(290, 90%, 60%)", requirement: "Finish the whole Spark Saga", rarity: "legendary", topic: "story" },
   { id: "chrono-caper", name: "Time Detective", description: "Complete The Chrono Caper story", icon: "Clock", color: "hsl(35, 90%, 55%)", requirement: "Catch The Curator across time", rarity: "epic", topic: "story" },
   { id: "body-brigade", name: "Micro Medic", description: "Complete the Body Brigade story", icon: "Heart", color: "hsl(340, 80%, 55%)", requirement: "Cure the patient from within", rarity: "epic", topic: "story" },
+  { id: "robot-rebellion", name: "Machine Master", description: "Complete The Robot Rebellion story", icon: "Cpu", color: "hsl(210, 15%, 55%)", requirement: "Shut down OMNI", rarity: "legendary", topic: "story" },
+  { id: "deep-descent", name: "Abyss Explorer", description: "Complete The Deep Descent story", icon: "Waves", color: "hsl(210, 80%, 50%)", requirement: "Reach the bottom of the ocean", rarity: "legendary", topic: "story" },
   { id: "gravity-master", name: "Gravity Master", description: "Score 200+ in Gravity Dash", icon: "Rocket", color: "hsl(270, 85%, 55%)", requirement: "Score 200 or more in Gravity Dash", rarity: "uncommon", topic: "games" },
   { id: "gene-genius", name: "Gene Genius", description: "Score 200+ in DNA Decoder", icon: "Dna", color: "hsl(160, 70%, 45%)", requirement: "Score 200 or more in DNA Decoder", rarity: "uncommon", topic: "games" },
   { id: "circuit-wizard", name: "Circuit Wizard", description: "Score 200+ in Circuit Crafter", icon: "Zap", color: "hsl(45, 95%, 50%)", requirement: "Score 200 or more in Circuit Crafter", rarity: "uncommon", topic: "games" },
@@ -2558,6 +2560,7 @@ export const BADGES: BadgeInfo[] = [
   { id: "event-horizon-survivor", name: "Event Horizon Survivor", description: "Defeat The Black Hole Maw (mutated)", icon: "Orbit", color: "hsl(265, 80%, 50%)", requirement: "Beat the mutated Space Boss", rarity: "epic", topic: "bosses" },
   { id: "cosmos-master", name: "Cosmos Master", description: "Defeat The Galactic End (omega)", icon: "Orbit", color: "hsl(275, 80%, 45%)", requirement: "Beat the omega Space Boss", rarity: "legendary", topic: "bosses" },
   // Dimensions
+  { id: "core-master", name: "Dimension Walker", description: "Beat all 4 Core Dimensions", icon: "Hexagon", color: "hsl(280, 70%, 55%)", requirement: "Complete the Gauntlet, Labyrinth, Nexus and Colosseum", rarity: "legendary", topic: "dimensions" },
   { id: "gauntlet-champion", name: "Gauntlet Champion", description: "Reach Wave 5 in The Gauntlet", icon: "Swords", color: "hsl(15, 85%, 50%)", requirement: "Survive to wave 5 in the Gauntlet dimension", rarity: "rare", topic: "dimensions" },
   { id: "labyrinth-master", name: "Labyrinth Master", description: "Escape The Labyrinth", icon: "Map", color: "hsl(265, 70%, 55%)", requirement: "Complete a run in the Labyrinth dimension", rarity: "epic", topic: "dimensions" },
   { id: "nexus-ascendant", name: "Nexus Ascendant", description: "Top the ladder in The Nexus", icon: "Sparkles", color: "hsl(190, 85%, 50%)", requirement: "Reach the top rung in the Nexus dimension", rarity: "epic", topic: "dimensions" },
@@ -2620,6 +2623,10 @@ export const SHOP_AVATARS: { id: string; name: string; icon: string; source?: st
   { id: "avatar-spark-eternal", name: "Spark Eternal", icon: "Infinity", source: "Complete The Spark Saga", category: "achievement" },
   { id: "avatar-quantum-sage", name: "Quantum Sage", icon: "Brain", source: "Forge the Quantum Codex", category: "achievement" },
   { id: "avatar-core-master", name: "Dimension Walker", icon: "Layers", source: "Beat all 4 Core Dimensions", category: "achievement" },
+  { id: "avatar-time-traveler", name: "Time Traveler", icon: "Hourglass", source: "Complete The Chrono Caper", category: "achievement" },
+  { id: "avatar-micro-medic", name: "Micro Medic", icon: "Stethoscope", source: "Complete Body Brigade", category: "achievement" },
+  { id: "avatar-machine-master", name: "Machine Master", icon: "Cog", source: "Complete The Robot Rebellion", category: "achievement" },
+  { id: "avatar-abyss-explorer", name: "Abyss Explorer", icon: "Anchor", source: "Complete The Deep Descent", category: "achievement" },
 ];
 
 export function getXPForLevel(level: number): number {

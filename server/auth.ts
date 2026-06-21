@@ -237,10 +237,16 @@ export function setupAuth(app: Express) {
           if (!bdg.includes(gr.badgeId)) { bdg.push(gr.badgeId); changed = true; }
         }
       }
-      // Beating all four Core Dimensions grants the Dimension Walker avatar.
+      // Beating all four Core Dimensions completes the Core group — grant its grand
+      // reward cosmetics + the complete flag (which switches on the +10% buffs).
+      const coreGroup = DIMENSION_GROUPS.find((g) => g.id === "core");
       const CORE_BADGES = ["gauntlet-champion", "labyrinth-master", "nexus-ascendant", "colosseum-victor"];
-      if (CORE_BADGES.every((b) => bdg.includes(b)) && !inv.includes("avatar-core-master")) {
-        inv.push("avatar-core-master"); changed = true;
+      if (coreGroup?.grandReward && CORE_BADGES.every((b) => bdg.includes(b))) {
+        const gr = coreGroup.grandReward;
+        for (const it of [gr.completeFlag, gr.avatarId, gr.borderId]) {
+          if (!inv.includes(it)) { inv.push(it); changed = true; }
+        }
+        if (!bdg.includes(gr.badgeId)) { bdg.push(gr.badgeId); changed = true; }
       }
       if (changed) {
         await storage.updateUser(freshUser.id, { inventory: inv, badges: bdg } as any);

@@ -698,6 +698,8 @@ export default function ShopPage() {
     { id: "title-spark-eternal", name: "Spark Eternal" },
     { id: "title-time-detective", name: "Time Detective" },
     { id: "title-micro-medic", name: "Micro Medic" },
+    { id: "title-machine-master", name: "Machine Master" },
+    { id: "title-abyss-explorer", name: "Abyss Explorer" },
   ];
   const storyTitleItems: ShopItem[] = storyTitleDefs
     .filter((t) => (userInventory as string[]).includes(t.id) && !items.find((i) => i.id === t.id))

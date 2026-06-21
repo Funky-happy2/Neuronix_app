@@ -1,12 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { BookOpen, ChevronRight, Sparkles } from "lucide-react";
-import { STORIES, isChapterUnlocked, isNodeComplete, totalStoryNodes, storyNodesDone, type Story, type StoryChapter, type StoryNode } from "@shared/story";
+import { BookOpen, ChevronRight } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { STORIES, isChapterUnlocked, isNodeComplete, totalStoryNodes, storyNodesDone, storyUnlockState, type Story, type StoryChapter, type StoryNode } from "@shared/story";
 
-// The next thing to play across all stories (first story with an open step).
-function nextStep(inventory: string[]): { story: Story; chapter: StoryChapter; node: StoryNode } | null {
+// The next thing to play across all UNLOCKED stories (first with an open step).
+function nextStep(level: number, inventory: string[]): { story: Story; chapter: StoryChapter; node: StoryNode } | null {
   for (const story of STORIES) {
+    if (!storyUnlockState(story, { level, inventory }).unlocked) continue;
     for (const c of story.chapters) {
       if (!isChapterUnlocked(c, inventory)) break;
       const node = c.nodes.find((n) => !isNodeComplete(n, inventory));
@@ -16,7 +20,7 @@ function nextStep(inventory: string[]): { story: Story; chapter: StoryChapter; n
   return null;
 }
 
-// "Continue your story" card for the Home screen.
+// "Continue your story" card for the Home screen — styled like the game cards.
 export function StoryBanner() {
   const [, navigate] = useLocation();
   const { data: user } = useQuery<any>({ queryKey: ["/api/user"] });
@@ -26,7 +30,7 @@ export function StoryBanner() {
   const total = STORIES.reduce((s, st) => s + totalStoryNodes(st), 0);
   const done = STORIES.reduce((s, st) => s + storyNodesDone(st, inventory), 0);
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-  const step = nextStep(inventory);
+  const step = nextStep((user as any).level || 0, inventory);
   const complete = !step;
   const fresh = done === 0;
 
@@ -43,41 +47,40 @@ export function StoryBanner() {
 
   return (
     <motion.div
-      whileHover={{ scale: 1.006 }}
-      whileTap={{ scale: 0.995 }}
-      onClick={() => navigate("/story")}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate("/story"); }}
-      className={`relative cursor-pointer rounded-2xl overflow-hidden bg-gradient-to-r ${gradient} text-white shadow-lg`}
-      data-testid="home-story-banner"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      whileHover={{ y: -2 }}
     >
-      {/* soft watermark */}
-      <div className="pointer-events-none select-none absolute -right-5 -top-7 text-[130px] leading-none opacity-10">{watermark}</div>
+      <Card
+        className={`p-6 border-border bg-gradient-to-br ${gradient} text-white relative group overflow-hidden cursor-pointer`}
+        onClick={() => navigate("/story")}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate("/story"); }}
+        data-testid="home-story-banner"
+      >
+        <div className="absolute inset-0 bg-black/10 rounded-md" />
+        <div className="pointer-events-none select-none absolute -right-3 -top-6 text-[110px] leading-none opacity-15">{watermark}</div>
+        <div className="relative">
+          <Badge variant="secondary" className="mb-3 text-xs font-bold bg-white/20 text-white border-white/20">
+            <BookOpen className="w-3 h-3 mr-1" /> Story Mode · {label}
+          </Badge>
+          <h2 className="text-2xl font-black mb-1">{heading}</h2>
+          <p className="text-sm text-white/85 mb-4 leading-relaxed">{sub}</p>
 
-      <div className="relative p-4 sm:p-5 flex items-center gap-4">
-        <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-3xl shrink-0 shadow-inner">
-          {fresh ? <BookOpen className="w-7 h-7" /> : watermark}
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest bg-white/20 rounded-full px-2 py-0.5 mb-1">
-            <Sparkles className="w-3 h-3" /> {label}
-          </div>
-          <div className="text-lg sm:text-xl font-black leading-tight truncate">{heading}</div>
-          <div className="text-sm font-semibold text-white/90 truncate">{sub}</div>
-          <div className="mt-2 flex items-center gap-2">
-            <div className="h-2 flex-1 max-w-[220px] rounded-full bg-black/25 overflow-hidden">
+          <div className="flex items-center gap-2 mb-4 max-w-xs">
+            <div className="h-2 flex-1 rounded-full bg-black/25 overflow-hidden">
               <div className="h-full bg-white rounded-full transition-all" style={{ width: `${pct}%` }} />
             </div>
-            <span className="text-[11px] font-bold text-white/90 tabular-nums">{done}/{total}</span>
+            <span className="text-xs font-bold text-white/90 tabular-nums">{done}/{total}</span>
           </div>
-        </div>
 
-        <div className="shrink-0 inline-flex items-center gap-1.5 bg-white text-gray-900 rounded-full px-4 py-2 font-black text-sm shadow">
-          {cta} <ChevronRight className="w-4 h-4" />
+          <Button variant="secondary" className="gap-2 font-bold bg-white/20 text-white border-white/20" data-testid="button-story-banner">
+            {cta} <ChevronRight className="w-4 h-4" />
+          </Button>
         </div>
-      </div>
+      </Card>
     </motion.div>
   );
 }

@@ -1,8 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage, db } from "./storage";
+import { storage, db, ensureFeatureSchema } from "./storage";
 import { questPosts, questMessages, tradeMessages, loginCodes } from "@shared/schema";
-import { STORY_FLAGS, getNode as getStoryNode, isNodeReachable as isStoryNodeReachable } from "@shared/story";
+import { STORY_FLAGS, getNode as getStoryNode, isNodeReachable as isStoryNodeReachable, storyUnlockState } from "@shared/story";
 import { eq, and, desc } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { setupAuth, hashPassword, comparePasswords } from "./auth";
@@ -304,6 +304,14 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   setupAuth(app);
+
+  // Self-heal feature schema before handling API writes (cached — instant after the
+  // first call). Guards news/quests/login-codes/trade-chat on a live DB that hasn't
+  // had these migrations applied yet.
+  app.use("/api", async (_req, _res, next) => {
+    try { await ensureFeatureSchema(); } catch { /* logged at startup */ }
+    next();
+  });
 
   app.use((req, _res, next) => {
     if (req.isAuthenticated() && req.user) {
@@ -1789,9 +1797,21 @@ export async function registerRoutes(
       const BORDER_UPGRADE_IDS = ["upgrade-golden-profile", "upgrade-diamond-profile", "upgrade-elite-border"];
       const isBorderUpgrade = category === "frame" && BORDER_UPGRADE_IDS.includes(itemId);
 
+      // Some cosmetics (dimension-shop / quest / story rewards) are granted straight to
+      // inventory without a matching DB shop row. Since ownership is already verified
+      // above, accept any owned item whose id-prefix matches the category it equips to.
+      const CATEGORY_PREFIXES: Record<string, string[]> = {
+        frame: ["frame-", "reward-tournament-frame"],
+        coin_style: ["coin-style-"],
+        gem_style: ["gem-style-"],
+        profile_animation: ["profile-anim-"],
+        name_animation: ["name-anim-"],
+      };
+      const prefixOk = (CATEGORY_PREFIXES[category] || []).some((p) => itemId === p || itemId.startsWith(p));
+
       const items = await storage.getShopItems();
       const shopItem = items.find((i) => i.id === itemId);
-      if (!isBorderUpgrade && (!shopItem || shopItem.category !== category)) {
+      if (!isBorderUpgrade && !prefixOk && (!shopItem || shopItem.category !== category)) {
         return res.status(400).json({ message: "Item does not match the specified category" });
       }
 
@@ -5343,6 +5363,9 @@ export async function registerRoutes(
       if (!user) return res.sendStatus(401);
       const inventory: string[] = user.inventory || [];
       const flag = flagFor(nodeId);
+      if (!storyUnlockState(found.story, { level: user.level || 0, inventory }).unlocked) {
+        return res.status(403).json({ message: "This story is locked." });
+      }
       if (!isStoryNodeReachable(nodeId, inventory)) return res.status(400).json({ message: "Finish earlier steps first." });
       if (inventory.includes(flag)) { // already done — no double reward
         const { password: _p, ...safe } = user as any;
@@ -5383,6 +5406,9 @@ export async function registerRoutes(
       const user = await storage.getUser(req.user!.id);
       if (!user) return res.sendStatus(401);
       const inventory: string[] = user.inventory || [];
+      if (!storyUnlockState(found.story, { level: user.level || 0, inventory }).unlocked) {
+        return res.status(403).json({ message: "This story is locked." });
+      }
       if (!isStoryNodeReachable(nodeId, inventory)) return res.status(400).json({ message: "Finish earlier steps first." });
       if (inventory.some((x) => x.startsWith(STORY_FLAGS.choicePrefix(nodeId)))) {
         const { password: _p, ...safe } = user as any;
@@ -5952,6 +5978,23 @@ export async function registerRoutes(
     } catch {
       res.status(500).json({ message: "Failed to give shop item" });
     }
+  });
+
+  // Admin: grant a dimension group's currency (Rift Shards, Ember Sparks, Stardust, Qubits…).
+  app.post("/api/admin/users/:id/give-dim-currency", requireAdmin, async (req, res) => {
+    try {
+      const userId = Number(req.params.id);
+      const { groupId, amount } = req.body;
+      const group = getDimensionGroup(String(groupId || ""));
+      if (!group || !group.currencyId) return res.status(400).json({ message: "Invalid dimension group" });
+      const amt = Math.max(1, Math.floor(Number(amount) || 0));
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      const exp = { ...(((user as any).upgradeExpirations as Record<string, number>) || {}) };
+      exp[group.currencyId] = (exp[group.currencyId] || 0) + amt;
+      await storage.updateUser(userId, { upgradeExpirations: exp } as any);
+      res.json({ success: true, amount: amt, currency: group.currencyName, newTotal: exp[group.currencyId] });
+    } catch { res.status(500).json({ message: "Failed to give currency" }); }
   });
 
   app.post("/api/admin/users/:id/give-mystery-box", requireAdmin, async (req, res) => {

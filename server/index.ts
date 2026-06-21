@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
+import { ensureFeatureSchema } from "./storage";
 import { createServer } from "http";
 
 const app = express();
@@ -62,7 +63,6 @@ app.use((req, res, next) => {
 (async () => {
   // Make sure feature tables/columns exist (so the live DB self-heals on deploy).
   try {
-    const { ensureFeatureSchema } = await import("./storage");
     await ensureFeatureSchema();
   } catch (e) {
     console.error("ensureFeatureSchema failed (continuing):", e);

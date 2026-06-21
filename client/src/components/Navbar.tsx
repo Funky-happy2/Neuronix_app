@@ -10,12 +10,14 @@ import {
   Snowflake, Orbit, Crown, ArrowLeftRight, Skull, Map,
   Telescope, Mountain, Wind, Hexagon, Footprints, Cpu, Waves, TreePine, Atom,
   TrendingUp, GraduationCap, Calendar, Gift, Radio, Gavel, ScrollText, Brain,
+  Infinity as InfinityIcon, Satellite, Tornado, Microscope, Layers, Heart, Hourglass, Stethoscope, Cog, Anchor,
   type LucideIcon
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useSafety } from "@/hooks/use-safety";
 import { getTitle, getTitleAnimClass, PROFILE_ANIM_CLASSES, NAME_ANIM_CLASSES, FRAME_MINI_STYLES } from "@/lib/titles";
+import { AVATARS, SHOP_AVATARS } from "@/lib/gameData";
 import { useTranslation } from "@/lib/i18n";
 
 const NAV_ITEMS = [
@@ -100,6 +102,24 @@ const AVATAR_ICON_MAP: Record<string, { icon: LucideIcon; gradient: string }> = 
   "avatar-team-champion": { icon: Users, gradient: "from-purple-500 to-violet-700" },
   "avatar-supreme-champion": { icon: Gem, gradient: "from-yellow-400 to-orange-600" },
 };
+
+// Resolve an avatar's icon the SAME way the Profile page does — from the avatar's
+// `icon` field — so the taskbar picture always matches the profile picture.
+const AVATAR_ICON_BY_NAME: Record<string, LucideIcon> = {
+  Rocket, FlaskConical, Bot, Sparkles, Swords, Wand2, Flame, Bird, Diamond, Star,
+  Shield, Crown, Snowflake, Orbit, Skull, Moon, Trophy, Globe, Medal, Gem,
+  Waves, Zap, Cpu, Atom, TreePine, Award, Gamepad2, Heart, Telescope, Mountain,
+  Wind, Sun, Hexagon, Footprints, TrendingUp, GraduationCap, Calendar, RefreshCw,
+  Users, Microscope, Infinity: InfinityIcon, Satellite, Brain, Tornado, Layers, Hourglass, Stethoscope, Cog, Anchor,
+};
+const ALL_AVATAR_DEFS = [...AVATARS, ...SHOP_AVATARS];
+function resolveAvatar(avatarId: string): { Icon: LucideIcon; gradient: string } {
+  const def = ALL_AVATAR_DEFS.find((a) => a.id === avatarId);
+  const mapped = AVATAR_ICON_MAP[avatarId];
+  const Icon = (def && AVATAR_ICON_BY_NAME[def.icon]) || mapped?.icon || Rocket;
+  const gradient = mapped?.gradient || "from-blue-500 to-cyan-500";
+  return { Icon, gradient };
+}
 
 const COIN_STYLE_COLORS: Record<string, { icon: string; text: string; anim?: string }> = {
   "coin-style-diamond": { icon: "text-cyan-400 drop-shadow-sm", text: "text-cyan-500 dark:text-cyan-400", anim: "animate-coin-sparkle" },
@@ -203,7 +223,8 @@ export default function Navbar({ isMuted, onToggleMute }: NavbarProps) {
   const xpNeeded = lvlEnd - lvlStart;
   const xpPercent = xpNeeded > 0 ? Math.min(100, Math.round((xpInLevel / xpNeeded) * 100)) : 0;
 
-  const avatarInfo = AVATAR_ICON_MAP[avatarId] || AVATAR_ICON_MAP["astronaut"];
+  const resolvedAvatar = resolveAvatar(avatarId);
+  const avatarInfo = { icon: resolvedAvatar.Icon, gradient: resolvedAvatar.gradient };
   const AvatarIcon = avatarInfo.icon;
   const { hiddenPaths } = useSafety();
   const visibleNavItems = NAV_ITEMS.filter(item => !hiddenPaths.has(item.path));

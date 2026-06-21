@@ -13,7 +13,7 @@ import {
   Gamepad2, Diamond, ShoppingBag, MapPin, TrendingUp, Coins,
   Square, Circle, Rainbow, Palette, Frame, Eye,
   Telescope, Mountain, Wind, Sun, Hexagon, Footprints, RefreshCw, Users, Pencil, KeyRound,
-  Infinity as InfinityIcon, Satellite, Brain, Tornado, Layers
+  Infinity as InfinityIcon, Satellite, Brain, Tornado, Layers, Hourglass, Stethoscope, Cog, Anchor
 } from "lucide-react";
 import { BADGES, AVATARS, SHOP_AVATARS, getXPForLevel, type AvatarCategory } from "@/lib/gameData";
 import { motion } from "framer-motion";
@@ -49,6 +49,12 @@ const FRAME_STYLES: Record<string, { border: string; shadow: string; animation?:
   "frame-elemental": { border: "ring-[4px] ring-orange-500 rounded-lg", shadow: "shadow-2xl shadow-orange-500/60", animation: "animate-frame-fire" },
   "frame-cosmos": { border: "ring-[4px] ring-indigo-400 rounded-xl", shadow: "shadow-2xl shadow-indigo-400/60", animation: "animate-frame-galaxy" },
   "frame-quantum": { border: "ring-[4px] ring-cyan-400 rounded-xl", shadow: "shadow-2xl shadow-cyan-400/60", animation: "animate-frame-void" },
+  // Dimension-shop frames (bought with group currency)
+  "frame-rift-shard": { border: "ring-[3px] ring-fuchsia-400 rounded-xl", shadow: "shadow-xl shadow-fuchsia-400/50", animation: "animate-frame-galaxy" },
+  "frame-ember-forge": { border: "ring-[3px] ring-orange-400", shadow: "shadow-xl shadow-orange-400/50", animation: "animate-frame-fire" },
+  "frame-starforge": { border: "ring-[3px] ring-sky-300 rounded-xl", shadow: "shadow-xl shadow-sky-300/50", animation: "animate-frame-galaxy" },
+  "frame-qubit-core": { border: "ring-[3px] ring-cyan-300 rounded-xl", shadow: "shadow-xl shadow-cyan-300/50", animation: "animate-frame-ice" },
+  "frame-core-walker": { border: "ring-[4px] ring-purple-500 rounded-xl", shadow: "shadow-2xl shadow-purple-500/60", animation: "animate-frame-galaxy" },
 };
 
 const BORDER_UPGRADE_IDS = ["upgrade-golden-profile", "upgrade-diamond-profile", "upgrade-elite-border"];
@@ -69,8 +75,8 @@ const COIN_STYLE_COLORS: Record<string, { icon: string; text: string }> = {
   "coin-style-toxic": { icon: "text-lime-500", text: "text-lime-600 dark:text-lime-400" },
   "coin-style-nebula": { icon: "text-indigo-600", text: "text-indigo-700 dark:text-indigo-400" },
   "coin-style-supreme-champion": { icon: "text-yellow-400", text: "text-yellow-500 dark:text-yellow-300" },
-  "coin-style-clan-champion": { icon: "text-sky-400", text: "text-sky-500 dark:text-sky-400" },
-  "coin-style-team-champion": { icon: "text-fuchsia-500", text: "text-fuchsia-600 dark:text-fuchsia-400" },
+  "coin-style-clan-champion": { icon: "text-blue-500", text: "text-blue-600 dark:text-blue-400" },
+  "coin-style-team-champion": { icon: "text-violet-500", text: "text-violet-600 dark:text-violet-400" },
 };
 
 const GEM_STYLE_COLORS: Record<string, { icon: string; text: string }> = {
@@ -85,7 +91,7 @@ const GEM_STYLE_COLORS: Record<string, { icon: string; text: string }> = {
   "gem-style-magma": { icon: "text-red-700", text: "text-red-800 dark:text-red-500" },
   "gem-style-supreme-champion": { icon: "text-yellow-400", text: "text-yellow-500 dark:text-yellow-300" },
   "gem-style-clan-champion": { icon: "text-sky-400", text: "text-sky-500 dark:text-sky-400" },
-  "gem-style-team-champion": { icon: "text-fuchsia-500", text: "text-fuchsia-600 dark:text-fuchsia-400" },
+  "gem-style-team-champion": { icon: "text-violet-500", text: "text-violet-600 dark:text-violet-400" },
 };
 
 const AVATAR_ICONS: Record<string, any> = {
@@ -94,7 +100,7 @@ const AVATAR_ICONS: Record<string, any> = {
   Waves, Zap, Cpu, Atom, TreePine, Award, Gamepad2, Heart,
   Telescope, Mountain, Wind, Sun, Hexagon, Footprints, TrendingUp, GraduationCap,
   Calendar, RefreshCw, Users,
-  Microscope, Infinity: InfinityIcon, Satellite, Brain, Tornado, Layers,
+  Microscope, Infinity: InfinityIcon, Satellite, Brain, Tornado, Layers, Hourglass, Stethoscope, Cog, Anchor,
 };
 
 const BADGE_ICONS: Record<string, any> = {
@@ -735,7 +741,9 @@ export default function ProfilePage({
         const ownedFrames = inventory.filter(i => i.startsWith("frame-") || i === "reward-tournament-frame" || BORDER_UPGRADE_IDS.includes(i));
         const ownedCoinStyles = inventory.filter(i => i.startsWith("coin-style-"));
         const ownedGemStyles = inventory.filter(i => i.startsWith("gem-style-"));
-        const hasCustomization = ownedFrames.length > 0 || ownedCoinStyles.length > 0 || ownedGemStyles.length > 0;
+        const ownedProfileAnims = inventory.filter(i => i.startsWith("profile-anim-"));
+        const ownedNameAnims = inventory.filter(i => i.startsWith("name-anim-"));
+        const hasCustomization = ownedFrames.length > 0 || ownedCoinStyles.length > 0 || ownedGemStyles.length > 0 || ownedProfileAnims.length > 0 || ownedNameAnims.length > 0;
 
         if (!hasCustomization) return null;
         return (
@@ -815,6 +823,53 @@ export default function ProfilePage({
                           <Check className={`w-3 h-3 shrink-0 ${isActive ? "opacity-100" : "opacity-0"}`} />
                           <span className="flex-1">{g.replace("gem-style-", "").replace(/-/g, " ").replace(/\b\w/g, ch => ch.toUpperCase())}</span>
                           {styleInfo && <Gem className={`w-3.5 h-3.5 ${styleInfo.icon}`} />}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Card>
+              )}
+              {ownedProfileAnims.length > 0 && (
+                <Card className="p-4 border-border">
+                  <h3 className="font-bold text-sm mb-2 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-cyan-500" /> Profile Animations
+                  </h3>
+                  <div className="space-y-1.5">
+                    {ownedProfileAnims.map(a => {
+                      const isActive = equippedProfileAnim === a;
+                      return (
+                        <div
+                          key={a}
+                          className={`text-xs p-2 rounded-md cursor-pointer flex items-center gap-2 transition-all ${isActive ? "bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 font-bold" : "bg-muted/50 hover:bg-muted"}`}
+                          onClick={() => equipCosmeticMutation.mutate({ itemId: a, category: "profile_animation" })}
+                          data-testid={`profile-anim-${a}`}
+                        >
+                          <Check className={`w-3 h-3 shrink-0 ${isActive ? "opacity-100" : "opacity-0"}`} />
+                          <span className="flex-1">{a.replace("profile-anim-", "").replace(/-/g, " ").replace(/\b\w/g, ch => ch.toUpperCase())}</span>
+                          <div className={`w-4 h-4 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 ${PROFILE_ANIM_CLASSES[a] || ""}`} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Card>
+              )}
+              {ownedNameAnims.length > 0 && (
+                <Card className="p-4 border-border">
+                  <h3 className="font-bold text-sm mb-2 flex items-center gap-1.5">
+                    <Pencil className="w-4 h-4 text-emerald-500" /> Name Animations
+                  </h3>
+                  <div className="space-y-1.5">
+                    {ownedNameAnims.map(a => {
+                      const isActive = equippedNameAnim === a;
+                      return (
+                        <div
+                          key={a}
+                          className={`text-xs p-2 rounded-md cursor-pointer flex items-center gap-2 transition-all ${isActive ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold" : "bg-muted/50 hover:bg-muted"}`}
+                          onClick={() => equipCosmeticMutation.mutate({ itemId: a, category: "name_animation" })}
+                          data-testid={`name-anim-${a}`}
+                        >
+                          <Check className={`w-3 h-3 shrink-0 ${isActive ? "opacity-100" : "opacity-0"}`} />
+                          <span className={`flex-1 ${NAME_ANIM_CLASSES[a] || ""}`}>{a.replace("name-anim-", "").replace(/-/g, " ").replace(/\b\w/g, ch => ch.toUpperCase())}</span>
                         </div>
                       );
                     })}

@@ -880,6 +880,10 @@ export default function DimensionsPage({ onAddXP, onAddCoins, onEarnBadge, yearL
         const groupDims = group.dimensionIds.map(id => DIMENSIONS.find(d => d.id === id)!).filter(Boolean);
         const collected = group.stones.filter(s => inventory.includes(s.id)).length;
         const setComplete = group.stones.length > 0 && collected === group.stones.length;
+        // Core group has no stones — its completion is tracked by the 4 dimension badges.
+        const coreDone = groupDims.filter(d => d.badgeId && userBadges.includes(d.badgeId)).length;
+        const coreComplete = !!group.grandReward && (inventory.includes(group.grandReward.completeFlag) || coreDone >= groupDims.length);
+        const gr = group.grandReward;
         return (
           <section key={group.id} className="mb-10">
             <div className="flex items-center gap-3 mb-1">
@@ -902,6 +906,7 @@ export default function DimensionsPage({ onAddXP, onAddCoins, onEarnBadge, yearL
                     </Badge>
                   )}
                 </div>
+                <Progress value={(collected / group.stones.length) * 100} className="h-2 mb-3" />
                 <div className="flex items-center justify-center gap-3 flex-wrap">
                   {group.stones.map((s: DimensionStone) => {
                     const owned = inventory.includes(s.id);
@@ -926,6 +931,40 @@ export default function DimensionsPage({ onAddXP, onAddCoins, onEarnBadge, yearL
                 ) : group.grandReward && (
                   <p className="mt-3 text-center text-xs text-muted-foreground">
                     Collect all {group.stones.length} stones to forge <span className="font-bold text-foreground">{group.grandReward.title}</span> — permanent buffs, a legendary avatar &amp; border, and a {group.grandReward.coins.toLocaleString()} Neuro payout.
+                  </p>
+                )}
+              </Card>
+            )}
+
+            {/* Core mastery tracker (no stones — tracked by the 4 dimension badges) */}
+            {group.stones.length === 0 && gr && (
+              <Card className="p-4 mb-5 border-2 border-purple-500/30 bg-gradient-to-br from-purple-500/5 to-cyan-500/5" data-testid="core-tracker">
+                <div className="flex items-center gap-2 font-black mb-2">
+                  <Hexagon className="w-5 h-5 text-purple-500" /> Core Mastery
+                  <span className="text-muted-foreground font-bold text-sm">{coreDone}/{groupDims.length} completed</span>
+                </div>
+                <Progress value={(coreDone / Math.max(1, groupDims.length)) * 100} className="h-2 mb-3" />
+                <div className="flex items-center justify-center gap-4 flex-wrap">
+                  {groupDims.map((d) => {
+                    const Icon = DIM_ICONS[d.icon] || Swords;
+                    const done = d.badgeId ? userBadges.includes(d.badgeId) : false;
+                    return (
+                      <div key={d.id} className="flex flex-col items-center gap-1" title={d.name}>
+                        <div className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${done ? "bg-purple-500/20 text-purple-500 shadow-[0_0_14px_2px_rgba(168,85,247,0.4)]" : "bg-muted text-muted-foreground grayscale opacity-40 scale-90"}`}>
+                          {done ? <CheckCircle className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
+                        </div>
+                        <span className="text-[9px] font-bold text-muted-foreground">{d.name.replace(/^The /, "")}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {coreComplete ? (
+                  <div className="mt-3 text-center text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-cyan-500 flex items-center justify-center gap-1">
+                    <TrendingUp className="w-4 h-4 text-purple-500" /> {gr.title.toUpperCase()} FORGED — +{gr.buffXpPct}% XP & +{gr.buffCoinPct}% coins!
+                  </div>
+                ) : (
+                  <p className="mt-3 text-center text-xs text-muted-foreground">
+                    Beat all {groupDims.length} Core Dimensions to forge <span className="font-bold text-foreground">{gr.title}</span> — a permanent +{gr.buffXpPct}% XP / +{gr.buffCoinPct}% coin buff, plus a legendary avatar &amp; border.
                   </p>
                 )}
               </Card>

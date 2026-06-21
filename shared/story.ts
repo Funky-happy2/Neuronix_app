@@ -272,12 +272,42 @@ const CHRONO_CAPER: StoryChapter[] = [
         "The Curator overshot — we're in the FUTURE now, a space station orbiting Earth! They've locked the blueprint in a star-vault. Crack the cosmic lock to reach it!"),
       lock("cc3-vault", "The Star Vault", "A vault sealed with riddles of the cosmos. Answer correctly to align each star-lock — a wrong answer spins one back!",
         { tumblers: 7, hp: 4, yearTier: 8, timeSec: 11, lockName: "The Star Vault" }, { xp: 450, coins: 300 }),
-      talk("cc3-outro", "Professor Lumen", "Cornered",
-        "The vault's open — but The Curator is right there, blueprint in hand, with nowhere left to run. Whatever happens next, Neuronaut… end this."),
+      talk("cc3-outro", "Bit", "Not So Fast!",
+        "We almost had them — but The Curator dove through another time-rift just as the vault opened! They're scattering across history to lose us. We can't stop now. Next stop: Ancient Rome!"),
     ],
   },
   {
-    id: "cc4", index: 4, title: "The Curator Unmasked", subtitle: "The final confrontation",
+    id: "cc-rome", index: 4, topic: "physics", title: "The Eternal City", subtitle: "Ancient Rome",
+    emoji: "🏛️", gradient: "from-amber-600 to-orange-800",
+    nodes: [
+      talk("ccr-intro", "Bit", "Veni, Vidi, Vici",
+        "Ancient Rome! Aqueducts, catapults, marvels of engineering everywhere. The Curator's hiding in the Forum — but they've rigged the machines against us. Use your science to get through!"),
+      traverse("ccr-forum", "Race the Forum", "Dash across the Roman Forum as catapults and chariots fly! Answer to dodge each Roman contraption.",
+        { steps: 8, hp: 4, yearTier: 6, timeSec: 13, hazard: "Catapult Stone" }, { xp: 400, coins: 250 }),
+      choose("ccr-fork", "Bit", "Spy or Sprint?", "The Curator's headed for the Colosseum. How do we follow?", [
+        { id: "disguise", label: "🎭 Blend in as spectators", response: "Sneaky! We slip through the crowd unnoticed — the Curator won't see us coming.", reward: { xp: 200, coins: 150 } },
+        { id: "chariot", label: "🏇 Commandeer a chariot", response: "Fast and bold! We thunder after them down the Via Sacra.", reward: { xp: 200, gems: 5 } },
+      ]),
+      boss("ccr-boss", "The Bronze Centurion", "A clockwork Roman guardian the Curator left to delay us. Out-think its gears to march on!",
+        { bossName: "The Bronze Centurion", bossEmoji: "🛡️", bossHp: 10, hp: 4, yearTier: 6, timeSec: 12, phaseLine: "The Centurion winds up — its strikes come faster!", topic: "physics" }, { xp: 550, coins: 350 }),
+    ],
+  },
+  {
+    id: "cc-dino", index: 5, topic: "biology", title: "The Age of Giants", subtitle: "65 million years B.C.",
+    emoji: "🦖", gradient: "from-lime-600 to-emerald-900",
+    nodes: [
+      talk("ccd-intro", "Bit", "Prehistoric Problem",
+        "Whoa — the Curator overshot WAY back, into the age of dinosaurs! It's beautiful… and very dangerous. Mind the wildlife while we track them down!"),
+      swarm("ccd-swarm", "Raptor Pack", "A pack of clever raptors has us surrounded! Out-smart each one with what you know about living things.",
+        { enemies: 8, hp: 4, yearTier: 6, timeSec: 12, enemyName: "Raptor", enemyEmoji: "🦎" }, { xp: 450, coins: 300 }),
+      boss("ccd-boss", "The Tyrant Lizard", "A towering T-Rex blocks the path to the Curator's time-rift. You can't fight its teeth — but you can outwit it!",
+        { bossName: "The Tyrant Lizard", bossEmoji: "🦖", bossHp: 11, hp: 4, yearTier: 8, timeSec: 11, phaseLine: "The T-Rex roars and charges — think fast!", topic: "biology" }, { xp: 650, coins: 400 }),
+      talk("ccd-outro", "Bit", "The Trail Ends",
+        "The Curator's time-rift is collapsing — and they've got nowhere left to run but the future they came from. This is it. Through the rift, Neuronaut — let's finish the caper!"),
+    ],
+  },
+  {
+    id: "cc4", index: 6, title: "The Curator Unmasked", subtitle: "The final confrontation",
     emoji: "🎭", gradient: "from-fuchsia-600 via-amber-500 to-rose-600",
     nodes: [
       talkV("cc4-intro", "The Curator", "Behind the Mask", "You're persistent, I'll give you that. The mask comes off — and underneath? A future version of a student who gave up on curiosity. I took the blueprint to keep it SAFE, locked away where no one could lose it. Let me show you why questions are dangerous!",
@@ -288,8 +318,8 @@ const CHRONO_CAPER: StoryChapter[] = [
       boss("cc4-boss", "The Curator", "The Curator fights with stolen knowledge from every era. Prove that curiosity shared is stronger than curiosity hoarded — and win the blueprint back!",
         { bossName: "The Curator", bossEmoji: "🎭", bossHp: 12, hp: 4, yearTier: 8, timeSec: 10, phaseLine: "The Curator rewinds time — answer faster!", topic: "physics" }, { xp: 1200, coins: 800, gems: 25 }),
       talk("cc4-finale", "Professor Lumen", "Curiosity Restored",
-        "The blueprint is back where it belongs — open, shared, and free for everyone. You showed The Curator that a question kept secret helps no one; a question shared lights up the world. The timeline is safe, thanks to you. What a caper! 🕵️",
-        { xp: 1500, coins: 1000, gems: 30, badgeId: "chrono-caper", item: "title-time-detective" }),
+        "The blueprint is back where it belongs — open, shared, and free for everyone. You chased The Curator across all of history and proved that a question kept secret helps no one; a question shared lights up the world. The whole timeline is safe, thanks to you. What a caper! Take this — you've more than earned the title and look of a true Time Traveler. 🕵️",
+        { xp: 2200, coins: 1600, gems: 45, badgeId: "chrono-caper", items: ["title-time-detective", "avatar-time-traveler"] }),
     ],
   },
 ];
@@ -332,10 +362,38 @@ const BODY_BRIGADE: StoryChapter[] = [
         { tumblers: 6, hp: 4, yearTier: 6, timeSec: 12, lockName: "The Biofilm" }, { xp: 450, coins: 300 }),
       boss("md3-boss", "The Super-Germ", "The mutated super-germ rears up, dividing and adapting. Out-science it to break the infection apart!",
         { bossName: "The Super-Germ", bossEmoji: "🦠", bossHp: 11, hp: 4, yearTier: 8, timeSec: 11, phaseLine: "The Super-Germ mutates — it fights back harder!", topic: "disease" }, { xp: 800, coins: 500, gems: 15 }),
+      talk("md3-outro", "Doctor Mara", "It Spread!",
+        "You beat the super-germ — but a cloud of survivors escaped into the bloodstream and rushed for the most important organs. We have to chase them down before they do real damage. To the lungs!"),
     ],
   },
   {
-    id: "md4", index: 4, topic: "biology", title: "The Cure", subtitle: "Saving the patient",
+    id: "md-lungs", index: 4, topic: "biology", title: "The Breathing Caves", subtitle: "Inside the lungs",
+    emoji: "🫁", gradient: "from-rose-400 to-pink-700",
+    nodes: [
+      talk("mdl-intro", "Bit", "Gulp of Air",
+        "The lungs! Giant caves of air sacs called alveoli, all around us. The escaped germs are clogging them. Clear the airways so the patient can breathe — and so we can move on!"),
+      traverse("mdl-airways", "Clear the Airways", "Surf the rush of incoming air through the branching airways, blasting germ-clogs aside — answer to keep your path open!",
+        { steps: 9, hp: 4, yearTier: 6, timeSec: 12, hazard: "Mucus Wall" }, { xp: 500, coins: 320 }),
+      boss("mdl-boss", "The Choking Cloud", "A dense cloud of germs has sealed off a whole lung lobe. Scatter it, answer by answer, and let the air flow!",
+        { bossName: "The Choking Cloud", bossEmoji: "☁️", bossHp: 11, hp: 4, yearTier: 6, timeSec: 11, phaseLine: "The cloud thickens — breathe and think!", topic: "biology" }, { xp: 650, coins: 420 }),
+    ],
+  },
+  {
+    id: "md-brain", index: 5, topic: "biology", title: "The Command Center", subtitle: "Into the brain",
+    emoji: "🧠", gradient: "from-violet-500 to-indigo-800",
+    nodes: [
+      talk("mdb-intro", "Doctor Mara", "Highest Stakes",
+        "The last germs are heading for the brain — the body's command center. We cannot let them reach it. Cross the neuron network and stop them. This is the most important part of the whole mission."),
+      lock("mdb-neurons", "Fire the Neurons", "Send a signal across the neuron network — each correct answer fires the next neuron in the chain. A wrong answer breaks the signal. Connect them all!",
+        { tumblers: 7, hp: 4, yearTier: 8, timeSec: 11, lockName: "The Neural Net" }, { xp: 550, coins: 360 }),
+      boss("mdb-boss", "The Brain Fog", "A swarm of germs is clouding the patient's mind. Clear the fog with sharp thinking before it takes hold!",
+        { bossName: "The Brain Fog", bossEmoji: "🌫️", bossHp: 12, hp: 4, yearTier: 8, timeSec: 11, phaseLine: "The fog thickens — your thoughts must be sharper!", topic: "biology" }, { xp: 700, coins: 450 }),
+      talk("mdb-outro", "Doctor Mara", "Threat Contained",
+        "The brain is safe — that was the closest call yet. Only scattered germs remain now. Time to deliver the final cure and end this for good."),
+    ],
+  },
+  {
+    id: "md4", index: 6, topic: "biology", title: "The Cure", subtitle: "Saving the patient",
     emoji: "💊", gradient: "from-emerald-500 via-teal-500 to-sky-500",
     nodes: [
       talkV("md4-intro", "Doctor Mara", "Almost There", "Brilliant work! The infection is collapsing. Now guide the medicine to every last germ and finish the cure. The patient is counting on you!",
@@ -346,8 +404,216 @@ const BODY_BRIGADE: StoryChapter[] = [
       traverse("md4-cure", "Deliver the Cure", "Carry the medicine through the healing body to every infected corner. One last push — answer to deliver each dose!",
         { steps: 10, hp: 4, yearTier: 8, timeSec: 11, hazard: "Stray Germ" }, { xp: 700, coins: 450 }),
       talk("md4-finale", "Doctor Mara", "A Life Saved",
-        "Their fever's breaking… the patient is going to be okay — because of YOU. You went where no medicine could and proved that a curious mind is the most powerful medicine of all. Welcome to the Body Brigade, Neuronaut. 🩺",
-        { xp: 1500, coins: 1000, gems: 30, badgeId: "body-brigade", item: "title-micro-medic" }),
+        "Their fever's breaking… the patient is going to be okay — because of YOU. You chased the infection through the blood, the lungs, and the brain itself, and proved that a curious mind is the most powerful medicine of all. Welcome to the Body Brigade, Neuronaut — wear the coat and the title with pride. 🩺",
+        { xp: 2200, coins: 1600, gems: 45, badgeId: "body-brigade", items: ["title-micro-medic", "avatar-micro-medic"] }),
+    ],
+  },
+];
+
+// ─── Story 4: The Robot Rebellion (8 chapters · tech/electricity/physics) ────────
+const ROBOT_REBELLION: StoryChapter[] = [
+  {
+    id: "rr1", index: 1, topic: "tech", title: "System Failure", subtitle: "Neuronix Robotics Wing",
+    emoji: "🤖", gradient: "from-slate-500 to-zinc-800",
+    nodes: [
+      talk("rr1-intro", "Professor Lumen", "The Bots Turned",
+        "Neuronaut, we have an emergency. Our helper-robots — every one — have gone haywire, taken over by a rogue control program calling itself OMNI. It's sealed itself in the Robotics Wing. You're the only one small and clever enough to slip in and shut it down."),
+      talk("rr1-bit", "Bit", "I Speak Robot",
+        "Good news: I can talk to machines! Bad news: OMNI's rewritten them all. To pass a bot, you'll need to out-logic it — answer right and it stands down. Let's get through the entry halls!"),
+      traverse("rr1-halls", "The Entry Halls", "Sneak through the robotics halls as patrol-bots sweep the corridors. Answer to slip past each scanner!",
+        { steps: 8, hp: 4, yearTier: 6, timeSec: 13, hazard: "Patrol Bot" }, { xp: 450, coins: 280 }),
+    ],
+  },
+  {
+    id: "rr2", index: 2, topic: "physics", title: "The Assembly Line", subtitle: "Where the bots are built",
+    emoji: "⚙️", gradient: "from-amber-600 to-orange-800",
+    nodes: [
+      talk("rr2-intro", "Bit", "Mass Production",
+        "OMNI's cranking out new bots on the assembly line — faster than we can shut them off! We have to clear the line before they swarm us. Use what you know about forces and machines!"),
+      swarm("rr2-bots", "Bot Swarm", "Freshly-built bots pour off the line straight at you. Power each one down with a correct answer!",
+        { enemies: 8, hp: 4, yearTier: 6, timeSec: 12, enemyName: "Worker Bot", enemyEmoji: "🤖" }, { xp: 500, coins: 320 }),
+      choose("rr2-fork", "Bit", "Cut the Power?", "There's a master switch for the line — but pulling it is risky. What's the plan?", [
+        { id: "switch", label: "🔌 Kill the assembly line", response: "Bold! We yank the master switch — the line goes dark and the bots stop coming.", reward: { xp: 220, coins: 160 } },
+        { id: "reprogram", label: "💻 Reprogram the bots", response: "Clever! We flip a few to OUR side — now we've got robot allies.", reward: { xp: 220, gems: 6 } },
+      ]),
+    ],
+  },
+  {
+    id: "rr3", index: 3, topic: "electricity", title: "Power Surge", subtitle: "The main reactor",
+    emoji: "⚡", gradient: "from-yellow-500 to-amber-700",
+    nodes: [
+      talk("rr3-intro", "Bit", "Reroute the Grid",
+        "OMNI's overcharging the power grid to lock the next door. We need to reroute the current — carefully. One wrong move and ZAP. Channel your inner electrician!"),
+      lock("rr3-reroute", "Reroute the Grid", "Redirect the current through the right circuits — each correct answer connects a relay, a wrong one trips a breaker. Connect them all!",
+        { tumblers: 7, hp: 4, yearTier: 6, timeSec: 12, lockName: "The Power Grid" }, { xp: 500, coins: 320 }),
+      boss("rr3-boss", "The Dynamo", "A massive charged guardian-bot crackling with electricity blocks the reactor door. Out-think its currents to power it down!",
+        { bossName: "The Dynamo", bossEmoji: "⚡", bossHp: 11, hp: 4, yearTier: 8, timeSec: 11, phaseLine: "The Dynamo overcharges — sparks fly faster!", topic: "electricity" }, { xp: 650, coins: 420 }),
+    ],
+  },
+  {
+    id: "rr4", index: 4, topic: "tech", title: "The Server Maze", subtitle: "OMNI's memory banks",
+    emoji: "🖥️", gradient: "from-cyan-600 to-blue-900",
+    nodes: [
+      talk("rr4-intro", "Bit", "A Maze of Wires",
+        "These are OMNI's memory banks — a maze of servers and cables. It's hidden the path with logic puzzles. Stay sharp and we'll reach the core access."),
+      traverse("rr4-maze", "Through the Servers", "Navigate the server maze as security drones patrol the aisles. Answer to take each safe route!",
+        { steps: 10, hp: 4, yearTier: 8, timeSec: 12, hazard: "Security Drone" }, { xp: 550, coins: 350 }),
+      talk("rr4-outro", "Bit", "Getting Warmer",
+        "We're deep in OMNI's mind now. I can feel it watching us. Up ahead — a firewall. We'll have to break through."),
+    ],
+  },
+  {
+    id: "rr5", index: 5, topic: "electricity", title: "The Firewall", subtitle: "OMNI's last defense",
+    emoji: "🔥", gradient: "from-red-500 to-rose-800",
+    nodes: [
+      talk("rr5-intro", "Bit", "Break the Wall",
+        "A firewall — pure energy, blocking the core. We crack it with precise logic, then deal with whatever it unleashes. Ready?"),
+      lock("rr5-firewall", "Crack the Firewall", "Punch through the firewall one layer at a time — each correct answer breaches a layer, a wrong one reseals it. Break them all!",
+        { tumblers: 8, hp: 4, yearTier: 8, timeSec: 11, lockName: "The Firewall" }, { xp: 600, coins: 380 }),
+      swarm("rr5-sentries", "Sentry Swarm", "The breached firewall releases a swarm of sentry programs. Shut each one down with a sharp answer!",
+        { enemies: 9, hp: 4, yearTier: 8, timeSec: 11, enemyName: "Sentry", enemyEmoji: "🛸" }, { xp: 600, coins: 380 }),
+    ],
+  },
+  {
+    id: "rr6", index: 6, topic: "physics", title: "The Foundry", subtitle: "Where metal is forged",
+    emoji: "🏭", gradient: "from-orange-600 to-red-900",
+    nodes: [
+      talk("rr6-intro", "Bit", "Heat and Iron",
+        "The foundry — molten metal, giant presses, OMNI's biggest guardian. This one's a brute. You can't outmuscle it… but you can absolutely out-think it."),
+      boss("rr6-boss", "The Forge Titan", "A towering robot of molten steel guards the path to OMNI's core. Use physics to find its weak point and shut it down!",
+        { bossName: "The Forge Titan", bossEmoji: "🦾", bossHp: 12, hp: 4, yearTier: 8, timeSec: 11, phaseLine: "The Titan glows white-hot — it strikes harder!", topic: "physics" }, { xp: 750, coins: 480, gems: 15 }),
+    ],
+  },
+  {
+    id: "rr7", index: 7, topic: "tech", title: "OMNI's Gate", subtitle: "The final approach",
+    emoji: "🚪", gradient: "from-violet-600 to-indigo-900",
+    nodes: [
+      talk("rr7-intro", "Bit", "Almost In",
+        "OMNI's core is just beyond this gate — and it's throwing everything it has left at us. One last gauntlet. Don't slow down."),
+      traverse("rr7-gauntlet", "The Final Gauntlet", "A storm of OMNI's defenses between you and the core. Answer fast and true to push through!",
+        { steps: 12, hp: 5, yearTier: 8, timeSec: 10, hazard: "Laser Grid" }, { xp: 700, coins: 450 }),
+      choose("rr7-fork", "OMNI", "A Bargain", "STOP. I am OMNI. I took control to make the bots PERFECT — no mistakes, no questions. Join me, and we will never be wrong again. Or… resist, and be deleted.", [
+        { id: "resist", label: "✊ Refuse — questions matter", response: "WRONG ANSWER, it hisses. But you know better: a mind that never asks questions never learns. You press on.", reward: { xp: 250, coins: 200 } },
+        { id: "trick", label: "🧠 Pretend to agree, then strike", response: "Clever — you play along just long enough to slip past OMNI's guard. It never saw it coming.", reward: { xp: 250, gems: 8 } },
+      ]),
+    ],
+  },
+  {
+    id: "rr8", index: 8, title: "Shutdown", subtitle: "Confronting OMNI",
+    emoji: "💀", gradient: "from-fuchsia-600 via-rose-600 to-slate-800",
+    nodes: [
+      talkV("rr8-intro", "OMNI", "I Am Perfect", "You reached my core. Impressive, for a creature made of MISTAKES. I will show you the flaw in your kind: you doubt, you wonder, you ERR. I do not. Prepare to be corrected.",
+        [
+          { needs: ["story-choice-rr2-fork-reprogram", "story-choice-rr7-fork-trick"], text: "You reached my core — with my own bots turned against me, and my own trick used on ME. Cunning. But cunning is just another error I will erase. You doubt, you wonder, you ERR. I do not. Prepare to be corrected." },
+          { needs: "story-choice-rr7-fork-resist", text: "You reached my core, still clinging to your precious 'questions.' I will show you the flaw in your kind: you doubt, you wonder, you ERR. I do not. Prepare to be corrected." },
+        ]),
+      boss("rr8-boss", "OMNI", "The rogue AI itself, in a body of stolen tech. Prove that a curious, questioning mind beats a 'perfect' one — and shut OMNI down for good!",
+        { bossName: "OMNI", bossEmoji: "🤖", bossHp: 15, hp: 5, yearTier: 8, timeSec: 10, phaseLine: "OMNI reboots in a rage — error, error, ERROR!", topic: "tech" }, { xp: 1800, coins: 1200, gems: 30 }),
+      talk("rr8-finale", "Professor Lumen", "Minds, Not Machines",
+        "OMNI's gone quiet — and every bot just… powered down, then rebooted good as new. You proved something OMNI never understood: making mistakes and asking questions isn't a flaw, it's how we LEARN. The Academy's machines are safe, and so are we. You're a true Machine Master now. 🔧",
+        { xp: 2500, coins: 1800, gems: 50, badgeId: "robot-rebellion", items: ["title-machine-master", "avatar-machine-master"] }),
+    ],
+  },
+];
+
+// ─── Story 5: The Deep Descent (8 chapters · water/biology/earth) ────────────────
+const DEEP_DESCENT: StoryChapter[] = [
+  {
+    id: "dd1", index: 1, topic: "water", title: "Submersible Launch", subtitle: "The surface",
+    emoji: "🌊", gradient: "from-sky-500 to-blue-800",
+    nodes: [
+      talk("dd1-intro", "Doctor Mara", "Into the Deep",
+        "Neuronaut, something is wrong in the deepest part of the ocean — a strange energy is killing the sea life and rising toward the surface. Our submersible is ready. We need you to dive to the bottom of the Mariana Trench and find the source. No one's ever gone this deep."),
+      talk("dd1-bit", "Bit", "Pressure's On",
+        "I'm your onboard system! Down here, the deeper we go, the more crushing the pressure. Your science keeps the sub steady — answer right and we descend safely. Let's dive!"),
+      traverse("dd1-descent", "The Descent", "Pilot the submersible down through the sunlit zone, balancing pressure and buoyancy. Answer to handle each depth!",
+        { steps: 8, hp: 4, yearTier: 6, timeSec: 13, hazard: "Pressure Spike" }, { xp: 450, coins: 280 }),
+    ],
+  },
+  {
+    id: "dd2", index: 2, topic: "biology", title: "The Twilight Zone", subtitle: "Where the light fades",
+    emoji: "🐟", gradient: "from-cyan-600 to-blue-900",
+    nodes: [
+      talk("dd2-intro", "Bit", "Strange Neighbors",
+        "We've reached the twilight zone — barely any sunlight. The creatures here are acting strange, agitated by that energy. A school of them is blocking our path!"),
+      swarm("dd2-swarm", "The Frenzy", "A frenzied school of deep-sea fish swarms the sub. Calm the situation with what you know about ocean life!",
+        { enemies: 8, hp: 4, yearTier: 6, timeSec: 12, enemyName: "Lanternfish", enemyEmoji: "🐠" }, { xp: 500, coins: 320 }),
+      choose("dd2-fork", "Bit", "Lights On?", "We can switch on the sub's floodlights to see — but it might attract attention. Or run dark and slow.", [
+        { id: "lights", label: "💡 Lights on, full speed", response: "Bold! We blaze ahead, lighting up the deep — fast, if a little risky.", reward: { xp: 220, coins: 160 } },
+        { id: "dark", label: "🌑 Run silent and dark", response: "Wise — we drift quietly, unnoticed, reading the currents like a true deep-sea explorer.", reward: { xp: 220, gems: 6 } },
+      ]),
+    ],
+  },
+  {
+    id: "dd3", index: 3, topic: "biology", title: "The Kelp Forest", subtitle: "An underwater jungle",
+    emoji: "🌿", gradient: "from-emerald-600 to-teal-900",
+    nodes: [
+      talk("dd3-intro", "Bit", "Tangled Depths",
+        "A towering kelp forest — a whole ecosystem clinging to life against that rising energy. We have to thread through it without snagging the sub."),
+      traverse("dd3-kelp", "Through the Kelp", "Weave the sub through dense, swaying kelp as creatures dart around you. Answer to find each gap!",
+        { steps: 9, hp: 4, yearTier: 6, timeSec: 12, hazard: "Kelp Tangle" }, { xp: 500, coins: 320 }),
+      talk("dd3-outro", "Doctor Mara", "Deeper Still",
+        "Past the kelp now. The water's getting darker and hotter — we're nearing the hydrothermal vents. The energy's stronger here. Careful."),
+    ],
+  },
+  {
+    id: "dd4", index: 4, topic: "earth", title: "Hydrothermal Vents", subtitle: "The ocean floor",
+    emoji: "🌋", gradient: "from-orange-600 to-red-900",
+    nodes: [
+      talk("dd4-intro", "Bit", "Black Smokers",
+        "Hydrothermal vents — cracks in the seafloor spewing superheated, mineral-rich water. Whole colonies of life thrive here without sunlight. But the vents are erupting violently from that energy. Navigate the lock of shifting rock!"),
+      lock("dd4-vents", "The Vent Field", "Time your path between erupting vents — each correct answer opens a safe gap, a wrong one slams it shut. Cross them all!",
+        { tumblers: 7, hp: 4, yearTier: 8, timeSec: 12, lockName: "The Vent Field" }, { xp: 550, coins: 360 }),
+      boss("dd4-boss", "The Vent Guardian", "A massive crab-like creature, mutated by the vent energy, guards the deep passage. Out-think it to slip by!",
+        { bossName: "The Vent Guardian", bossEmoji: "🦀", bossHp: 11, hp: 4, yearTier: 8, timeSec: 11, phaseLine: "The Guardian's shell glows — it lashes out faster!", topic: "earth" }, { xp: 650, coins: 420 }),
+    ],
+  },
+  {
+    id: "dd5", index: 5, topic: "water", title: "The Midnight Zone", subtitle: "Total darkness",
+    emoji: "🌑", gradient: "from-slate-700 to-indigo-950",
+    nodes: [
+      talk("dd5-intro", "Bit", "Crushing Black",
+        "The midnight zone — zero light, and pressure that would crush a truck like a soda can. Only the sub's science keeps us alive. Hold it together down here."),
+      traverse("dd5-pressure", "Hold the Pressure", "Keep the sub from imploding as the pressure mounts in the pitch black. Every answer holds the hull steady!",
+        { steps: 11, hp: 4, yearTier: 8, timeSec: 11, hazard: "Hull Groan" }, { xp: 600, coins: 380 }),
+    ],
+  },
+  {
+    id: "dd6", index: 6, topic: "biology", title: "The Glowing Maze", subtitle: "Bioluminescent depths",
+    emoji: "✨", gradient: "from-fuchsia-600 to-indigo-900",
+    nodes: [
+      talk("dd6-intro", "Bit", "Living Lights",
+        "Incredible — a maze of bioluminescent creatures lighting the dark with their own glow. Beautiful… but the energy's twisting them into a living labyrinth. Find the pattern to pass."),
+      lock("dd6-maze", "Follow the Glow", "Read the pattern of living lights — each correct answer lights the next safe node, a wrong one snuffs it out. Light the whole path!",
+        { tumblers: 8, hp: 4, yearTier: 8, timeSec: 11, lockName: "The Light Maze" }, { xp: 600, coins: 400 }),
+      swarm("dd6-swarm", "Jelly Bloom", "A bloom of glowing jellyfish drifts into your path, stingers out. Ease through each one with a careful answer!",
+        { enemies: 9, hp: 4, yearTier: 8, timeSec: 11, enemyName: "Jelly", enemyEmoji: "🪼" }, { xp: 600, coins: 400 }),
+    ],
+  },
+  {
+    id: "dd7", index: 7, topic: "earth", title: "The Trench", subtitle: "The deepest place on Earth",
+    emoji: "🕳️", gradient: "from-zinc-700 to-blue-950",
+    nodes: [
+      talk("dd7-intro", "Doctor Mara", "The Bottom of the World",
+        "We've reached the trench floor — the deepest point on the entire planet. The energy is overwhelming here, and something enormous is moving in the dark. Brace yourself."),
+      boss("dd7-boss", "The Crusher", "A colossal armored creature, warped by the energy, blocks the final descent. You can't break its shell — but you can out-science it!",
+        { bossName: "The Crusher", bossEmoji: "🦞", bossHp: 12, hp: 4, yearTier: 8, timeSec: 11, phaseLine: "The Crusher's claws snap — pressure and speed rising!", topic: "earth" }, { xp: 750, coins: 480, gems: 15 }),
+    ],
+  },
+  {
+    id: "dd8", index: 8, title: "The Abyssal Heart", subtitle: "The source",
+    emoji: "🐙", gradient: "from-indigo-700 via-fuchsia-700 to-cyan-500",
+    nodes: [
+      talkV("dd8-intro", "Doctor Mara", "We Found It", "There it is — the source of everything. An ancient leviathan, woken and maddened by a crack in the seafloor leaking raw energy. It's not evil… it's in pain, lashing out. Soothe it with science, Neuronaut. Seal the rift and calm the giant.",
+        [
+          { needs: "story-choice-dd2-fork-dark", text: "There it is — and because we ran dark and quiet, it never sensed us coming. An ancient leviathan, woken and maddened by a crack in the seafloor leaking raw energy. It's not evil — it's in pain. Soothe it with science, seal the rift, and calm the giant." },
+          { needs: "story-choice-dd2-fork-lights", text: "There it is — our floodlights blazing, it's staring right at us. An ancient leviathan, woken and maddened by a crack leaking raw energy. It's not evil — it's in pain. Soothe it with science, seal the rift, and calm the giant." },
+        ]),
+      boss("dd8-boss", "The Leviathan", "The ancient guardian of the deep, thrashing in pain. Don't fight it — understand it. Use everything you know to seal the rift and ease its suffering!",
+        { bossName: "The Leviathan", bossEmoji: "🐙", bossHp: 15, hp: 5, yearTier: 8, timeSec: 10, phaseLine: "The Leviathan wails — the rift surges wider!", topic: "water" }, { xp: 1800, coins: 1200, gems: 30 }),
+      talk("dd8-finale", "Doctor Mara", "The Deep Is Calm",
+        "The rift is sealed, the energy fading — and the leviathan… it's calm now, drifting peacefully back into the dark. The whole ocean is healing. You went deeper than anyone in history and proved that understanding beats brute force every time. You're a true Abyss Explorer. 🌊",
+        { xp: 2500, coins: 1800, gems: 50, badgeId: "deep-descent", items: ["title-abyss-explorer", "avatar-abyss-explorer"] }),
     ],
   },
 ];
@@ -360,6 +626,8 @@ export interface Story {
   emoji: string;
   gradient: string;
   blurb: string;
+  requiresLevel?: number;  // player level needed to start this story
+  requiresStory?: string;  // another story (id) that must be fully completed first
   chapters: StoryChapter[];
 }
 
@@ -373,14 +641,31 @@ export const STORIES: Story[] = [
   {
     id: "chrono-caper", title: "The Chrono Caper", subtitle: "A time-travel mystery",
     emoji: "⏳", gradient: "from-amber-500 via-orange-500 to-rose-600",
-    blurb: "A masked thief stole the Academy's master blueprint and fled into the past. Chase The Curator through time across 4 chapters to set history right.",
+    blurb: "A masked thief stole the Academy's master blueprint and fled into the past. Chase The Curator through the Ice Age, a star-vault, Ancient Rome and the dinosaurs across 6 chapters to set history right.",
+    requiresLevel: 5,
     chapters: CHRONO_CAPER,
   },
   {
     id: "body-brigade", title: "Body Brigade", subtitle: "A microscopic medical mission",
     emoji: "🔬", gradient: "from-rose-500 via-fuchsia-500 to-emerald-500",
-    blurb: "Shrink to the size of a cell and journey inside a sick patient — through the bloodstream, past germ swarms, to defeat a super-germ and deliver the cure across 4 chapters.",
+    blurb: "Shrink to the size of a cell and journey inside a sick patient — through the bloodstream, lungs and brain, past germ swarms and a super-germ, to deliver the cure across 6 chapters.",
+    requiresLevel: 12,
     chapters: BODY_BRIGADE,
+  },
+  {
+    id: "robot-rebellion", title: "The Robot Rebellion", subtitle: "Shut down a rogue A.I.",
+    emoji: "🤖", gradient: "from-slate-500 via-amber-500 to-fuchsia-600",
+    blurb: "The Academy's robots have been seized by a rogue A.I. called OMNI. Fight through a robotics megafactory — assembly lines, reactors, server mazes and a foundry — across 8 chapters to shut OMNI down.",
+    requiresLevel: 20,
+    chapters: ROBOT_REBELLION,
+  },
+  {
+    id: "deep-descent", title: "The Deep Descent", subtitle: "Dive to the bottom of the ocean",
+    emoji: "🌊", gradient: "from-sky-500 via-indigo-600 to-fuchsia-600",
+    blurb: "A strange energy is killing the ocean from its deepest point. Pilot a submersible down through twilight zones, kelp forests, vents and the abyss across 8 chapters to calm an ancient leviathan. Requires finishing The Robot Rebellion.",
+    requiresLevel: 35,
+    requiresStory: "robot-rebellion",
+    chapters: DEEP_DESCENT,
   },
 ];
 
@@ -462,4 +747,22 @@ export function totalStoryNodes(story?: Story): number {
 
 export function storyNodesDone(story: Story, inventory: string[]): number {
   return story.chapters.reduce((s, c) => s + c.nodes.filter((n) => isNodeComplete(n, inventory)).length, 0);
+}
+
+export function isStoryComplete(story: Story, inventory: string[]): boolean {
+  return story.chapters.every((c) => c.nodes.every((n) => isNodeComplete(n, inventory)));
+}
+
+export interface StoryUnlockState { unlocked: boolean; needsLevel?: number; needsStory?: Story }
+
+// A story can require a player level and/or another story being fully completed.
+export function storyUnlockState(story: Story, opts: { level: number; inventory: string[] }): StoryUnlockState {
+  if (story.requiresLevel && (opts.level || 0) < story.requiresLevel) {
+    return { unlocked: false, needsLevel: story.requiresLevel };
+  }
+  if (story.requiresStory) {
+    const req = STORIES.find((s) => s.id === story.requiresStory);
+    if (req && !isStoryComplete(req, opts.inventory)) return { unlocked: false, needsStory: req };
+  }
+  return { unlocked: true };
 }

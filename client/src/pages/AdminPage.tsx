@@ -17,7 +17,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import type { CommunityPack, Feedback } from "@shared/schema";
-import { BADGES, WORLDS, POTIONS, GAME_MODES as ARCADE_GAME_MODES, DIMENSIONS } from "@/lib/gameData";
+import { BADGES, WORLDS, POTIONS, GAME_MODES as ARCADE_GAME_MODES, DIMENSIONS, DIMENSION_GROUPS } from "@/lib/gameData";
 
 type AdminTab = "feedback" | "packs" | "users" | "daily" | "tournaments" | "gt-questions" | "codes" | "messages" | "parliament" | "schools" | "reports" | "appeals" | "dimensions";
 
@@ -375,7 +375,9 @@ function UsersTab() {
   const [renameValue, setRenameValue] = useState("");
   const [titlePanel, setTitlePanel] = useState<number | null>(null);
   const [titleValue, setTitleValue] = useState("");
-  const [giveSubTab, setGiveSubTab] = useState<"items" | "boxes" | "potions">("items");
+  const [giveSubTab, setGiveSubTab] = useState<"items" | "boxes" | "potions" | "currency">("items");
+  const [dimGroupId, setDimGroupId] = useState("infinity");
+  const [dimAmount, setDimAmount] = useState(100);
   const [giveItemSearch, setGiveItemSearch] = useState("");
   const [giveItemCategory, setGiveItemCategory] = useState("all");
   const [giveBoxType, setGiveBoxType] = useState("bronze");
@@ -515,6 +517,18 @@ function UsersTab() {
       toast({ title: `Gave ${data.quantity}× ${pot?.name || data.potionId}!` });
     },
     onError: (e: any) => toast({ title: "Failed to give potion", variant: "destructive" }),
+  });
+
+  const giveDimCurrency = useMutation({
+    mutationFn: ({ id, groupId, amount }: { id: number; groupId: string; amount: number }) =>
+      apiRequest("POST", `/api/admin/users/${id}/give-dim-currency`, { groupId, amount }),
+    onSuccess: async (res) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      const data = await res.json();
+      toast({ title: `Gave ${data.amount}× ${data.currency}!` });
+    },
+    onError: () => toast({ title: "Failed to give currency", variant: "destructive" }),
   });
 
   const updateUser = useMutation({
@@ -1060,9 +1074,9 @@ function UsersTab() {
               <div className="mt-3 pt-3 border-t space-y-3">
                 <h4 className="text-sm font-bold flex items-center gap-1.5"><ShoppingBag className="w-4 h-4 text-violet-500" /> Give Items</h4>
                 <div className="flex gap-1">
-                  {(["items", "boxes", "potions"] as const).map(tab => (
+                  {(["items", "boxes", "potions", "currency"] as const).map(tab => (
                     <Button key={tab} size="sm" variant={giveSubTab === tab ? "default" : "outline"} onClick={() => { setGiveSubTab(tab); setGiveBoxResults([]); }} className="text-xs capitalize flex-1">
-                      {tab === "items" ? <><ShoppingBag className="w-3 h-3 mr-1" /> Shop Items</> : tab === "boxes" ? <><Package className="w-3 h-3 mr-1" /> Mystery Boxes</> : <><FlaskConical className="w-3 h-3 mr-1" /> Potions</>}
+                      {tab === "items" ? <><ShoppingBag className="w-3 h-3 mr-1" /> Items</> : tab === "boxes" ? <><Package className="w-3 h-3 mr-1" /> Boxes</> : tab === "potions" ? <><FlaskConical className="w-3 h-3 mr-1" /> Potions</> : <>💠 Currency</>}
                     </Button>
                   ))}
                 </div>
@@ -1204,6 +1218,36 @@ function UsersTab() {
                     >
                       {givePotion.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <FlaskConical className="w-3 h-3" />}
                       Give {givePotionQty}× Potion
+                    </Button>
+                  </div>
+                )}
+
+                {giveSubTab === "currency" && (
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap gap-1">
+                      {DIMENSION_GROUPS.filter(g => g.currencyId).map(g => (
+                        <Button key={g.id} size="sm" variant={dimGroupId === g.id ? "default" : "outline"}
+                          onClick={() => setDimGroupId(g.id)} className="text-xs flex-1"
+                          data-testid={`dim-currency-group-${g.id}`}>
+                          {g.currencyEmoji} {g.currencyName}
+                        </Button>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-muted-foreground shrink-0">Amount</span>
+                      <input type="number" min={1} value={dimAmount}
+                        onChange={(e) => setDimAmount(Math.max(1, Math.floor(Number(e.target.value) || 0)))}
+                        className="flex-1 h-8 px-2 rounded border bg-background text-sm" data-testid={`dim-currency-amount-${user.id}`} />
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => giveDimCurrency.mutate({ id: user.id, groupId: dimGroupId, amount: dimAmount })}
+                      disabled={giveDimCurrency.isPending}
+                      className="gap-1 font-bold w-full"
+                      data-testid={`button-give-dim-currency-${user.id}`}
+                    >
+                      {giveDimCurrency.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <>💠</>}
+                      Give {dimAmount}× {DIMENSION_GROUPS.find(g => g.id === dimGroupId)?.currencyName || "Currency"}
                     </Button>
                   </div>
                 )}

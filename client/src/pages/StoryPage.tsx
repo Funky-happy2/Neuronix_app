@@ -14,7 +14,7 @@ import {
 import { StoryLevel } from "@/components/StoryLevel";
 import {
   STORIES, isNodeComplete, isChapterUnlocked, totalStoryNodes, storyNodesDone,
-  resolveDialogueText, getChosenOptionId,
+  resolveDialogueText, getChosenOptionId, storyUnlockState,
   type Story, type StoryChapter, type StoryNode, type StoryReward,
 } from "@shared/story";
 
@@ -22,6 +22,7 @@ export default function StoryPage() {
   const { toast } = useToast();
   const { data: user, isLoading } = useQuery<any>({ queryKey: ["/api/user"] });
   const inventory: string[] = user?.inventory || [];
+  const level: number = (user as any)?.level || 0;
 
   // Active playable level (rendered full-screen).
   const [playing, setPlaying] = useState<{ node: StoryNode; chapter: StoryChapter } | null>(null);
@@ -91,30 +92,45 @@ export default function StoryPage() {
             const done = storyNodesDone(s, inventory);
             const complete = done >= total;
             const pct = Math.round((done / total) * 100);
+            const unlock = storyUnlockState(s, { level, inventory });
+            const lockText = unlock.needsStory
+              ? `Finish "${unlock.needsStory.title}" first`
+              : unlock.needsLevel ? `Reach Level ${unlock.needsLevel}` : "";
             return (
               <motion.button
                 key={s.id}
-                whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
-                onClick={() => setStoryId(s.id)}
+                whileHover={unlock.unlocked ? { scale: 1.01 } : {}} whileTap={unlock.unlocked ? { scale: 0.99 } : {}}
+                onClick={() => unlock.unlocked && setStoryId(s.id)}
+                disabled={!unlock.unlocked}
                 data-testid={`story-pick-${s.id}`}
-                className="w-full text-left rounded-2xl overflow-hidden border-2 border-border hover:border-transparent hover:shadow-2xl transition-all"
+                className={`w-full text-left rounded-2xl overflow-hidden border-2 border-border transition-all ${unlock.unlocked ? "hover:border-transparent hover:shadow-2xl cursor-pointer" : "opacity-80 cursor-not-allowed"}`}
               >
-                <div className={`bg-gradient-to-r ${s.gradient} p-5 text-white flex items-center gap-4`}>
+                <div className={`bg-gradient-to-r ${s.gradient} p-5 text-white flex items-center gap-4 ${unlock.unlocked ? "" : "grayscale"}`}>
                   <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-3xl shrink-0">{s.emoji}</div>
                   <div className="flex-1 min-w-0">
                     <div className="text-xl font-black leading-tight">{s.title}</div>
                     <div className="text-sm font-semibold text-white/85">{s.subtitle}</div>
                   </div>
-                  <div className="inline-flex items-center gap-1 bg-white/20 rounded-full px-3 py-1.5 font-black text-sm shrink-0">
-                    {complete ? "Replay" : done === 0 ? "Start" : "Continue"} <ChevronRight className="w-4 h-4" />
-                  </div>
+                  {unlock.unlocked ? (
+                    <div className="inline-flex items-center gap-1 bg-white/20 rounded-full px-3 py-1.5 font-black text-sm shrink-0">
+                      {complete ? "Replay" : done === 0 ? "Start" : "Continue"} <ChevronRight className="w-4 h-4" />
+                    </div>
+                  ) : (
+                    <div className="inline-flex items-center gap-1 bg-black/30 rounded-full px-3 py-1.5 font-black text-xs shrink-0"><Lock className="w-3.5 h-3.5" /> Locked</div>
+                  )}
                 </div>
                 <div className="p-4 bg-card">
                   <p className="text-sm text-muted-foreground font-medium mb-3">{s.blurb}</p>
-                  <div className="flex items-center gap-2">
-                    <Progress value={pct} className="h-2 flex-1" />
-                    <span className="text-xs font-bold text-muted-foreground shrink-0">{done}/{total}{complete ? " ✓" : ""}</span>
-                  </div>
+                  {unlock.unlocked ? (
+                    <div className="flex items-center gap-2">
+                      <Progress value={pct} className="h-2 flex-1" />
+                      <span className="text-xs font-bold text-muted-foreground shrink-0">{done}/{total}{complete ? " ✓" : ""}</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-sm font-bold text-amber-600 dark:text-amber-400">
+                      <Lock className="w-4 h-4 shrink-0" /> {lockText} to unlock
+                    </div>
+                  )}
                 </div>
               </motion.button>
             );
