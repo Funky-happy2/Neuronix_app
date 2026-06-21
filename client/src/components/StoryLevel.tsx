@@ -39,6 +39,8 @@ export function StoryLevel({ level, title, gradient, onWin, onExit }: {
   const [bossHp, setBossHp] = useState(maxBossHp);
   const [enemiesLeft, setEnemiesLeft] = useState(level.type === "swarm" ? level.enemies : 0);  // swarm
   const [pins, setPins] = useState(0);          // lock
+  const [rivalPos, setRivalPos] = useState(0);  // chase
+  const [allyHp, setAllyHp] = useState(level.type === "escort" ? level.allyHp : 0);  // escort
   const [shake, setShake] = useState<"boss" | "player" | null>(null);
   const [enraged, setEnraged] = useState(false);
   const [flash, setFlash] = useState<string>("");
@@ -55,6 +57,7 @@ export function StoryLevel({ level, title, gradient, onWin, onExit }: {
     setMcq(makeMCQ(poolRef.current[0]));
     setChosen(null); setStatus("playing"); setHp(level.hp); setPos(0);
     setBossHp(maxBossHp); setEnemiesLeft(level.type === "swarm" ? level.enemies : 0); setPins(0);
+    setRivalPos(0); setAllyHp(level.type === "escort" ? level.allyHp : 0);
     setEnraged(false); setShake(null); setFlash("");
     setRunKey((k) => k + 1);
   };
@@ -97,7 +100,7 @@ export function StoryLevel({ level, title, gradient, onWin, onExit }: {
         const ne = enemiesLeft - 1; setEnemiesLeft(ne); setShake("boss"); setFlash(`${level.enemyName} defeated!`);
         if (ne <= 0) { window.setTimeout(() => finish(true), 700); return; }
       } else if (hurt(`A ${level.enemyName} struck you!`)) return;
-    } else { // lock
+    } else if (level.type === "lock") {
       if (ok) {
         const np = pins + 1; setPins(np); setFlash("A tumbler clicks into place!");
         if (np >= level.tumblers) { window.setTimeout(() => finish(true), 700); return; }
@@ -105,10 +108,26 @@ export function StoryLevel({ level, title, gradient, onWin, onExit }: {
         setPins((p) => Math.max(0, p - 1));
         if (hurt("The lock resets a tumbler!")) return;
       }
+    } else if (level.type === "chase") {
+      if (ok) {
+        const np = pos + 1; setPos(np); setShake("boss"); setFlash("You pull ahead!");
+        if (np >= level.distance) { window.setTimeout(() => finish(true), 700); return; }
+      } else {
+        const nr = rivalPos + 1; setRivalPos(nr); setShake("player"); setFlash(`${level.rivalName} gains on you!`);
+        if (nr >= level.distance) { window.setTimeout(() => finish(false), 850); return; }
+      }
+    } else if (level.type === "escort") {
+      if (ok) {
+        const np = pos + 1; setPos(np); setFlash(`${level.allyName} moves up safely!`);
+        if (np >= level.steps) { window.setTimeout(() => finish(true), 700); return; }
+      } else {
+        const na = allyHp - 1; setAllyHp(na); setShake("player"); setFlash(`${level.allyName} got hit!`);
+        if (na <= 0) { window.setTimeout(() => finish(false), 850); return; }
+      }
     }
     window.setTimeout(nextQuestion, 850);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [level, pos, hp, bossHp, enemiesLeft, pins, enraged, maxBossHp, nextQuestion]);
+  }, [level, pos, hp, bossHp, enemiesLeft, pins, rivalPos, allyHp, enraged, maxBossHp, nextQuestion]);
 
   // Timer — resets each question; tightens when the boss enrages.
   const [timeLeft, setTimeLeft] = useState(baseTime);
@@ -136,8 +155,8 @@ export function StoryLevel({ level, title, gradient, onWin, onExit }: {
   // ── Result ─────────────────────────────────────────────────────────────────
   if (status !== "playing") {
     const won = status === "won";
-    const winEmoji = level.type === "boss" ? "🏆" : level.type === "lock" ? "🔓" : level.type === "swarm" ? "⚔️" : "🏁";
-    const winTitle = level.type === "boss" ? "Guardian Defeated!" : level.type === "lock" ? "Gate Opened!" : level.type === "swarm" ? "Horde Defeated!" : "Region Crossed!";
+    const winEmoji = level.type === "boss" ? "🏆" : level.type === "lock" ? "🔓" : level.type === "swarm" ? "⚔️" : level.type === "chase" ? "🏁" : level.type === "escort" ? "🛟" : "🏁";
+    const winTitle = level.type === "boss" ? "Guardian Defeated!" : level.type === "lock" ? "Gate Opened!" : level.type === "swarm" ? "Horde Defeated!" : level.type === "chase" ? "Race Won!" : level.type === "escort" ? "Escort Complete!" : "Region Crossed!";
     return (
       <div className={`min-h-screen bg-gradient-to-br ${gradient} flex items-center justify-center p-4`}>
         <motion.div initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
@@ -253,6 +272,43 @@ export function StoryLevel({ level, title, gradient, onWin, onExit }: {
               ))}
             </div>
             <div className="text-white/80 text-xs font-bold mt-2">{pins}/{level.tumblers} tumblers</div>
+          </div>
+        )}
+
+        {level.type === "chase" && (
+          <div className="bg-white/10 rounded-2xl p-4 mb-3 space-y-3">
+            <div className="text-white/90 text-xs font-bold text-center">Race {level.rivalName} to the finish — don't let them catch up!</div>
+            {[
+              { who: "You", emoji: "⚡", at: pos, cls: "bg-yellow-300", shakeOn: "boss" as const },
+              { who: level.rivalName, emoji: level.rivalEmoji, at: rivalPos, cls: "bg-rose-400", shakeOn: "player" as const },
+            ].map((row) => (
+              <div key={row.who}>
+                <div className="flex justify-between text-white/80 text-[11px] font-bold mb-1"><span>{row.who}</span><span>{row.at}/{level.distance}</span></div>
+                <div className="relative h-7 flex items-center">
+                  <div className="absolute inset-x-0 h-1.5 bg-white/20 rounded-full" />
+                  <motion.div className="absolute z-20 text-xl" animate={{ left: `calc(${(row.at / level.distance) * 100}% - 10px)`, ...(shake === row.shakeOn ? { scale: [1, 1.3, 1] } : {}) }} transition={{ type: "spring", stiffness: 200, damping: 20 }}>{row.emoji}</motion.div>
+                  <div className="absolute right-0 z-10 text-lg">🏁</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {level.type === "escort" && (
+          <div className="bg-white/10 rounded-2xl p-4 mb-3 text-center">
+            <motion.div className="text-5xl mb-1 inline-block" animate={shake === "player" ? { x: [0, -8, 8, -6, 0] } : {}} transition={{ duration: 0.35 }}>{level.allyEmoji}</motion.div>
+            <div className="font-black text-white">Escort {level.allyName} to safety</div>
+            <div className="flex items-center justify-center gap-1 mt-1">
+              {Array.from({ length: level.allyHp }).map((_, i) => (
+                <Heart key={i} className={`w-4 h-4 ${i < allyHp ? "text-emerald-300 fill-emerald-300" : "text-white/25"}`} />
+              ))}
+            </div>
+            <div className="relative h-8 flex items-center mt-2">
+              <div className="absolute inset-x-0 h-1.5 bg-white/20 rounded-full" />
+              <motion.div className="absolute z-20 text-2xl" animate={{ left: `calc(${(pos / level.steps) * 100}% - 12px)` }} transition={{ type: "spring", stiffness: 200, damping: 20 }}>{level.allyEmoji}</motion.div>
+              <div className="absolute right-0 z-10 text-xl">🛟</div>
+            </div>
+            <div className="text-white/80 text-xs font-bold mt-1">{pos}/{level.steps} to safety</div>
           </div>
         )}
 

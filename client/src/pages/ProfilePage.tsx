@@ -423,13 +423,13 @@ export default function ProfilePage({
 
             <div className="mt-3 p-3 rounded-lg bg-muted/50 text-left">
               <p className="text-xs font-bold text-muted-foreground mb-2">Year Level (Question Difficulty)</p>
-              <div className="flex gap-1.5">
+              <div className="grid grid-cols-7 gap-1">
                 {[3, 4, 5, 6, 7, 8, 9].map((yr) => (
                   <Button
                     key={yr}
                     size="sm"
                     variant={yearLevel === yr ? "default" : "outline"}
-                    className="flex-1 text-xs font-bold h-8"
+                    className="w-full min-w-0 px-0 text-xs font-bold h-8"
                     onClick={() => onSetYearLevel(yr)}
                     data-testid={`button-year-${yr}`}
                   >

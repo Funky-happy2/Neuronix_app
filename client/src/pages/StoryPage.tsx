@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { motion } from "framer-motion";
 import {
   BookOpen, Lock, CheckCircle2, ChevronRight, ChevronLeft, MessageCircle, Swords, Trophy,
-  Zap, Coins, Gem, Loader2, Flag, Play, Footprints, GitBranch, Users, KeyRound,
+  Zap, Coins, Gem, Loader2, Flag, Play, Footprints, GitBranch, Users, KeyRound, RotateCcw, Heart,
 } from "lucide-react";
 import { StoryLevel } from "@/components/StoryLevel";
 import {
@@ -25,7 +25,7 @@ export default function StoryPage() {
   const level: number = (user as any)?.level || 0;
 
   // Active playable level (rendered full-screen).
-  const [playing, setPlaying] = useState<{ node: StoryNode; chapter: StoryChapter } | null>(null);
+  const [playing, setPlaying] = useState<{ node: StoryNode; chapter: StoryChapter; replay?: boolean } | null>(null);
   // Which story is open (null = the story-selection hub).
   const [storyId, setStoryId] = useState<string | null>(null);
 
@@ -65,7 +65,12 @@ export default function StoryPage() {
         title={node.title}
         gradient={playing.chapter.gradient}
         onExit={() => setPlaying(null)}
-        onWin={() => { clear.mutate(node); setPlaying(null); }}
+        onWin={() => {
+          // Replays don't re-grant rewards — they're just for fun / practice.
+          if (playing.replay) { toast({ title: "Replayed!", description: "Nice run — no rewards on replays." }); }
+          else { clear.mutate(node); }
+          setPlaying(null);
+        }}
       />
     );
   }
@@ -179,6 +184,7 @@ export default function StoryPage() {
             busy={ack.isPending || clear.isPending || choose.isPending}
             onContinue={(n) => ack.mutate(n)}
             onPlay={(n) => setPlaying({ node: n, chapter })}
+            onReplay={(n) => setPlaying({ node: n, chapter, replay: true })}
             onChoose={(n, optionId) => choose.mutate({ node: n, optionId })}
           />
         ))}
@@ -187,12 +193,13 @@ export default function StoryPage() {
   );
 }
 
-function ChapterSection({ chapter, inventory, busy, onContinue, onPlay, onChoose }: {
+function ChapterSection({ chapter, inventory, busy, onContinue, onPlay, onReplay, onChoose }: {
   chapter: StoryChapter;
   inventory: string[];
   busy: boolean;
   onContinue: (n: StoryNode) => void;
   onPlay: (n: StoryNode) => void;
+  onReplay: (n: StoryNode) => void;
   onChoose: (n: StoryNode, optionId: string) => void;
 }) {
   const unlocked = isChapterUnlocked(chapter, inventory);
@@ -234,7 +241,7 @@ function ChapterSection({ chapter, inventory, busy, onContinue, onPlay, onChoose
             const isUpcoming = firstIncomplete !== -1 && i > firstIncomplete;
             return (
               <NodeRow key={node.id} node={node} inventory={inventory} complete={complete} isActive={isActive} isUpcoming={isUpcoming}
-                busy={busy} onContinue={onContinue} onPlay={onPlay} onChoose={onChoose} />
+                busy={busy} onContinue={onContinue} onPlay={onPlay} onReplay={onReplay} onChoose={onChoose} />
             );
           })}
         </div>
@@ -243,10 +250,10 @@ function ChapterSection({ chapter, inventory, busy, onContinue, onPlay, onChoose
   );
 }
 
-function NodeRow({ node, inventory, complete, isActive, isUpcoming, busy, onContinue, onPlay, onChoose }: {
+function NodeRow({ node, inventory, complete, isActive, isUpcoming, busy, onContinue, onPlay, onReplay, onChoose }: {
   node: StoryNode; inventory: string[];
   complete: boolean; isActive: boolean; isUpcoming: boolean; busy: boolean;
-  onContinue: (n: StoryNode) => void; onPlay: (n: StoryNode) => void; onChoose: (n: StoryNode, optionId: string) => void;
+  onContinue: (n: StoryNode) => void; onPlay: (n: StoryNode) => void; onReplay: (n: StoryNode) => void; onChoose: (n: StoryNode, optionId: string) => void;
 }) {
   const isDialogue = node.kind === "dialogue";
   const isChoice = node.kind === "choice";
@@ -268,17 +275,23 @@ function NodeRow({ node, inventory, complete, isActive, isUpcoming, busy, onCont
     return (
       <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10" data-testid={`node-${node.id}`}>
         <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
-        <span className="text-sm font-bold text-green-700 dark:text-green-300">{node.title}{chosenLabel ? ` — ${chosenLabel}` : ""}</span>
+        <span className="text-sm font-bold text-green-700 dark:text-green-300 flex-1 min-w-0">{node.title}{chosenLabel ? ` — ${chosenLabel}` : ""}</span>
+        {node.kind === "level" && (
+          <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs font-bold text-green-700 dark:text-green-300 hover:bg-green-500/20 shrink-0"
+            onClick={() => onReplay(node)} data-testid={`replay-${node.id}`}>
+            <RotateCcw className="w-3.5 h-3.5" /> Replay
+          </Button>
+        )}
       </div>
     );
   }
 
   // Active node — the thing to do next.
   const reward = node.reward;
-  const Icon = isDialogue ? MessageCircle : isChoice ? GitBranch : isBoss ? Swords : levelKind === "swarm" ? Users : levelKind === "lock" ? KeyRound : Footprints;
+  const Icon = isDialogue ? MessageCircle : isChoice ? GitBranch : isBoss ? Swords : levelKind === "swarm" ? Users : levelKind === "lock" ? KeyRound : levelKind === "chase" ? Flag : levelKind === "escort" ? Heart : Footprints;
   const iconCls = isDialogue ? "bg-sky-500/15 text-sky-500" : isChoice ? "bg-fuchsia-500/15 text-fuchsia-500" : isBoss ? "bg-rose-500/15 text-rose-500" : "bg-amber-500/15 text-amber-500";
   const text = node.kind === "dialogue" ? resolveDialogueText(node, inventory) : node.text;
-  const levelLabel = levelKind === "boss" ? "BOSS" : levelKind === "swarm" ? "SWARM" : levelKind === "lock" ? "PUZZLE" : "LEVEL";
+  const levelLabel = levelKind === "boss" ? "BOSS" : levelKind === "swarm" ? "SWARM" : levelKind === "lock" ? "PUZZLE" : levelKind === "chase" ? "RACE" : levelKind === "escort" ? "ESCORT" : "LEVEL";
 
   return (
     <div className={`rounded-xl border-2 p-3.5 ${isActive ? "border-fuchsia-500/50 bg-fuchsia-500/5" : "border-border"}`} data-testid={`node-${node.id}`}>

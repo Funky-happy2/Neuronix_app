@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { POTIONS } from "@/lib/gameData";
 import { getTitle, getTitleAnimClass, PROFILE_ANIM_CLASSES, FRAME_MINI_STYLES } from "@/lib/titles";
+import { resolveAvatarIcon } from "@/lib/avatarIcons";
 
 const AVATAR_ICON_MAP: Record<string, { icon: LucideIcon; gradient: string }> = {
   "astronaut": { icon: Rocket, gradient: "from-blue-500 to-cyan-500" },
@@ -61,7 +62,7 @@ const AVATAR_ICON_MAP: Record<string, { icon: LucideIcon; gradient: string }> = 
 };
 
 function getAvatarInfo(id: string | null) {
-  return AVATAR_ICON_MAP[id || ""] || AVATAR_ICON_MAP["astronaut"];
+  return resolveAvatarIcon(id);
 }
 
 function groupPotions(potions: string[]): { id: string; name: string; count: number }[] {

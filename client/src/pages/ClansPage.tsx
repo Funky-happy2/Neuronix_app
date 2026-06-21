@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { renderMentions, UserNameDisplay } from "@/lib/mentions";
 import UserProfileModal from "@/components/UserProfileModal";
+import { resolveAvatarIcon } from "@/lib/avatarIcons";
 import {
   Shield, Users, Star, Gem, Award, Crown, Loader2,
   Plus, LogOut, UserMinus, ArrowLeft, Coins, MessageCircle, Send,
@@ -1325,7 +1326,7 @@ export default function ClansPage() {
         </h2>
         <div className="space-y-2">
           {members.map((m, i) => {
-            const avatarInfo = AVATAR_ICON_MAP[m.avatarId] || AVATAR_ICON_MAP["astronaut"];
+            const avatarInfo = resolveAvatarIcon(m.avatarId);
             const AvatarIcon = avatarInfo.icon;
             const isMemberCoLeader = coLeaderIds.includes(m.id);
             const isMemberOwner = m.id === clan.leaderId;

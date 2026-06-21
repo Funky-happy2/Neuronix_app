@@ -5605,20 +5605,29 @@ export async function registerRoutes(
   app.post("/api/admin/users/:id/update", requireAdmin, async (req, res) => {
     try {
       const { xp, coins, gems, level, badges, bossesDefeated, inventory, rebirthLevel } = req.body;
+      const before = await storage.getUser(Number(req.params.id));
+      if (!before) return res.status(404).json({ message: "User not found" });
       const updates: any = {};
-      if (xp !== undefined) { updates.xp = Number(xp); updates.level = computeLevel(Number(xp)); }
-      if (coins !== undefined) updates.coins = Number(coins);
-      if (gems !== undefined) updates.gems = Number(gems);
+      const changes: string[] = [];
+      if (xp !== undefined) { updates.xp = Number(xp); updates.level = computeLevel(Number(xp)); if (Number(xp) !== before.xp) changes.push(`XP ${before.xp}→${Number(xp)}`); }
+      if (coins !== undefined && Number(coins) !== before.coins) { updates.coins = Number(coins); changes.push(`Neuros ${before.coins}→${Number(coins)}`); }
+      if (gems !== undefined && Number(gems) !== before.gems) { updates.gems = Number(gems); changes.push(`Sparks ${before.gems}→${Number(gems)}`); }
       if (badges !== undefined) updates.badges = badges;
       if (bossesDefeated !== undefined) updates.bossesDefeated = bossesDefeated;
-      if (inventory !== undefined) updates.inventory = inventory;
+      if (inventory !== undefined) { updates.inventory = inventory; if ((inventory?.length || 0) !== (before.inventory?.length || 0)) changes.push(`inventory ${(before.inventory?.length || 0)}→${inventory.length} items`); }
       if (rebirthLevel !== undefined) {
         updates.rebirthLevel = rebirthLevel;
         updates.rebirthMultiplier = 100 + rebirthLevel * 5;
+        if (rebirthLevel !== (before as any).rebirthLevel) changes.push(`rebirth ${(before as any).rebirthLevel || 0}→${rebirthLevel}`);
       }
 
       const user = await storage.updateUser(Number(req.params.id), updates);
       if (!user) return res.status(404).json({ message: "User not found" });
+      // Record account adjustments (giving Neuros/Sparks/XP, etc.) in the public decision log.
+      if (changes.length) {
+        const requester = await storage.getUser(req.user!.id);
+        await logAdminDecision(requester!, { type: "adjust-account", targetId: before.id, targetName: before.username, description: `Adjusted account — ${changes.join(", ")}.`, reversible: false });
+      }
       res.json(user);
     } catch (error) {
       res.status(500).json({ message: "Failed to update user" });
@@ -5974,6 +5983,8 @@ export async function registerRoutes(
       const inventory = user.inventory || [];
       if (inventory.includes(itemId)) return res.status(400).json({ message: "User already owns this item" });
       await storage.updateUser(userId, { inventory: [...inventory, itemId] } as any);
+      const requester = await storage.getUser(req.user!.id);
+      await logAdminDecision(requester!, { type: "give-item", targetId: user.id, targetName: user.username, description: `Gave shop item "${item.name}".`, reversible: false });
       res.json({ success: true, itemId, itemName: item.name });
     } catch {
       res.status(500).json({ message: "Failed to give shop item" });
@@ -5993,6 +6004,8 @@ export async function registerRoutes(
       const exp = { ...(((user as any).upgradeExpirations as Record<string, number>) || {}) };
       exp[group.currencyId] = (exp[group.currencyId] || 0) + amt;
       await storage.updateUser(userId, { upgradeExpirations: exp } as any);
+      const requester = await storage.getUser(req.user!.id);
+      await logAdminDecision(requester!, { type: "give-currency", targetId: user.id, targetName: user.username, description: `Gave ${amt}× ${group.currencyName}.`, reversible: false });
       res.json({ success: true, amount: amt, currency: group.currencyName, newTotal: exp[group.currencyId] });
     } catch { res.status(500).json({ message: "Failed to give currency" }); }
   });
@@ -6078,6 +6091,8 @@ export async function registerRoutes(
       if (!user) return res.status(404).json({ message: "User not found" });
       const newPotions = [...(user.potions || []), ...Array(qty).fill(potionId)];
       await storage.updateUser(userId, { potions: newPotions } as any);
+      const requester = await storage.getUser(req.user!.id);
+      await logAdminDecision(requester!, { type: "give-potion", targetId: user.id, targetName: user.username, description: `Gave ${qty}× potion (${potionId}).`, reversible: false });
       res.json({ success: true, potionId, quantity: qty });
     } catch {
       res.status(500).json({ message: "Failed to give potion" });

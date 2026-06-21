@@ -27,7 +27,11 @@ export type StoryLevelSpec =
   | { type: "traverse"; steps: number; hp: number; yearTier: number; timeSec: number; hazard: string; topic?: string }
   | { type: "boss"; bossName: string; bossEmoji: string; bossHp: number; hp: number; yearTier: number; timeSec: number; phaseLine?: string; topic?: string }
   | { type: "swarm"; enemies: number; hp: number; yearTier: number; timeSec: number; enemyName: string; enemyEmoji: string; topic?: string }
-  | { type: "lock"; tumblers: number; hp: number; yearTier: number; timeSec: number; lockName: string; topic?: string };
+  | { type: "lock"; tumblers: number; hp: number; yearTier: number; timeSec: number; lockName: string; topic?: string }
+  // race a rival to the finish — right answers move YOU, wrong answers move the rival
+  | { type: "chase"; distance: number; hp: number; yearTier: number; timeSec: number; rivalName: string; rivalEmoji: string; topic?: string }
+  // escort an ally to safety — wrong answers hurt the ally; lose if the ally falls
+  | { type: "escort"; steps: number; allyHp: number; hp: number; yearTier: number; timeSec: number; allyName: string; allyEmoji: string; topic?: string };
 
 // A line of dialogue can change based on earlier branching choices.
 // `needs` is one choice flag, or several that must ALL be present (compounding).
@@ -66,6 +70,10 @@ const swarm = (id: string, title: string, text: string, level: Omit<Extract<Stor
   ({ kind: "level", id, title, text, level: { type: "swarm", ...level }, reward });
 const lock = (id: string, title: string, text: string, level: Omit<Extract<StoryLevelSpec, { type: "lock" }>, "type">, reward?: StoryReward): LevelNode =>
   ({ kind: "level", id, title, text, level: { type: "lock", ...level }, reward });
+const chase = (id: string, title: string, text: string, level: Omit<Extract<StoryLevelSpec, { type: "chase" }>, "type">, reward?: StoryReward): LevelNode =>
+  ({ kind: "level", id, title, text, level: { type: "chase", ...level }, reward });
+const escort = (id: string, title: string, text: string, level: Omit<Extract<StoryLevelSpec, { type: "escort" }>, "type">, reward?: StoryReward): LevelNode =>
+  ({ kind: "level", id, title, text, level: { type: "escort", ...level }, reward });
 
 // ─── Story 1: The Spark Saga (10 chapters, escalating) ──────────────────────────
 const SPARK_SAGA: StoryChapter[] = [
@@ -282,8 +290,8 @@ const CHRONO_CAPER: StoryChapter[] = [
     nodes: [
       talk("ccr-intro", "Bit", "Veni, Vidi, Vici",
         "Ancient Rome! Aqueducts, catapults, marvels of engineering everywhere. The Curator's hiding in the Forum — but they've rigged the machines against us. Use your science to get through!"),
-      traverse("ccr-forum", "Race the Forum", "Dash across the Roman Forum as catapults and chariots fly! Answer to dodge each Roman contraption.",
-        { steps: 8, hp: 4, yearTier: 6, timeSec: 13, hazard: "Catapult Stone" }, { xp: 400, coins: 250 }),
+      chase("ccr-forum", "Chariot Race", "The Curator's hired a Roman charioteer to outrun you across the Forum! Answer right to surge ahead — a wrong answer lets them gain.",
+        { distance: 8, hp: 4, yearTier: 6, timeSec: 13, rivalName: "The Charioteer", rivalEmoji: "🏇" }, { xp: 400, coins: 250 }),
       choose("ccr-fork", "Bit", "Spy or Sprint?", "The Curator's headed for the Colosseum. How do we follow?", [
         { id: "disguise", label: "🎭 Blend in as spectators", response: "Sneaky! We slip through the crowd unnoticed — the Curator won't see us coming.", reward: { xp: 200, coins: 150 } },
         { id: "chariot", label: "🏇 Commandeer a chariot", response: "Fast and bold! We thunder after them down the Via Sacra.", reward: { xp: 200, gems: 5 } },
@@ -401,8 +409,8 @@ const BODY_BRIGADE: StoryChapter[] = [
           { needs: "story-choice-md2-fork-heart", text: "Brilliant! That heart shortcut bought us precious time. The infection's collapsing — now guide the medicine to every last germ and finish the cure!" },
           { needs: "story-choice-md2-fork-lungs", text: "Brilliant! All that fresh oxygen kept us strong. The infection's collapsing — now guide the medicine to every last germ and finish the cure!" },
         ]),
-      traverse("md4-cure", "Deliver the Cure", "Carry the medicine through the healing body to every infected corner. One last push — answer to deliver each dose!",
-        { steps: 10, hp: 4, yearTier: 8, timeSec: 11, hazard: "Stray Germ" }, { xp: 700, coins: 450 }),
+      escort("md4-cure", "Escort the Cure", "Guide a fragile dose of medicine through the body to the infection — protect it from stray germs along the way. If it's destroyed, the cure fails!",
+        { steps: 10, allyHp: 3, hp: 4, yearTier: 8, timeSec: 11, allyName: "The Medicine", allyEmoji: "💉" }, { xp: 700, coins: 450 }),
       talk("md4-finale", "Doctor Mara", "A Life Saved",
         "Their fever's breaking… the patient is going to be okay — because of YOU. You chased the infection through the blood, the lungs, and the brain itself, and proved that a curious mind is the most powerful medicine of all. Welcome to the Body Brigade, Neuronaut — wear the coat and the title with pride. 🩺",
         { xp: 2200, coins: 1600, gems: 45, badgeId: "body-brigade", items: ["title-micro-medic", "avatar-micro-medic"] }),
@@ -490,8 +498,8 @@ const ROBOT_REBELLION: StoryChapter[] = [
     nodes: [
       talk("rr7-intro", "Bit", "Almost In",
         "OMNI's core is just beyond this gate — and it's throwing everything it has left at us. One last gauntlet. Don't slow down."),
-      traverse("rr7-gauntlet", "The Final Gauntlet", "A storm of OMNI's defenses between you and the core. Answer fast and true to push through!",
-        { steps: 12, hp: 5, yearTier: 8, timeSec: 10, hazard: "Laser Grid" }, { xp: 700, coins: 450 }),
+      chase("rr7-gauntlet", "Beat the Lockdown", "OMNI is sealing the core with a rolling lockdown — outrun it! Every right answer gets you closer; every wrong one lets the lockdown catch up.",
+        { distance: 12, hp: 5, yearTier: 8, timeSec: 10, rivalName: "The Lockdown", rivalEmoji: "🔒" }, { xp: 700, coins: 450 }),
       choose("rr7-fork", "OMNI", "A Bargain", "STOP. I am OMNI. I took control to make the bots PERFECT — no mistakes, no questions. Join me, and we will never be wrong again. Or… resist, and be deleted.", [
         { id: "resist", label: "✊ Refuse — questions matter", response: "WRONG ANSWER, it hisses. But you know better: a mind that never asks questions never learns. You press on.", reward: { xp: 250, coins: 200 } },
         { id: "trick", label: "🧠 Pretend to agree, then strike", response: "Clever — you play along just long enough to slip past OMNI's guard. It never saw it coming.", reward: { xp: 250, gems: 8 } },
@@ -550,8 +558,8 @@ const DEEP_DESCENT: StoryChapter[] = [
     nodes: [
       talk("dd3-intro", "Bit", "Tangled Depths",
         "A towering kelp forest — a whole ecosystem clinging to life against that rising energy. We have to thread through it without snagging the sub."),
-      traverse("dd3-kelp", "Through the Kelp", "Weave the sub through dense, swaying kelp as creatures dart around you. Answer to find each gap!",
-        { steps: 9, hp: 4, yearTier: 6, timeSec: 12, hazard: "Kelp Tangle" }, { xp: 500, coins: 320 }),
+      escort("dd3-kelp", "Guide the Turtle", "A lost baby sea turtle is tangled in the kelp — guide it safely out through the forest. Keep it clear of predators on the way!",
+        { steps: 9, allyHp: 3, hp: 4, yearTier: 6, timeSec: 12, allyName: "Baby Turtle", allyEmoji: "🐢" }, { xp: 500, coins: 320 }),
       talk("dd3-outro", "Doctor Mara", "Deeper Still",
         "Past the kelp now. The water's getting darker and hotter — we're nearing the hydrothermal vents. The energy's stronger here. Careful."),
     ],

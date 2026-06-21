@@ -14,6 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { getTitle, getTitleAnimClass, PROFILE_ANIM_CLASSES, NAME_ANIM_CLASSES, FRAME_MINI_STYLES } from "@/lib/titles";
+import { resolveAvatarIcon } from "@/lib/avatarIcons";
 import { UserNameDisplay } from "@/lib/mentions";
 import { motion } from "framer-motion";
 import { useState, useEffect, useRef } from "react";
@@ -117,8 +118,9 @@ const AVATAR_ICONS: Record<string, { icon: LucideIcon; gradient: string }> = {
 };
 
 function getAvatarInfo(avatarId: string | null) {
-  if (avatarId && AVATAR_ICONS[avatarId]) return AVATAR_ICONS[avatarId];
-  return { icon: User, gradient: "from-purple-500 to-blue-500" };
+  // Data-driven resolver — new achievement avatars (Dimension Walker, etc.) resolve
+  // from their definition, so they show up on the leaderboard like everywhere else.
+  return resolveAvatarIcon(avatarId);
 }
 
 const PODIUM_COLORS = [

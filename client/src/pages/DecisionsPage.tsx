@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Gavel, Shield, Ban, AlertTriangle, RotateCcw, Trash2, Crown, Star, Bot, CheckCircle, XCircle, Clock, Loader2 } from "lucide-react";
+import { Gavel, Shield, Ban, AlertTriangle, RotateCcw, Trash2, Crown, Star, Bot, CheckCircle, XCircle, Clock, Loader2, Coins, Gift, FlaskConical } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -40,6 +40,10 @@ const TYPE_META: Record<string, { label: string; icon: typeof Gavel; color: stri
   "grant-vip": { label: "VIP Granted", icon: Star, color: "text-amber-500 bg-amber-500/10 border-amber-500/30" },
   "remove-vip": { label: "VIP Removed", icon: Star, color: "text-amber-500 bg-amber-500/10 border-amber-500/30" },
   "autoclicker-suspension": { label: "Auto-Suspension", icon: Bot, color: "text-rose-500 bg-rose-500/10 border-rose-500/30" },
+  "adjust-account": { label: "Account Adjusted", icon: Coins, color: "text-blue-500 bg-blue-500/10 border-blue-500/30" },
+  "give-currency": { label: "Currency Granted", icon: Coins, color: "text-amber-500 bg-amber-500/10 border-amber-500/30" },
+  "give-item": { label: "Item Granted", icon: Gift, color: "text-fuchsia-500 bg-fuchsia-500/10 border-fuchsia-500/30" },
+  "give-potion": { label: "Potion Granted", icon: FlaskConical, color: "text-emerald-500 bg-emerald-500/10 border-emerald-500/30" },
   "appeal-overturned": { label: "Appeal Granted", icon: CheckCircle, color: "text-green-500 bg-green-500/10 border-green-500/30" },
   "appeal-upheld": { label: "Appeal Denied", icon: XCircle, color: "text-slate-500 bg-slate-500/10 border-slate-500/30" },
 };

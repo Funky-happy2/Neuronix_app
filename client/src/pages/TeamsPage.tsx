@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { renderMentions, UserNameDisplay } from "@/lib/mentions";
 import UserProfileModal from "@/components/UserProfileModal";
+import { resolveAvatarIcon } from "@/lib/avatarIcons";
 import {
   Users, Star, Award, Crown, Loader2, Plus, LogOut, UserMinus,
   ArrowLeft, Coins, Copy, Check, Link2, Trophy, Zap, MessageCircle, Send, Pencil, Save,
@@ -434,7 +435,7 @@ export default function TeamsPage() {
           <h3 className="text-sm font-bold mb-2">Members ({members.length}/5)</h3>
           <div className="space-y-2">
             {members.map((m) => {
-              const avatarInfo = AVATAR_ICON_MAP[m.avatarId] || AVATAR_ICON_MAP["astronaut"];
+              const avatarInfo = resolveAvatarIcon(m.avatarId);
               const AvatarIcon = avatarInfo.icon;
               const equippedTitle = (m.equippedCosmetics || {} as any)["title"];
               return (
