@@ -167,6 +167,7 @@ function GauntletGame({ yearLevel, params, onComplete, topic }: WorldGameProps) 
   const [lives, setLives] = useState(startLives);
   const [score, setScore] = useState(0);
   const [done, setDone] = useState(false);
+  const [locked, setLocked] = useState(false);
   const lockRef = useRef(false);
   const doneRef = useRef(false);
   const scoreRef = useRef(0);
@@ -184,23 +185,25 @@ function GauntletGame({ yearLevel, params, onComplete, topic }: WorldGameProps) 
 
   const resolve = useCallback((correct: boolean) => {
     if (lockRef.current || doneRef.current) return;
-    lockRef.current = true;
+    lockRef.current = true; setLocked(true); // freeze the timer during answer feedback
     if (correct) {
       setScore((s) => s + 10 * wave);
       const nextCount = qi + 1;
       const nextWave = nextCount % 4 === 0 ? wave + 1 : wave; // a wave every 4 questions
       if (nextWave >= winWave) { window.setTimeout(() => finish(true), 600); return; }
       if (nextWave !== wave) setWave(nextWave);
-      window.setTimeout(() => { lockRef.current = false; setQi(nextCount); }, 650);
+      window.setTimeout(() => { lockRef.current = false; setLocked(false); setQi(nextCount); }, 650);
     } else {
       const nl = lives - 1;
       setLives(nl);
       if (nl <= 0) { window.setTimeout(() => finish(false), 650); return; }
-      window.setTimeout(() => { lockRef.current = false; setQi((i) => i + 1); }, 650);
+      window.setTimeout(() => { lockRef.current = false; setLocked(false); setQi((i) => i + 1); }, 650);
     }
   }, [qi, wave, lives, finish, winWave]);
 
-  const timeLeft = useCountdown(baseTime, () => resolve(false), qi, !done);
+  // Timer pauses the instant you answer (while feedback shows) and restarts on the
+  // next question — so it never ticks down "a second after" you've answered.
+  const timeLeft = useCountdown(baseTime, () => resolve(false), qi, !done && !locked);
 
   return (
     <div className="max-w-xl mx-auto">

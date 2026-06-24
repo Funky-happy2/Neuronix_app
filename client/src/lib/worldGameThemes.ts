@@ -72,6 +72,26 @@ export type SliderMatchTheme = {
 };
 
 export const MATCHING_THEMES: Record<string, MatchingTheme> = {
+  "periodic-pairs": {
+    pairs: [
+      { base: "O", match: "Oxygen", color: "#3b82f6" },
+      { base: "Na", match: "Sodium", color: "#f59e0b" },
+      { base: "Fe", match: "Iron", color: "#6b7280" },
+      { base: "He", match: "Helium", color: "#ec4899" },
+    ],
+    prompt: "Which element has this symbol?",
+    options: ["Oxygen", "Sodium", "Iron", "Helium"],
+  },
+  "circuit-match": {
+    pairs: [
+      { base: "🔋", match: "Battery", color: "#22c55e" },
+      { base: "💡", match: "Bulb", color: "#eab308" },
+      { base: "🔌", match: "Plug", color: "#3b82f6" },
+      { base: "⚡", match: "Current", color: "#f97316" },
+    ],
+    prompt: "Match the circuit part to its name:",
+    options: ["Battery", "Bulb", "Plug", "Current"],
+  },
   "marine-pairs": {
     pairs: [
       { base: "🐙", match: "Octopus", color: "#0ea5e9" },
@@ -105,6 +125,17 @@ export const MATCHING_THEMES: Record<string, MatchingTheme> = {
 };
 
 export const SORTING_THEMES: Record<string, SortingTheme> = {
+  "life-timeline": {
+    events: [
+      { text: "🦠 First single-celled life", year: 1 },
+      { text: "🐟 First fish swim the seas", year: 2 },
+      { text: "🌿 Plants spread onto land", year: 3 },
+      { text: "🦖 Age of the dinosaurs", year: 4 },
+      { text: "🦣 Mammals rise up", year: 5 },
+      { text: "🧑 First humans appear", year: 6 },
+    ],
+    instruction: "Order these from earliest to most recent!",
+  },
   "species-sort": {
     events: [
       { text: "🐒 Spider Monkey (Mammal)", year: 1 },
@@ -186,6 +217,15 @@ export const MEMORY_THEMES: Record<string, MemoryTheme> = {
 };
 
 export const WORD_SCRAMBLE_THEMES: Record<string, WordScrambleTheme> = {
+  "anatomy-scramble": {
+    words: [
+      { word: "heart", cat: "Organ" }, { word: "lung", cat: "Organ" }, { word: "brain", cat: "Organ" },
+      { word: "liver", cat: "Organ" }, { word: "kidney", cat: "Organ" }, { word: "bone", cat: "Skeleton" },
+      { word: "muscle", cat: "Body" }, { word: "nerve", cat: "Nervous" }, { word: "artery", cat: "Blood" },
+      { word: "skull", cat: "Skeleton" }, { word: "spine", cat: "Skeleton" }, { word: "cell", cat: "Biology" },
+      { word: "blood", cat: "Body" }, { word: "stomach", cat: "Organ" }, { word: "skin", cat: "Body" },
+    ],
+  },
   "ice-words": {
     words: [
       { word: "ice", cat: "Arctic" }, { word: "snow", cat: "Weather" }, { word: "frost", cat: "Weather" },
@@ -219,6 +259,21 @@ export const WORD_SCRAMBLE_THEMES: Record<string, WordScrambleTheme> = {
 };
 
 export const REACTION_TAP_THEMES: Record<string, ReactionTapTheme> = {
+  "storm-chaser": {
+    items: [
+      { num: 1, sym: "☀️", name: "Clear", color: "#fbbf24" },
+      { num: 2, sym: "🌤️", name: "Fair", color: "#fcd34d" },
+      { num: 3, sym: "⛅", name: "Cloudy", color: "#9ca3af" },
+      { num: 4, sym: "🌧️", name: "Rain", color: "#3b82f6" },
+      { num: 5, sym: "⛈️", name: "Storm", color: "#6366f1" },
+      { num: 6, sym: "🌩️", name: "Lightning", color: "#eab308" },
+      { num: 7, sym: "🌨️", name: "Snow", color: "#bfdbfe" },
+      { num: 8, sym: "🌪️", name: "Tornado", color: "#6b7280" },
+      { num: 9, sym: "🌈", name: "Rainbow", color: "#ec4899" },
+    ],
+    instruction: "Tap the weather in order, calm to wild!",
+    bgGradient: "from-sky-600 to-indigo-800",
+  },
   "eruption-timing": {
     items: [
       { num: 1, sym: "🌋", name: "Shield Volcano", color: "#ef4444" },

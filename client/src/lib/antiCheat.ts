@@ -1,16 +1,19 @@
 // Shared autoclicker / automation detector.
 //
-// The old detector only fired when input was BOTH faster than ~95ms AND almost
-// perfectly uniform, so any autoclicker set to a human-ish speed (120-300ms)
-// sailed right through. Real humans — even kids mashing a button — have lots of
-// timing jitter, so the strongest signal isn't raw speed, it's *consistency*.
+// IMPORTANT: many of our games are tap-to-act (Gravity Dash, clickers, reaction
+// taps). A human playing those clicks the SAME spot, often at a fairly steady
+// rhythm — that is NORMAL play and must never be flagged. So this detector only
+// fires on signatures a human physically cannot sustain:
 //
-// We flag on any of three independent signals:
-//   1. Metronome timing  — coefficient of variation (stdDev/mean) is tiny across
-//      a wide speed range. No human holds <8% variation for 16+ taps.
-//   2. Superhuman speed   — sustained mean interval below ~70ms (>14 clicks/sec).
-//   3. Pixel-locked taps  — many pointer events landing on the (near) exact same
-//      coordinate, which is what a fixed-position autoclicker produces.
+//   1. Near-perfect metronome timing — coefficient of variation (stdDev/mean)
+//      under ~3% across a LONG window. Real humans always have >5-10% jitter,
+//      even when deliberately tapping steadily; autoclickers sit near 0%.
+//   2. Sustained superhuman speed — mean interval under ~55ms (>18 clicks/sec)
+//      over a long window.
+//
+// We deliberately do NOT flag "same coordinate" on its own — tapping one jump
+// button is exactly what these games ask for. Fixed position only counts as
+// corroborating evidence alongside near-perfect timing.
 
 export interface InputSample {
   t: number;       // timestamp (ms)
@@ -23,7 +26,8 @@ export interface CadenceVerdict {
   reason: string;
 }
 
-const MIN_SAMPLES = 16;
+// Require a long run of inputs before judging — a few steady taps are not proof.
+const MIN_SAMPLES = 40;
 
 function stats(values: number[]) {
   const mean = values.reduce((a, b) => a + b, 0) / values.length;
@@ -33,7 +37,7 @@ function stats(values: number[]) {
 
 /**
  * Analyse the most recent input samples and decide whether they look automated.
- * Returns { robotic:false } until there's enough evidence.
+ * Returns { robotic:false } until there's strong, sustained evidence.
  */
 export function analyzeCadence(samples: InputSample[]): CadenceVerdict {
   if (samples.length < MIN_SAMPLES) return { robotic: false, reason: "" };
@@ -44,33 +48,33 @@ export function analyzeCadence(samples: InputSample[]): CadenceVerdict {
   const { mean, stdDev } = stats(intervals);
   const cv = mean > 0 ? stdDev / mean : 1;
 
-  // 1. Metronome-uniform timing (the giveaway for most autoclickers).
-  if (mean < 320 && cv < 0.08) {
+  // 1. Near-perfect metronome timing — the unmistakable autoclicker signature.
+  //    CV under 1.5% over ~40 inputs is not humanly reproducible (even trained,
+  //    deliberately-steady tapping floors out around 4-5% jitter). We also
+  //    require a reasonably brisk cadence — a slow, steady human pace is fine.
+  if (mean < 260 && cv < 0.015) {
+    // Corroborate with pixel-lock when we have pointer data: a real autoclicker
+    // is both metronome-uniform AND fixed-position. Keyboard input (no coords)
+    // is judged on timing alone.
+    const pointers = recent.filter((s) => typeof s.x === "number" && typeof s.y === "number");
+    if (pointers.length >= MIN_SAMPLES * 0.75) {
+      const sx = stats(pointers.map((p) => p.x as number));
+      const sy = stats(pointers.map((p) => p.y as number));
+      // If the player is moving around at all, it's a human — don't flag.
+      if (sx.stdDev >= 1.5 || sy.stdDev >= 1.5) return { robotic: false, reason: "" };
+    }
     return {
       robotic: true,
       reason: `Robotic cadence: mean ${Math.round(mean)}ms, CV ${(cv * 100).toFixed(1)}% over ${intervals.length} inputs`,
     };
   }
 
-  // 2. Sustained superhuman speed (>~14 inputs/sec).
-  if (mean < 70) {
+  // 2. Sustained superhuman speed (>~18 inputs/sec across the whole window).
+  if (mean < 55) {
     return {
       robotic: true,
       reason: `Superhuman speed: mean ${Math.round(mean)}ms (${(1000 / mean).toFixed(1)}/sec) over ${intervals.length} inputs`,
     };
-  }
-
-  // 3. Pixel-locked pointer events (fixed-position autoclicker).
-  const pointers = recent.filter((s) => typeof s.x === "number" && typeof s.y === "number");
-  if (pointers.length >= MIN_SAMPLES) {
-    const sx = stats(pointers.map((p) => p.x as number));
-    const sy = stats(pointers.map((p) => p.y as number));
-    if (sx.stdDev < 2.5 && sy.stdDev < 2.5) {
-      return {
-        robotic: true,
-        reason: `Pixel-locked clicks: spread ${sx.stdDev.toFixed(1)}x${sy.stdDev.toFixed(1)}px over ${pointers.length} clicks`,
-      };
-    }
   }
 
   return { robotic: false, reason: "" };

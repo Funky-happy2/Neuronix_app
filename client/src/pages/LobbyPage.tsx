@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import GamePlayer from "@/components/GamePlayer";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -281,6 +282,11 @@ export default function LobbyPage() {
 
       if (msg.type === "match_found") {
         setMyStatus("in_game");
+        // Clear any stale results/state from a previous match, or the new game
+        // won't render and the player gets stuck "in game" on the lobby screen.
+        setGameResults(null);
+        setTeamResults(null);
+        setTeamMatch(null);
         setMatch(msg);
         setGravityModifierName(msg.gravityModifierName || "");
         setPlayingGame(msg.gameId);
@@ -1342,14 +1348,24 @@ export default function LobbyPage() {
               <Button size="sm" variant="outline" onClick={leaveTeamMatch} data-testid="button-leave-team"><X className="w-4 h-4" /></Button>
             </Card>
           </div>
-          <GamePlayer
-            game={game}
-            onBack={leaveTeamMatch}
-            onComplete={(score) => submitTeamScore(score)}
-            yearLevel={(user as any)?.yearLevel || 7}
-            forcedDifficulty={teamMatch.difficulty}
-            skipRewardSubmit
-          />
+          <ErrorBoundary fallback={
+            <div className="max-w-md mx-auto px-4 py-10 text-center">
+              <Card className="p-6 border-border">
+                <p className="font-black text-lg mb-1">Match hiccup</p>
+                <p className="text-sm text-muted-foreground mb-4">Something glitched in the team match. Head back to the lobby and try again.</p>
+                <Button onClick={leaveTeamMatch} className="font-bold" data-testid="button-team-recover">Back to Lobby</Button>
+              </Card>
+            </div>
+          }>
+            <GamePlayer
+              game={game}
+              onBack={leaveTeamMatch}
+              onComplete={(score) => submitTeamScore(score)}
+              yearLevel={(user as any)?.yearLevel || 7}
+              forcedDifficulty={teamMatch.difficulty}
+              skipRewardSubmit
+            />
+          </ErrorBoundary>
         </div>
       );
     }
@@ -1375,23 +1391,43 @@ export default function LobbyPage() {
               )}
             </Card>
           </div>
-          <GamePlayer
-            game={game}
-            onBack={() => {
-              wsRef.current?.send(JSON.stringify({ type: "leave_room", roomId: match.roomId }));
-              setMatch(null);
-              setPlayingGame(null);
-              setMyStatus("idle");
-            }}
-            onComplete={(score, won) => submitScore(score, won)}
-            yearLevel={(user as any)?.yearLevel || 7}
-            forcedDifficulty={match.difficulty}
-            gravityModifier={match.gravityModifier}
-            skipRewardSubmit
-          />
+          <ErrorBoundary fallback={
+            <div className="max-w-md mx-auto px-4 py-10 text-center">
+              <Card className="p-6 border-border">
+                <p className="font-black text-lg mb-1">Match hiccup</p>
+                <p className="text-sm text-muted-foreground mb-4">Something glitched in the match. You're not in trouble — jump back to the lobby and try again.</p>
+                <Button onClick={() => { setMatch(null); setPlayingGame(null); setGameResults(null); setMyStatus("idle"); }} className="font-bold" data-testid="button-match-recover">Back to Lobby</Button>
+              </Card>
+            </div>
+          }>
+            <GamePlayer
+              game={game}
+              onBack={() => {
+                wsRef.current?.send(JSON.stringify({ type: "leave_room", roomId: match.roomId }));
+                setMatch(null);
+                setPlayingGame(null);
+                setMyStatus("idle");
+              }}
+              onComplete={(score, won) => submitScore(score, won)}
+              yearLevel={(user as any)?.yearLevel || 7}
+              forcedDifficulty={match.difficulty}
+              gravityModifier={match.gravityModifier}
+              skipRewardSubmit
+            />
+          </ErrorBoundary>
         </div>
       );
     }
+    // Matched a game we can't resolve — don't strand the player "in game".
+    return (
+      <div className="min-h-screen max-w-md mx-auto px-4 py-10 text-center">
+        <Card className="p-6 border-border">
+          <p className="font-black text-lg mb-1">Couldn't load that game</p>
+          <p className="text-sm text-muted-foreground mb-4">The match referenced a game that isn't available. Back to the lobby to queue again.</p>
+          <Button onClick={() => { wsRef.current?.send(JSON.stringify({ type: "leave_room", roomId: match.roomId })); setMatch(null); setPlayingGame(null); setMyStatus("idle"); }} className="font-bold" data-testid="button-unknown-game-recover">Back to Lobby</Button>
+        </Card>
+      </div>
+    );
   }
 
   if (gameResults) {

@@ -6,8 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import {
   Gamepad2, Star, Lock, Trophy, ArrowLeft, Zap, Target,
   Rocket, Dna, FlaskConical, Clock, Atom, TreePine, Puzzle,
-  CloudLightning, Shield, Orbit, Sparkles, Pickaxe, Play, Users, Coins, Medal
+  CloudLightning, Shield, Orbit, Sparkles, Pickaxe, Play, Users, Coins, Medal,
+  Search, Shuffle, Flame, Crown, X
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { GAME_MODES } from "@/lib/gameData";
 import type { GameMode } from "@shared/schema";
 import { motion, AnimatePresence } from "framer-motion";
@@ -37,6 +39,8 @@ export default function ArcadePage({ badges, onPlayGame, onAddXP, onEarnBadge, y
   const { user } = useAuth();
   const { toast } = useToast();
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<"featured" | "az" | "score">("featured");
   const [selectedGame, setSelectedGame] = useState<GameMode | null>(null);
   const [playingGame, setPlayingGame] = useState<GameMode | null>(null);
   const [challengeInfo, setChallengeInfo] = useState<{ title: string; target: number; xp: number } | null>(null);
@@ -78,17 +82,34 @@ export default function ArcadePage({ badges, onPlayGame, onAddXP, onEarnBadge, y
     return false;
   };
 
+  const scores: Record<string, number> = ((user as any)?.gameScores as Record<string, number>) || {};
+  const q = search.trim().toLowerCase();
   const filteredGames = GAME_MODES.filter((game) => {
     if (game.world) return false;
     if (selectedCategory !== "All" && game.category !== selectedCategory) return false;
     if (isGameLocked(game)) return false;
+    if (q && !(`${game.name} ${game.description} ${game.category}`.toLowerCase().includes(q))) return false;
     return true;
   }).sort((a, b) => {
+    if (sortBy === "az") return a.name.localeCompare(b.name);
+    if (sortBy === "score") return (scores[b.id] || 0) - (scores[a.id] || 0);
     if (a.isSecret !== b.isSecret) return a.isSecret ? 1 : -1;
     return 0;
   });
 
   const lockedSecrets = GAME_MODES.filter((g) => !g.world && isGameLocked(g));
+
+  // Playable (unlocked, non-secret-locked) pool for spotlight + surprise.
+  const playablePool = GAME_MODES.filter((g) => !g.world && !isGameLocked(g) && !g.isSecret);
+  // Daily Spotlight — deterministic rotation by date, so it feels fresh each day.
+  const daySeed = Math.floor(Date.now() / 86400000);
+  const spotlight = playablePool.length ? playablePool[daySeed % playablePool.length] : null;
+  const masteredCount = playablePool.filter((g) => (scores[g.id] || 0) > 0).length;
+  const surprise = () => {
+    if (!playablePool.length) return;
+    const pick = playablePool[Math.floor(Math.random() * playablePool.length)];
+    setPlayingGame(pick);
+  };
 
   const handleGameComplete = async () => {
     queryClient.invalidateQueries({ queryKey: ["/api/daily-challenge"] });
@@ -261,7 +282,7 @@ export default function ArcadePage({ badges, onPlayGame, onAddXP, onEarnBadge, y
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
           >
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
               <div>
                 <h1 className="text-3xl md:text-4xl font-black flex items-center gap-3">
                   <Gamepad2 className="w-8 h-8 text-purple-500" /> Game Arcade
@@ -270,9 +291,55 @@ export default function ArcadePage({ badges, onPlayGame, onAddXP, onEarnBadge, y
                   Choose a game mode and start your science adventure!
                 </p>
               </div>
-              <Badge variant="secondary" className="text-sm font-bold self-start md:self-auto">
-                {filteredGames.length} Games Available
-              </Badge>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="secondary" className="text-xs font-bold gap-1"><Gamepad2 className="w-3 h-3" /> {playablePool.length} games</Badge>
+                <Badge variant="secondary" className="text-xs font-bold gap-1 text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-400/30"><Crown className="w-3 h-3" /> {masteredCount} mastered</Badge>
+                <Button size="sm" onClick={surprise} className="font-bold gap-1.5 bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white" data-testid="button-surprise">
+                  <Shuffle className="w-4 h-4" /> Surprise Me
+                </Button>
+              </div>
+            </div>
+
+            {/* Daily Spotlight — rotates every day */}
+            {spotlight && (() => {
+              const SpotIcon = ICON_MAP[spotlight.icon] || Gamepad2;
+              const best = scores[spotlight.id] || 0;
+              return (
+                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+                  <Card className={`p-6 border-0 bg-gradient-to-br ${spotlight.gradient} text-white relative overflow-hidden cursor-pointer group`} onClick={() => setSelectedGame(spotlight)} data-testid="arcade-spotlight">
+                    <div className="absolute inset-0 bg-black/10" />
+                    <div className="pointer-events-none absolute -right-4 -top-6 opacity-15 group-hover:opacity-25 transition-opacity"><SpotIcon className="w-40 h-40" /></div>
+                    <div className="relative flex items-center gap-4 flex-wrap">
+                      <div className="w-14 h-14 rounded-md bg-white/20 flex items-center justify-center shrink-0"><SpotIcon className="w-8 h-8" /></div>
+                      <div className="flex-1 min-w-0">
+                        <Badge variant="secondary" className="mb-1 text-[10px] font-bold bg-white/20 text-white border-white/20"><Flame className="w-3 h-3 mr-1" /> Daily Spotlight</Badge>
+                        <h2 className="text-2xl font-black leading-tight">{spotlight.name}</h2>
+                        <p className="text-sm text-white/85 line-clamp-1">{spotlight.description}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {best > 0 && <Badge variant="secondary" className="text-[10px] font-bold bg-white/20 text-white border-white/20"><Medal className="w-3 h-3 mr-1" /> Best {best}</Badge>}
+                        <Button variant="secondary" className="font-bold gap-1.5 bg-white/20 text-white border-white/20" onClick={(e) => { e.stopPropagation(); setPlayingGame(spotlight); }} data-testid="button-spotlight-play">
+                          <Play className="w-4 h-4" /> Play
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                </motion.div>
+              );
+            })()}
+
+            {/* Search + sort */}
+            <div className="flex flex-col sm:flex-row gap-2 mb-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search games…" className="pl-9 pr-9" data-testid="input-arcade-search" />
+                {search && <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" data-testid="button-clear-search"><X className="w-4 h-4" /></button>}
+              </div>
+              <div className="flex gap-1">
+                {([["featured", "Featured"], ["az", "A–Z"], ["score", "Top Score"]] as const).map(([val, label]) => (
+                  <Button key={val} size="sm" variant={sortBy === val ? "default" : "outline"} onClick={() => setSortBy(val)} className="font-semibold text-xs" data-testid={`button-sort-${val}`}>{label}</Button>
+                ))}
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-2 mb-6">
@@ -289,6 +356,14 @@ export default function ArcadePage({ badges, onPlayGame, onAddXP, onEarnBadge, y
                 </Button>
               ))}
             </div>
+
+            {filteredGames.length === 0 && (
+              <Card className="p-10 text-center border-dashed">
+                <Search className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+                <p className="font-bold">No games match your search</p>
+                <p className="text-sm text-muted-foreground">Try a different word or category.</p>
+              </Card>
+            )}
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredGames.map((game, i) => {

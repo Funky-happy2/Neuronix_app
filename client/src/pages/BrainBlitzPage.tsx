@@ -87,7 +87,7 @@ const MUTATORS: Mutator[] = [
   { id: "time-attack", name: "Time Attack", emoji: "⚡", blurb: "Snappy timers, +35% points. Think fast!", lives: 3, baseTime: 7, pointMult: 1.35, livesLostOnWrong: 1, color: "from-amber-500 to-orange-600" },
   { id: "sudden-death", name: "Sudden Death", emoji: "💀", blurb: "ONE life, double points. How far can you go?", lives: 1, baseTime: 11, pointMult: 2, livesLostOnWrong: 1, color: "from-rose-600 to-red-800" },
   { id: "combo-frenzy", name: "Combo Frenzy", emoji: "🔥", blurb: "Combos build faster & score huge — but mistakes cost 2 lives.", lives: 4, baseTime: 10, pointMult: 1.2, livesLostOnWrong: 2, color: "from-fuchsia-500 to-purple-700" },
-  { id: "glass-cannon", name: "Glass Cannon", emoji: "💎", blurb: "One life, but 2.5× points. High risk, high reward!", lives: 1, baseTime: 12, pointMult: 2.5, livesLostOnWrong: 1, color: "from-pink-500 to-rose-700" },
+  { id: "glass-cannon", name: "Glass Cannon", emoji: "💎", blurb: "One life AND a razor-thin timer — but a massive 3× points. Pure speed-or-shatter.", lives: 1, baseTime: 6, pointMult: 3, livesLostOnWrong: 1, color: "from-pink-500 to-rose-700" },
   { id: "speedrun", name: "Speedrun", emoji: "🏃", blurb: "Blink-and-you-miss-it timers, +50% points.", lives: 2, baseTime: 5, pointMult: 1.5, livesLostOnWrong: 1, color: "from-yellow-500 to-amber-600" },
   { id: "iron-will", name: "Iron Will", emoji: "🛡️", blurb: "6 lives, easy timer. The friendliest way to learn.", lives: 6, baseTime: 18, pointMult: 0.7, livesLostOnWrong: 1, color: "from-slate-500 to-gray-700" },
 ];

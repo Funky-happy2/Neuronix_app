@@ -31,6 +31,18 @@ interface GameRewards {
   activeUpgrades: string[];
 }
 
+// ── Game-agnostic combo system ───────────────────────────────────────────────
+// Every mini-game reports points through one `onScore` hook, so we wrap it once
+// here to give EVERY game a satisfying combo meter, score multipliers, floating
+// score pop-ups and an escalating "tier" — without touching the 26 mini-games.
+function comboTier(combo: number): { mult: number; label: string; color: string; emoji: string } {
+  if (combo >= 25) return { mult: 2, label: "UNSTOPPABLE", color: "from-fuchsia-500 to-rose-500", emoji: "💥" };
+  if (combo >= 15) return { mult: 1.75, label: "ON FIRE", color: "from-orange-500 to-red-500", emoji: "🔥" };
+  if (combo >= 8) return { mult: 1.5, label: "HOT STREAK", color: "from-amber-400 to-orange-500", emoji: "⚡" };
+  if (combo >= 4) return { mult: 1.25, label: "COMBO", color: "from-yellow-400 to-amber-500", emoji: "✨" };
+  return { mult: 1, label: "", color: "from-purple-500 to-blue-500", emoji: "" };
+}
+
 interface GamePlayerProps {
   game: GameMode;
   onBack: () => void;
@@ -95,6 +107,19 @@ export default function GamePlayer({ game, onBack, onComplete, yearLevel = 7, au
   const luckyAnswerLevel = hasLuckyAnswer ? (((user as any)?.itemLevels || {})["powerup-lucky-answer"] || 0) : 0;
   const [phase, setPhase] = useState<"intro" | "playing" | "result">(autoStart || forcedDifficulty ? "playing" : "intro");
   const [score, setScore] = useState(0);
+  // Combo / juice (game-agnostic — see comboTier + handleScore below)
+  const [combo, setCombo] = useState(0);
+  const comboRef = useRef(0);
+  const [maxCombo, setMaxCombo] = useState(0);
+  const maxComboRef = useRef(0);
+  const [frenzy, setFrenzy] = useState(false);
+  const frenzyRef = useRef(false);
+  const [frenzyUsed, setFrenzyUsed] = useState(false);
+  const [popups, setPopups] = useState<{ id: number; text: string; good: boolean }[]>([]);
+  const popupId = useRef(0);
+  const comboDecay = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const milestoneRef = useRef(0);
+  const [milestone, setMilestone] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(30);
   const [lives, setLives] = useState(3);
   const [gameOver, setGameOver] = useState(false);
@@ -126,6 +151,7 @@ export default function GamePlayer({ game, onBack, onComplete, yearLevel = 7, au
     if (phase === "result" && autoLoop) {
       const t = setTimeout(() => {
         setScore(0);
+        resetCombo();
         setGameOver(false);
         setRewards(null);
         rewardsSubmittedRef.current = false;
@@ -215,6 +241,56 @@ export default function GamePlayer({ game, onBack, onComplete, yearLevel = 7, au
     setPhase("result");
     setGameOver(true);
   }, []);
+
+  const spawnPopup = (text: string, good: boolean) => {
+    const pid = ++popupId.current;
+    setPopups((p) => [...p.slice(-4), { id: pid, text, good }]);
+    setTimeout(() => setPopups((p) => p.filter((x) => x.id !== pid)), 950);
+  };
+
+  // Wraps every mini-game's onScore: builds the combo, applies the multiplier,
+  // and spawns floating pop-ups. This is what makes all 26 games feel "juicy".
+  const handleScore = useCallback((pts: number) => {
+    if (pts > 0) {
+      const nc = comboRef.current + 1;
+      comboRef.current = nc;
+      setCombo(nc);
+      if (nc > maxComboRef.current) { maxComboRef.current = nc; setMaxCombo(nc); }
+      const tier = comboTier(nc);
+      const mult = frenzyRef.current ? Math.min(2.5, tier.mult + 1) : tier.mult;
+      const gained = Math.max(1, Math.round(pts * mult));
+      setScore((s) => Math.max(0, s + gained));
+      spawnPopup(`+${gained}${mult > 1 ? ` ×${+mult.toFixed(2)}` : ""}`, true);
+      if ([4, 8, 15, 25].includes(nc) && nc > milestoneRef.current) {
+        milestoneRef.current = nc;
+        setMilestone(`${tier.emoji} ${tier.label}! ×${tier.mult}`);
+        setTimeout(() => setMilestone(null), 1100);
+      }
+      if (comboDecay.current) clearTimeout(comboDecay.current);
+      comboDecay.current = setTimeout(() => { comboRef.current = 0; setCombo(0); milestoneRef.current = 0; }, 3500);
+    } else {
+      comboRef.current = 0; setCombo(0); milestoneRef.current = 0;
+      setScore((s) => Math.max(0, s + pts));
+      if (pts < 0) spawnPopup(`${pts}`, false);
+    }
+  }, []);
+
+  // One-per-run "Frenzy" power-up: 8 seconds of bonus multiplier.
+  const activateFrenzy = () => {
+    if (frenzyUsed || phase !== "playing") return;
+    setFrenzyUsed(true);
+    frenzyRef.current = true; setFrenzy(true);
+    setTimeout(() => { frenzyRef.current = false; setFrenzy(false); }, 8000);
+  };
+
+  const resetCombo = () => {
+    comboRef.current = 0; setCombo(0);
+    maxComboRef.current = 0; setMaxCombo(0);
+    milestoneRef.current = 0; setMilestone(null);
+    frenzyRef.current = false; setFrenzy(false); setFrenzyUsed(false);
+    setPopups([]);
+    if (comboDecay.current) clearTimeout(comboDecay.current);
+  };
 
   useEffect(() => {
     if (phase === "result" && !skipRewardSubmit && !rewardsSubmittedRef.current) {
@@ -374,6 +450,13 @@ export default function GamePlayer({ game, onBack, onComplete, yearLevel = 7, au
             )}
             <h2 className="text-2xl font-black mb-2" data-testid="text-result-title">{won ? "Awesome Job!" : "Good Try!"}</h2>
             <p className="text-4xl font-black text-purple-500 mb-1" data-testid="text-result-score">{score} pts</p>
+            {maxCombo >= 4 && (
+              <p className="text-xs font-black mb-2 flex items-center justify-center gap-1">
+                <span className={`px-2 py-0.5 rounded-full bg-gradient-to-r ${comboTier(maxCombo).color} text-white`} data-testid="text-max-combo">
+                  {comboTier(maxCombo).emoji} Best combo ×{maxCombo}
+                </span>
+              </p>
+            )}
             {!isNewHighScore && oldBest > 0 && (
               <p className="text-xs text-muted-foreground mb-2">Your best: {oldBest} pts</p>
             )}
@@ -457,7 +540,7 @@ export default function GamePlayer({ game, onBack, onComplete, yearLevel = 7, au
             )}
 
             <div className="flex gap-3 justify-center">
-              <Button onClick={() => { setPhase("intro"); setScore(0); setGameOver(false); setRewards(null); rewardsSubmittedRef.current = false; }} variant="outline" className="gap-2 font-bold" data-testid="button-play-again">
+              <Button onClick={() => { setPhase("intro"); setScore(0); resetCombo(); setGameOver(false); setRewards(null); rewardsSubmittedRef.current = false; }} variant="outline" className="gap-2 font-bold" data-testid="button-play-again">
                 <RotateCcw className="w-4 h-4" /> Play Again
               </Button>
               <Button onClick={() => onComplete(score, won, difficulty)} className="gap-2 font-bold" data-testid="button-finish">
@@ -470,21 +553,68 @@ export default function GamePlayer({ game, onBack, onComplete, yearLevel = 7, au
     );
   }
 
+  const tier = comboTier(combo);
   return (
     <div className="min-h-screen max-w-4xl mx-auto px-4 py-4">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-2 gap-2">
         <Button variant="ghost" size="sm" onClick={() => handleGameEnd(score)} data-testid="button-quit">
           <X className="w-4 h-4 mr-1" /> Quit
         </Button>
-        <Badge className="font-black text-xl px-5 py-2 bg-purple-600 text-white border-0 gap-2 rounded-full" data-testid="score-overlay">
-          <Star className="w-5 h-5 text-yellow-300" /> {score} pts
-        </Badge>
+        {/* Frenzy power-up — one charge per run, 8s of bonus multiplier */}
+        <Button
+          size="sm"
+          onClick={activateFrenzy}
+          disabled={frenzyUsed}
+          className={`font-black gap-1.5 rounded-full ${frenzy ? "bg-fuchsia-600 text-white animate-pulse" : frenzyUsed ? "opacity-40" : "bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white"}`}
+          data-testid="button-frenzy"
+        >
+          <Zap className="w-4 h-4" /> {frenzy ? "FRENZY!" : frenzyUsed ? "Used" : "Frenzy"}
+        </Button>
+        <div className="relative">
+          <Badge className="font-black text-xl px-5 py-2 bg-purple-600 text-white border-0 gap-2 rounded-full" data-testid="score-overlay">
+            <Star className="w-5 h-5 text-yellow-300" /> {score} pts
+          </Badge>
+          {/* Floating score pop-ups */}
+          <AnimatePresence>
+            {popups.map((p) => (
+              <motion.div
+                key={p.id}
+                initial={{ opacity: 0, y: 0, scale: 0.8 }}
+                animate={{ opacity: 1, y: -34, scale: 1 }}
+                exit={{ opacity: 0, y: -52 }}
+                transition={{ duration: 0.9 }}
+                className={`absolute right-2 top-0 font-black text-lg pointer-events-none ${p.good ? "text-green-400" : "text-red-400"}`}
+              >
+                {p.text}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* Combo meter — only shows once a combo is building */}
+      <div className="h-7 mb-2 flex items-center">
+        <AnimatePresence>
+          {combo >= 2 && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+              className="flex items-center gap-2 w-full" data-testid="combo-meter"
+            >
+              <span className={`text-sm font-black bg-gradient-to-r ${tier.color} bg-clip-text text-transparent whitespace-nowrap`}>
+                {tier.emoji} {combo}× combo{tier.mult > 1 ? ` · ${tier.mult}× pts` : ""}
+              </span>
+              <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                <motion.div className={`h-full bg-gradient-to-r ${tier.color}`} animate={{ width: `${Math.min(100, (combo % 8) / 8 * 100 || 100)}%` }} />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <GameEngine
         gameType={game.gameType}
         gameId={game.id}
-        onScore={(pts) => setScore((prev) => Math.max(0, prev + pts))}
+        onScore={handleScore}
         onEnd={(finalScore) => handleGameEnd(finalScore)}
         score={score}
         yearLevel={selectedYear}
@@ -495,6 +625,23 @@ export default function GamePlayer({ game, onBack, onComplete, yearLevel = 7, au
         luckyAnswerLevel={luckyAnswerLevel}
         gravityModifier={gravityModifier}
       />
+
+      {/* Milestone celebration */}
+      <AnimatePresence>
+        {milestone && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.5, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 1.4 }}
+            className="fixed inset-x-0 top-1/3 z-50 pointer-events-none flex justify-center"
+            data-testid="combo-milestone"
+          >
+            <div className={`px-6 py-3 rounded-2xl bg-gradient-to-r ${comboTier(milestoneRef.current).color} text-white font-black text-2xl shadow-2xl`}>
+              {milestone}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -2450,10 +2597,21 @@ function SpeedQuizGame({ gameId, onScore, onEnd, score, yearLevel = 7, difficult
     hard: { time: 20, correctBonus: 2, wrongPenalty: 3 },
   };
   const qs = quizSettings[difficulty];
-  const [questions] = useState(() =>
+  type QuizQ = { q: string; a: string; opts: string[]; format: "mcq" | "tf"; claim?: string; tfAnswer?: boolean };
+  const [questions] = useState<QuizQ[]>(() =>
     elementQuestions
       .sort(() => Math.random() - 0.5)
-      .map(q => ({ ...q, opts: [...q.opts].sort(() => Math.random() - 0.5) }))
+      .map((q, i): QuizQ => {
+        const opts = [...q.opts].sort(() => Math.random() - 0.5);
+        // Every 3rd question is a fast True/False "lightning" round for variety.
+        if (i % 3 === 2) {
+          const useTrue = Math.random() < 0.5;
+          const wrong = q.opts.find((o) => o !== q.a) || q.a;
+          const claim = useTrue ? q.a : wrong;
+          return { ...q, opts, format: "tf", claim, tfAnswer: claim === q.a };
+        }
+        return { ...q, opts, format: "mcq" };
+      })
   );
   const [current, setCurrent] = useState(0);
   const [timeLeft, setTimeLeft] = useState(qs.time + extraTime);
@@ -2540,9 +2698,10 @@ function SpeedQuizGame({ gameId, onScore, onEnd, score, yearLevel = 7, difficult
     if (review) return; // already answered this question — waiting for "Next"
     if (current >= questions.length) { onEnd(scoreRef.current); return; }
     const q = questions[current];
-    const isCorrect = choice === q.a;
+    const isCorrect = q.format === "tf" ? ((choice === "True") === q.tfAnswer) : (choice === q.a);
     if (isCorrect) {
-      const pts = 15 + combo * 5;
+      // True/False lightning rounds are quicker, so they pay a small speed bonus.
+      const pts = (q.format === "tf" ? 12 : 15) + combo * 5;
       onScore(pts);
       setCombo((c) => c + 1);
       setTimeLeft((t) => Math.min(t + qs.correctBonus, 60));
@@ -2612,33 +2771,60 @@ function SpeedQuizGame({ gameId, onScore, onEnd, score, yearLevel = 7, difficult
 
       <div className="text-center mb-6">
         <p className="text-sm text-muted-foreground mb-2">{current + 1}/{questions.length}</p>
-        <h3 className="text-lg font-bold">{q.q}</h3>
+        {q.format === "tf" ? (
+          <>
+            <Badge className="mb-2 bg-gradient-to-r from-amber-400 to-orange-500 text-white border-0 font-black gap-1">⚡ Lightning · True or False?</Badge>
+            <h3 className="text-lg font-bold">{q.q.replace(/\?$/, "")} <span className="text-purple-500">{q.claim}</span></h3>
+          </>
+        ) : (
+          <h3 className="text-lg font-bold">{q.q}</h3>
+        )}
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        {filteredOpts.map((opt) => {
-          const isAnswer = opt === q.a;
-          const isChosen = review?.chosen === opt;
-          let stateClass = "";
-          if (review) {
-            if (isAnswer) stateClass = "bg-green-500 text-white border-green-500 hover:bg-green-500";
-            else if (isChosen) stateClass = "bg-red-500 text-white border-red-500 hover:bg-red-500";
-            else stateClass = "opacity-50";
-          }
-          return (
-            <Button
-              key={opt}
-              variant="outline"
-              className={`h-14 font-bold text-sm ${stateClass}`}
-              disabled={!!review}
-              onClick={() => answer(opt)}
-              data-testid={`button-answer-${opt}`}
-            >
-              {opt}
-            </Button>
-          );
-        })}
-      </div>
+      {q.format === "tf" ? (
+        <div className="grid grid-cols-2 gap-2">
+          {(["True", "False"] as const).map((opt) => {
+            const isAnswer = (opt === "True") === q.tfAnswer;
+            const isChosen = review?.chosen === opt;
+            let stateClass = "";
+            if (review) {
+              if (isAnswer) stateClass = "bg-green-500 text-white border-green-500 hover:bg-green-500";
+              else if (isChosen) stateClass = "bg-red-500 text-white border-red-500 hover:bg-red-500";
+              else stateClass = "opacity-50";
+            }
+            return (
+              <Button key={opt} variant="outline" className={`h-16 font-black text-lg ${stateClass}`} disabled={!!review} onClick={() => answer(opt)} data-testid={`button-tf-${opt.toLowerCase()}`}>
+                {opt === "True" ? "✓ True" : "✗ False"}
+              </Button>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-2">
+          {filteredOpts.map((opt) => {
+            const isAnswer = opt === q.a;
+            const isChosen = review?.chosen === opt;
+            let stateClass = "";
+            if (review) {
+              if (isAnswer) stateClass = "bg-green-500 text-white border-green-500 hover:bg-green-500";
+              else if (isChosen) stateClass = "bg-red-500 text-white border-red-500 hover:bg-red-500";
+              else stateClass = "opacity-50";
+            }
+            return (
+              <Button
+                key={opt}
+                variant="outline"
+                className={`h-14 font-bold text-sm ${stateClass}`}
+                disabled={!!review}
+                onClick={() => answer(opt)}
+                data-testid={`button-answer-${opt}`}
+              >
+                {opt}
+              </Button>
+            );
+          })}
+        </div>
+      )}
 
       {review && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4">
