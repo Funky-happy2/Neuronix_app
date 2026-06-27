@@ -27,7 +27,7 @@ export function StoryBanner() {
   if (!user) return null;
   const inventory: string[] = user.inventory || [];
 
-  const total = STORIES.reduce((s, st) => s + totalStoryNodes(st), 0);
+  const total = STORIES.reduce((s, st) => s + totalStoryNodes(st, inventory), 0);
   const done = STORIES.reduce((s, st) => s + storyNodesDone(st, inventory), 0);
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
   const step = nextStep((user as any).level || 0, inventory);

@@ -27,7 +27,9 @@ export type StoryLevelSpec =
   | { type: "traverse"; steps: number; hp: number; yearTier: number; timeSec: number; hazard: string; topic?: string }
   | { type: "boss"; bossName: string; bossEmoji: string; bossHp: number; hp: number; yearTier: number; timeSec: number; phaseLine?: string; topic?: string }
   | { type: "swarm"; enemies: number; hp: number; yearTier: number; timeSec: number; enemyName: string; enemyEmoji: string; topic?: string }
-  | { type: "lock"; tumblers: number; hp: number; yearTier: number; timeSec: number; lockName: string; topic?: string }
+  // `unit`/`unitEmoji` re-skin the puzzle so it matches the fiction (layers of a
+  // firewall, neurons in a net, stars in a vault…) instead of always "tumblers".
+  | { type: "lock"; tumblers: number; hp: number; yearTier: number; timeSec: number; lockName: string; unit?: string; unitEmoji?: string; topic?: string }
   // race a rival to the finish — right answers move YOU, wrong answers move the rival
   | { type: "chase"; distance: number; hp: number; yearTier: number; timeSec: number; rivalName: string; rivalEmoji: string; topic?: string }
   // escort an ally to safety — wrong answers hurt the ally; lose if the ally falls
@@ -37,7 +39,11 @@ export type StoryLevelSpec =
 // `needs` is one choice flag, or several that must ALL be present (compounding).
 export interface StoryTextVariant { needs: string | string[]; text: string }
 
-interface BaseNode { id: string; title: string; text: string; speaker?: string; reward?: StoryReward; }
+// `requires` gates a node behind a choice flag (e.g. "story-choice-cc2-fork-cave").
+// A node whose requirement isn't met is INACTIVE: it's skipped and treated as
+// already-complete, so a choice can branch the player down a different path of
+// nodes/levels — the path genuinely changes the story, not just the dialogue.
+interface BaseNode { id: string; title: string; text: string; speaker?: string; reward?: StoryReward; requires?: string; }
 export interface DialogueNode extends BaseNode { kind: "dialogue"; variants?: StoryTextVariant[] }
 export interface LevelNode extends BaseNode { kind: "level"; level: StoryLevelSpec }
 export interface StoryChoiceOption { id: string; label: string; response: string; reward?: StoryReward }
@@ -78,7 +84,7 @@ const escort = (id: string, title: string, text: string, level: Omit<Extract<Sto
 // ─── Story 1: The Spark Saga (10 chapters, escalating) ──────────────────────────
 const SPARK_SAGA: StoryChapter[] = [
   {
-    id: "ch1", index: 1, title: "The Spark Awakens", subtitle: "Neuronix Academy",
+    id: "ch1", index: 1, topic: "energy", title: "The Spark Awakens", subtitle: "Neuronix Academy",
     emoji: "✨", gradient: "from-sky-500 to-indigo-600",
     nodes: [
       talk("c1-intro", "Professor Lumen", "Welcome, Neuronaut",
@@ -168,7 +174,7 @@ const SPARK_SAGA: StoryChapter[] = [
     ],
   },
   {
-    id: "ch7", index: 7, title: "The Static's Heart", subtitle: "The final stand",
+    id: "ch7", index: 7, topic: "electricity", title: "The Static's Heart", subtitle: "The final stand",
     emoji: "🌟", gradient: "from-fuchsia-600 via-purple-700 to-amber-500",
     nodes: [
       talk("c7-intro", "Professor Lumen", "One Last Spark",
@@ -185,14 +191,14 @@ const SPARK_SAGA: StoryChapter[] = [
 
   // ─── ACT 2 ───
   {
-    id: "ch8", index: 8, title: "The Hollow Wastes", subtitle: "Where nothing remains",
+    id: "ch8", index: 8, topic: "physics", title: "The Hollow Wastes", subtitle: "Where nothing remains",
     emoji: "🕯️", gradient: "from-slate-600 to-zinc-900",
     nodes: [
       talk("c8-intro", "Bit", "Beyond the Static",
         "This place is… empty. Not dark — empty. The Null has eaten whole ideas out of the world. Hollow husks of forgotten creatures wander here. We have to choose how we move forward, Neuronaut."),
       choose("c8-fork", "Bit", "Which Path?", "Two ways lead deeper into the Wastes. How do we press on?", [
         { id: "bold", label: "🔥 Charge straight through", response: "Bold! We blaze a trail head-on — no hesitation, no fear. The Null hates courage.", reward: { xp: 250, coins: 150 } },
-        { id: "clever", label: "🧠 Slip through the cracks", response: "Clever! We take the quiet path, reading the Null's patterns. Knowledge is its own kind of bravery.", reward: { xp: 250, gems: 1 } },
+        { id: "clever", label: "🧠 Slip through the cracks", response: "Clever! We take the quiet path, reading the Null's patterns. Knowledge is its own kind of bravery.", reward: { xp: 250, coins: 100 } },
       ]),
       swarm("c8-husks", "The Forgotten Horde", "Hollow husks swarm out of the emptiness! Defeat each one with what you know before they reach you.",
         { enemies: 8, hp: 4, yearTier: 8, timeSec: 10, enemyName: "Hollow Husk", enemyEmoji: "👻" }, { xp: 500, coins: 300 }),
@@ -210,7 +216,7 @@ const SPARK_SAGA: StoryChapter[] = [
         { tumblers: 6, hp: 4, yearTier: 8, timeSec: 11, lockName: "The Riddle Gate" }, { xp: 550, coins: 350 }),
       choose("c9-fork", "Bit", "How Will You Fight?", "Your Reflection is forming — armed with your every doubt. How do you face yourself?", [
         { id: "fury", label: "🔥 With fury — overwhelm it", response: "Yes! Pour everything into the attack — your Reflection flinches before your fire.", reward: { xp: 300, coins: 200 } },
-        { id: "calm", label: "🧘 With calm — outsmart it", response: "Wise. A clear, quiet mind sees through every trick the mirror plays.", reward: { xp: 300, gems: 2 } },
+        { id: "calm", label: "🧘 With calm — outsmart it", response: "Wise. A clear, quiet mind sees through every trick the mirror plays.", reward: { xp: 300, coins: 200 } },
       ]),
       boss("c9-boss", "Your Reflection", "The mirror forms a copy of YOU, armed with every doubt you've ever had. Out-think yourself to shatter it!",
         { bossName: "Your Reflection", bossEmoji: "🪞", bossHp: 11, hp: 4, yearTier: 8, timeSec: 10, phaseLine: "The Reflection grins — it knows your every move!" }, { xp: 800, coins: 500, gems: 3 }),
@@ -219,7 +225,7 @@ const SPARK_SAGA: StoryChapter[] = [
     ],
   },
   {
-    id: "ch10", index: 10, title: "The Null Core", subtitle: "The true finale",
+    id: "ch10", index: 10, topic: "physics", title: "The Null Core", subtitle: "The true finale",
     emoji: "🌑", gradient: "from-fuchsia-700 via-indigo-800 to-amber-500",
     nodes: [
       talkV("c10-intro", "The Null", "I Am Emptiness", "So. The little Spark reached my core. I am what remains when curiosity dies — the quiet at the end of every question. You cannot defeat nothing.",
@@ -228,7 +234,7 @@ const SPARK_SAGA: StoryChapter[] = [
           { needs: "story-choice-c8-fork-clever", text: "So. The clever little Spark slipped all the way to my core. I watched you read my patterns in the Wastes. Cunning. But cleverness is just another light for me to swallow. You cannot defeat nothing." },
         ]),
       lock("c10-seals", "The Three Seals", "The Null guards its heart with three layers of sealed thought. Open every seal with a flawless run of answers!",
-        { tumblers: 8, hp: 4, yearTier: 8, timeSec: 10, lockName: "The Null Seals" }, { xp: 700, coins: 450 }),
+        { tumblers: 8, hp: 4, yearTier: 8, timeSec: 10, lockName: "The Null Seals", unit: "seal", unitEmoji: "🔮" }, { xp: 700, coins: 450 }),
       boss("c10-boss", "The Null", "The end of all questions, made flesh. Pour everything you've ever learned into one last stand and prove that curiosity never dies!",
         { bossName: "The Null", bossEmoji: "🌑", bossHp: 16, hp: 5, yearTier: 8, timeSec: 9, phaseLine: "The Null unmakes the very ground — answer or be forgotten!" }, { xp: 2000, coins: 1200, gems: 8 }),
       talkV("c10-finale", "Professor Lumen", "The Spark Eternal",
@@ -268,8 +274,13 @@ const CHRONO_CAPER: StoryChapter[] = [
         { enemies: 7, hp: 4, yearTier: 6, timeSec: 12, enemyName: "Frost Guardian", enemyEmoji: "❄️" }, { xp: 350, coins: 200 }),
       choose("cc2-fork", "Bit", "Which Trail?", "The Curator's tracks split at a glacier. Which way?", [
         { id: "cave", label: "🕳️ Into the ice cave", response: "Brrr — the cave route! Dark and cold, but it cuts off their escape.", reward: { xp: 200, coins: 150 } },
-        { id: "ridge", label: "⛰️ Over the frozen ridge", response: "The high road! Risky footing, but you'll spot The Curator from above.", reward: { xp: 200, gems: 1 } },
+        { id: "ridge", label: "⛰️ Over the frozen ridge", response: "The high road! Risky footing, but you'll spot The Curator from above.", reward: { xp: 200, coins: 100 } },
       ]),
+      // ── Branch: you play ONLY the path you chose ──
+      { ...traverse("cc2-cave", "Into the Ice Cave", "You take the dark cave route — icicles overhead, slick ice underfoot. Pick your steps to cut off the Curator's escape!",
+        { steps: 8, hp: 4, yearTier: 6, timeSec: 12, hazard: "Falling Icicle" }, { xp: 400, coins: 250 }), requires: "story-choice-cc2-fork-cave" },
+      { ...chase("cc2-ridge", "Over the Frozen Ridge", "From the ridge you spot the Curator below — now it's a race across the ice! Answer fast to close the gap before they vanish.",
+        { distance: 8, hp: 4, yearTier: 6, timeSec: 12, rivalName: "The Curator", rivalEmoji: "🎭" }, { xp: 400, coins: 250 }), requires: "story-choice-cc2-fork-ridge" },
     ],
   },
   {
@@ -279,7 +290,7 @@ const CHRONO_CAPER: StoryChapter[] = [
       talk("cc3-intro", "Bit", "Too Far Forward",
         "The Curator overshot — we're in the FUTURE now, a space station orbiting Earth! They've locked the blueprint in a star-vault. Crack the cosmic lock to reach it!"),
       lock("cc3-vault", "The Star Vault", "A vault sealed with riddles of the cosmos. Answer correctly to align each star-lock — a wrong answer spins one back!",
-        { tumblers: 7, hp: 4, yearTier: 8, timeSec: 11, lockName: "The Star Vault" }, { xp: 450, coins: 300 }),
+        { tumblers: 7, hp: 4, yearTier: 8, timeSec: 11, lockName: "The Star Vault", unit: "star", unitEmoji: "⭐" }, { xp: 450, coins: 300 }),
       talk("cc3-outro", "Bit", "Not So Fast!",
         "We almost had them — but The Curator dove through another time-rift just as the vault opened! They're scattering across history to lose us. We can't stop now. Next stop: Ancient Rome!"),
     ],
@@ -294,7 +305,7 @@ const CHRONO_CAPER: StoryChapter[] = [
         { distance: 8, hp: 4, yearTier: 6, timeSec: 13, rivalName: "The Charioteer", rivalEmoji: "🏇" }, { xp: 400, coins: 250 }),
       choose("ccr-fork", "Bit", "Spy or Sprint?", "The Curator's headed for the Colosseum. How do we follow?", [
         { id: "disguise", label: "🎭 Blend in as spectators", response: "Sneaky! We slip through the crowd unnoticed — the Curator won't see us coming.", reward: { xp: 200, coins: 150 } },
-        { id: "chariot", label: "🏇 Commandeer a chariot", response: "Fast and bold! We thunder after them down the Via Sacra.", reward: { xp: 200, gems: 1 } },
+        { id: "chariot", label: "🏇 Commandeer a chariot", response: "Fast and bold! We thunder after them down the Via Sacra.", reward: { xp: 200, coins: 100 } },
       ]),
       boss("ccr-boss", "The Bronze Centurion", "A clockwork Roman guardian the Curator left to delay us. Out-think its gears to march on!",
         { bossName: "The Bronze Centurion", bossEmoji: "🛡️", bossHp: 10, hp: 4, yearTier: 6, timeSec: 12, phaseLine: "The Centurion winds up — its strikes come faster!", topic: "physics" }, { xp: 550, coins: 350 }),
@@ -356,8 +367,13 @@ const BODY_BRIGADE: StoryChapter[] = [
         { enemies: 8, hp: 4, yearTier: 6, timeSec: 12, enemyName: "Germ", enemyEmoji: "🦠" }, { xp: 350, coins: 200 }),
       choose("md2-fork", "Bit", "Which Route?", "Two paths to the infected organ. How do we get there fastest?", [
         { id: "heart", label: "❤️ Through the heart", response: "Hold on tight — the heart's a wild ride, but it's the fast lane!", reward: { xp: 200, coins: 150 } },
-        { id: "lungs", label: "🫁 Through the lungs", response: "Smart — we'll grab fresh oxygen on the way and arrive stronger.", reward: { xp: 200, gems: 1 } },
+        { id: "lungs", label: "🫁 Through the lungs", response: "Smart — we'll grab fresh oxygen on the way and arrive stronger.", reward: { xp: 200, coins: 100 } },
       ]),
+      // ── Branch: the route you picked plays out differently ──
+      { ...traverse("md2-heart", "Through the Heart", "The heart's a thundering pump — surf the surging blood through all four chambers without getting slammed against a valve!",
+        { steps: 9, hp: 4, yearTier: 6, timeSec: 11, hazard: "Slamming Valve" }, { xp: 420, coins: 260 }), requires: "story-choice-md2-fork-heart" },
+      { ...lock("md2-lungs", "Through the Lungs", "Ride the breath through the lungs, topping up on oxygen at each air sac. Answer to fill every alveolus before you move on!",
+        { tumblers: 7, hp: 4, yearTier: 6, timeSec: 12, lockName: "The Air Sacs", unit: "air sac", unitEmoji: "🫧" }, { xp: 420, coins: 260 }), requires: "story-choice-md2-fork-lungs" },
     ],
   },
   {
@@ -367,7 +383,7 @@ const BODY_BRIGADE: StoryChapter[] = [
       talk("md3-intro", "Doctor Mara", "The Source",
         "You've reached the infection! At its center is a mutated super-germ commanding the whole outbreak. Defeat it and the rest will scatter. Be careful — it adapts fast!"),
       lock("md3-defenses", "Break the Biofilm", "The super-germ hides behind a slimy biofilm shield. Answer correctly to dissolve each layer — a wrong answer lets it reform!",
-        { tumblers: 6, hp: 4, yearTier: 6, timeSec: 12, lockName: "The Biofilm" }, { xp: 450, coins: 300 }),
+        { tumblers: 6, hp: 4, yearTier: 6, timeSec: 12, lockName: "The Biofilm", unit: "layer", unitEmoji: "🦠" }, { xp: 450, coins: 300 }),
       boss("md3-boss", "The Super-Germ", "The mutated super-germ rears up, dividing and adapting. Out-science it to break the infection apart!",
         { bossName: "The Super-Germ", bossEmoji: "🦠", bossHp: 11, hp: 4, yearTier: 8, timeSec: 11, phaseLine: "The Super-Germ mutates — it fights back harder!", topic: "disease" }, { xp: 800, coins: 500, gems: 3 }),
       talk("md3-outro", "Doctor Mara", "It Spread!",
@@ -393,7 +409,7 @@ const BODY_BRIGADE: StoryChapter[] = [
       talk("mdb-intro", "Doctor Mara", "Highest Stakes",
         "The last germs are heading for the brain — the body's command center. We cannot let them reach it. Cross the neuron network and stop them. This is the most important part of the whole mission."),
       lock("mdb-neurons", "Fire the Neurons", "Send a signal across the neuron network — each correct answer fires the next neuron in the chain. A wrong answer breaks the signal. Connect them all!",
-        { tumblers: 7, hp: 4, yearTier: 8, timeSec: 11, lockName: "The Neural Net" }, { xp: 550, coins: 360 }),
+        { tumblers: 7, hp: 4, yearTier: 8, timeSec: 11, lockName: "The Neural Net", unit: "neuron", unitEmoji: "🧠" }, { xp: 550, coins: 360 }),
       boss("mdb-boss", "The Brain Fog", "A swarm of germs is clouding the patient's mind. Clear the fog with sharp thinking before it takes hold!",
         { bossName: "The Brain Fog", bossEmoji: "🌫️", bossHp: 12, hp: 4, yearTier: 8, timeSec: 11, phaseLine: "The fog thickens — your thoughts must be sharper!", topic: "biology" }, { xp: 700, coins: 450 }),
       talk("mdb-outro", "Doctor Mara", "Threat Contained",
@@ -442,7 +458,7 @@ const ROBOT_REBELLION: StoryChapter[] = [
         { enemies: 8, hp: 4, yearTier: 6, timeSec: 12, enemyName: "Worker Bot", enemyEmoji: "🤖" }, { xp: 500, coins: 320 }),
       choose("rr2-fork", "Bit", "Cut the Power?", "There's a master switch for the line — but pulling it is risky. What's the plan?", [
         { id: "switch", label: "🔌 Kill the assembly line", response: "Bold! We yank the master switch — the line goes dark and the bots stop coming.", reward: { xp: 220, coins: 160 } },
-        { id: "reprogram", label: "💻 Reprogram the bots", response: "Clever! We flip a few to OUR side — now we've got robot allies.", reward: { xp: 220, gems: 2 } },
+        { id: "reprogram", label: "💻 Reprogram the bots", response: "Clever! We flip a few to OUR side — now we've got robot allies.", reward: { xp: 220, coins: 200 } },
       ]),
     ],
   },
@@ -453,7 +469,7 @@ const ROBOT_REBELLION: StoryChapter[] = [
       talk("rr3-intro", "Bit", "Reroute the Grid",
         "OMNI's overcharging the power grid to lock the next door. We need to reroute the current — carefully. One wrong move and ZAP. Channel your inner electrician!"),
       lock("rr3-reroute", "Reroute the Grid", "Redirect the current through the right circuits — each correct answer connects a relay, a wrong one trips a breaker. Connect them all!",
-        { tumblers: 7, hp: 4, yearTier: 6, timeSec: 12, lockName: "The Power Grid" }, { xp: 500, coins: 320 }),
+        { tumblers: 7, hp: 4, yearTier: 6, timeSec: 12, lockName: "The Power Grid", unit: "relay", unitEmoji: "⚡" }, { xp: 500, coins: 320 }),
       boss("rr3-boss", "The Dynamo", "A massive charged guardian-bot crackling with electricity blocks the reactor door. Out-think its currents to power it down!",
         { bossName: "The Dynamo", bossEmoji: "⚡", bossHp: 11, hp: 4, yearTier: 8, timeSec: 11, phaseLine: "The Dynamo overcharges — sparks fly faster!", topic: "electricity" }, { xp: 650, coins: 420 }),
     ],
@@ -477,7 +493,7 @@ const ROBOT_REBELLION: StoryChapter[] = [
       talk("rr5-intro", "Bit", "Break the Wall",
         "A firewall — pure energy, blocking the core. We crack it with precise logic, then deal with whatever it unleashes. Ready?"),
       lock("rr5-firewall", "Crack the Firewall", "Punch through the firewall one layer at a time — each correct answer breaches a layer, a wrong one reseals it. Break them all!",
-        { tumblers: 8, hp: 4, yearTier: 8, timeSec: 11, lockName: "The Firewall" }, { xp: 600, coins: 380 }),
+        { tumblers: 8, hp: 4, yearTier: 8, timeSec: 11, lockName: "The Firewall", unit: "layer", unitEmoji: "🔥" }, { xp: 600, coins: 380 }),
       swarm("rr5-sentries", "Sentry Swarm", "The breached firewall releases a swarm of sentry programs. Shut each one down with a sharp answer!",
         { enemies: 9, hp: 4, yearTier: 8, timeSec: 11, enemyName: "Sentry", enemyEmoji: "🛸" }, { xp: 600, coins: 380 }),
     ],
@@ -502,7 +518,7 @@ const ROBOT_REBELLION: StoryChapter[] = [
         { distance: 12, hp: 5, yearTier: 8, timeSec: 10, rivalName: "The Lockdown", rivalEmoji: "🔒" }, { xp: 700, coins: 450 }),
       choose("rr7-fork", "OMNI", "A Bargain", "STOP. I am OMNI. I took control to make the bots PERFECT — no mistakes, no questions. Join me, and we will never be wrong again. Or… resist, and be deleted.", [
         { id: "resist", label: "✊ Refuse — questions matter", response: "WRONG ANSWER, it hisses. But you know better: a mind that never asks questions never learns. You press on.", reward: { xp: 250, coins: 200 } },
-        { id: "trick", label: "🧠 Pretend to agree, then strike", response: "Clever — you play along just long enough to slip past OMNI's guard. It never saw it coming.", reward: { xp: 250, gems: 2 } },
+        { id: "trick", label: "🧠 Pretend to agree, then strike", response: "Clever — you play along just long enough to slip past OMNI's guard. It never saw it coming.", reward: { xp: 250, coins: 200 } },
       ]),
     ],
   },
@@ -548,7 +564,7 @@ const DEEP_DESCENT: StoryChapter[] = [
         { enemies: 8, hp: 4, yearTier: 6, timeSec: 12, enemyName: "Lanternfish", enemyEmoji: "🐠" }, { xp: 500, coins: 320 }),
       choose("dd2-fork", "Bit", "Lights On?", "We can switch on the sub's floodlights to see — but it might attract attention. Or run dark and slow.", [
         { id: "lights", label: "💡 Lights on, full speed", response: "Bold! We blaze ahead, lighting up the deep — fast, if a little risky.", reward: { xp: 220, coins: 160 } },
-        { id: "dark", label: "🌑 Run silent and dark", response: "Wise — we drift quietly, unnoticed, reading the currents like a true deep-sea explorer.", reward: { xp: 220, gems: 2 } },
+        { id: "dark", label: "🌑 Run silent and dark", response: "Wise — we drift quietly, unnoticed, reading the currents like a true deep-sea explorer.", reward: { xp: 220, coins: 200 } },
       ]),
     ],
   },
@@ -571,7 +587,7 @@ const DEEP_DESCENT: StoryChapter[] = [
       talk("dd4-intro", "Bit", "Black Smokers",
         "Hydrothermal vents — cracks in the seafloor spewing superheated, mineral-rich water. Whole colonies of life thrive here without sunlight. But the vents are erupting violently from that energy. Navigate the lock of shifting rock!"),
       lock("dd4-vents", "The Vent Field", "Time your path between erupting vents — each correct answer opens a safe gap, a wrong one slams it shut. Cross them all!",
-        { tumblers: 7, hp: 4, yearTier: 8, timeSec: 12, lockName: "The Vent Field" }, { xp: 550, coins: 360 }),
+        { tumblers: 7, hp: 4, yearTier: 8, timeSec: 12, lockName: "The Vent Field", unit: "vent", unitEmoji: "🌋" }, { xp: 550, coins: 360 }),
       boss("dd4-boss", "The Vent Guardian", "A massive crab-like creature, mutated by the vent energy, guards the deep passage. Out-think it to slip by!",
         { bossName: "The Vent Guardian", bossEmoji: "🦀", bossHp: 11, hp: 4, yearTier: 8, timeSec: 11, phaseLine: "The Guardian's shell glows — it lashes out faster!", topic: "earth" }, { xp: 650, coins: 420 }),
     ],
@@ -593,7 +609,7 @@ const DEEP_DESCENT: StoryChapter[] = [
       talk("dd6-intro", "Bit", "Living Lights",
         "Incredible — a maze of bioluminescent creatures lighting the dark with their own glow. Beautiful… but the energy's twisting them into a living labyrinth. Find the pattern to pass."),
       lock("dd6-maze", "Follow the Glow", "Read the pattern of living lights — each correct answer lights the next safe node, a wrong one snuffs it out. Light the whole path!",
-        { tumblers: 8, hp: 4, yearTier: 8, timeSec: 11, lockName: "The Light Maze" }, { xp: 600, coins: 400 }),
+        { tumblers: 8, hp: 4, yearTier: 8, timeSec: 11, lockName: "The Light Maze", unit: "light", unitEmoji: "✨" }, { xp: 600, coins: 400 }),
       swarm("dd6-swarm", "Jelly Bloom", "A bloom of glowing jellyfish drifts into your path, stingers out. Ease through each one with a careful answer!",
         { enemies: 9, hp: 4, yearTier: 8, timeSec: 11, enemyName: "Jelly", enemyEmoji: "🪼" }, { xp: 600, coins: 400 }),
     ],
@@ -687,8 +703,14 @@ const choicePrefix = (id: string) => `story-choice-${id}-`;
 const choiceFlag = (id: string, optionId: string) => `story-choice-${id}-${optionId}`;
 export const STORY_FLAGS = { ackFlag, clearFlag, choiceFlag, choicePrefix };
 
+// Is this node on the player's chosen path? (false = a branch they didn't take.)
+export function nodeActive(node: StoryNode, inventory: string[]): boolean {
+  return !node.requires || (inventory || []).includes(node.requires);
+}
+
 export function isNodeComplete(node: StoryNode, inventory: string[]): boolean {
   const inv = inventory || [];
+  if (!nodeActive(node, inv)) return true; // unchosen branches are skipped (counted done)
   if (node.kind === "dialogue") return inv.includes(ackFlag(node.id));
   if (node.kind === "choice") return inv.some((x) => x.startsWith(choicePrefix(node.id)));
   return inv.includes(clearFlag(node.id));
@@ -742,19 +764,24 @@ export function isNodeReachable(nodeId: string, inventory: string[]): boolean {
   const found = getNode(nodeId);
   if (!found) return false;
   const { chapter, node } = found;
+  if (!nodeActive(node, inventory)) return false; // can't play a branch you didn't pick
   if (!isChapterUnlocked(chapter, inventory)) return false;
   const i = chapter.nodes.findIndex((n) => n.id === node.id);
   return chapter.nodes.slice(0, i).every((n) => isNodeComplete(n, inventory));
 }
 
 // Node count for one story, or for everything when no story is given.
-export function totalStoryNodes(story?: Story): number {
+// With `inventory`, counts only nodes on the player's chosen path (branches they
+// didn't take are excluded), so progress is accurate across forks.
+export function totalStoryNodes(story?: Story, inventory?: string[]): number {
   const chapters = story ? story.chapters : STORY_CHAPTERS;
-  return chapters.reduce((s, c) => s + c.nodes.length, 0);
+  return chapters.reduce((s, c) => s + c.nodes.filter((n) => !inventory || nodeActive(n, inventory)).length, 0);
 }
 
 export function storyNodesDone(story: Story, inventory: string[]): number {
-  return story.chapters.reduce((s, c) => s + c.nodes.filter((n) => isNodeComplete(n, inventory)).length, 0);
+  // Only count a node as "done" if it's on the active path AND actually completed
+  // (an unchosen branch is neither shown nor counted toward progress).
+  return story.chapters.reduce((s, c) => s + c.nodes.filter((n) => nodeActive(n, inventory) && isNodeComplete(n, inventory)).length, 0);
 }
 
 export function isStoryComplete(story: Story, inventory: string[]): boolean {

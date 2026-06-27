@@ -16,6 +16,7 @@ import {
   type LucideIcon
 } from "lucide-react";
 import { WORLDS, GAME_MODES, BOSS_BATTLES, LAB_EXPERIMENTS } from "@/lib/gameData";
+import { bossStage, stageName, STAGE_EMOJI, BOSS_STAGES } from "@/lib/bossStages";
 import { BOSS_QUESTIONS_BY_YEAR, type BossQ } from "@/lib/bossQuestions";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -185,6 +186,9 @@ function WorldBossFight({ boss, bossForm, onComplete, onBack, yearLevel = 7, has
 
   const [bossHP, setBossHP] = useState(100);
   const [playerHP, setPlayerHP] = useState(100);
+  // In-fight stages: the boss mutates harder as its HP drops (see lib/bossStages).
+  const [stage, setStage] = useState(0);
+  const [mutateBanner, setMutateBanner] = useState<string | null>(null);
   const [currentQ, setCurrentQ] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
@@ -260,7 +264,8 @@ function WorldBossFight({ boss, bossForm, onComplete, onBack, yearLevel = 7, has
     }
   }, [powerupUsedThisQ, selected, gameOver, wbpCounts, activeSkill, wbpData, toast]);
 
-  const timerMax = bossForm.mutationLevel === 0 ? 0 : bossForm.mutationLevel === 1 ? 20 : 12;
+  const baseTimerMax = bossForm.mutationLevel === 0 ? 0 : bossForm.mutationLevel === 1 ? 20 : 12;
+  const timerMax = baseTimerMax > 0 ? Math.max(6, baseTimerMax - stage * 4) : 0;
   const [timer, setTimer] = useState(timerMax);
   const selectedRef = useRef(selected);
   selectedRef.current = selected;
@@ -345,8 +350,8 @@ function WorldBossFight({ boss, bossForm, onComplete, onBack, yearLevel = 7, has
     }
   }, [timer]);
 
-  const wrongDamage = bossForm.mutationLevel === 0 ? 25 : bossForm.mutationLevel === 1 ? 35 : 50;
-  const bossHealOnWrong = bossForm.mutationLevel >= 2 ? 8 : bossForm.mutationLevel === 1 ? 4 : 0;
+  const wrongDamage = (bossForm.mutationLevel === 0 ? 25 : bossForm.mutationLevel === 1 ? 35 : 50) + stage * 8;
+  const bossHealOnWrong = (bossForm.mutationLevel >= 2 ? 8 : bossForm.mutationLevel === 1 ? 4 : 0) + stage * 2;
 
   const handleAnswer = (idx: number) => {
     if (selected !== null) return;
@@ -385,6 +390,13 @@ function WorldBossFight({ boss, bossForm, onComplete, onBack, yearLevel = 7, has
     const nextPlayerHP = isCorrect ? playerHP : Math.max(0, playerHP - actualWrongDamage);
     setBossHP(nextBossHP);
     setPlayerHP(nextPlayerHP);
+
+    const nextStage = bossStage(nextBossHP / 100);
+    if (nextBossHP > 0 && nextStage > stage) {
+      setStage(nextStage);
+      setMutateBanner(`${STAGE_EMOJI[nextStage]} ${bossForm.name} ${stageName(nextStage)}`);
+      setTimeout(() => setMutateBanner(null), 1700);
+    }
 
     setTimeout(() => {
       setSelected(null);
@@ -482,6 +494,22 @@ function WorldBossFight({ boss, bossForm, onComplete, onBack, yearLevel = 7, has
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6">
+      <AnimatePresence>
+        {mutateBanner && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.6, y: -10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 1.3 }}
+            className="fixed inset-x-0 top-24 z-50 flex justify-center pointer-events-none"
+            data-testid="world-boss-mutate-banner"
+          >
+            <div className="px-6 py-3 rounded-2xl bg-gradient-to-r from-orange-500 to-red-600 text-white font-black text-xl shadow-2xl">
+              {mutateBanner}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5 font-semibold mb-4 text-white/70 hover:text-white" data-testid="button-retreat-world-boss">
         <ArrowLeft className="w-4 h-4" /> Retreat
       </Button>
@@ -577,16 +605,21 @@ function WorldBossFight({ boss, bossForm, onComplete, onBack, yearLevel = 7, has
         </Card>
         <Card className={`p-4 border ${bossForm.mutationLevel === 0 ? "bg-red-900/40 border-red-700/50" : bossForm.mutationLevel === 1 ? "bg-orange-900/40 border-orange-600/50" : "bg-purple-900/40 border-purple-600/50"}`}>
           <div className="flex items-center gap-2 mb-2">
-            <Swords className={`w-4 h-4 ${bossForm.mutationLevel >= 2 ? "text-purple-400" : "text-red-400"}`} />
+            <motion.div animate={mutateBanner ? { rotate: [0, -12, 12, 0], scale: [1, 1.2, 1] } : {}} transition={{ duration: 0.5 }}>
+              <Swords className={`w-4 h-4 ${bossForm.mutationLevel >= 2 ? "text-purple-400" : "text-red-400"}`} />
+            </motion.div>
             <span className="text-sm font-bold text-white">{bossForm.mutationLevel > 0 ? bossForm.name : "Boss"}</span>
-            {bossHealOnWrong > 0 && (
-              <span className="text-[10px] text-yellow-400 ml-auto">Heals +{bossHealOnWrong}%</span>
-            )}
+            <Badge className="bg-black/40 text-white border-0 text-[10px] font-black ml-auto" data-testid="world-boss-stage-badge">
+              {STAGE_EMOJI[stage] || "🟢"} Stage {stage + 1}/{BOSS_STAGES}
+            </Badge>
           </div>
-          <div className="w-full bg-gray-800 rounded-full h-3">
+          <div className="relative w-full bg-gray-800 rounded-full h-3 overflow-hidden">
             <div className={`h-3 rounded-full transition-all duration-500 bg-gradient-to-r ${bossForm.mutationLevel === 0 ? "from-red-500 to-orange-400" : bossForm.mutationLevel === 1 ? "from-orange-500 to-yellow-400" : "from-purple-500 to-pink-400"}`} style={{ width: `${bossHP}%` }} />
+            {Array.from({ length: BOSS_STAGES - 1 }).map((_, i) => (
+              <div key={i} className="absolute top-0 h-full w-0.5 bg-black/50" style={{ left: `${100 - ((i + 1) / BOSS_STAGES) * 100}%` }} />
+            ))}
           </div>
-          <p className="text-xs text-gray-400 mt-1">{Math.round(bossHP)}%</p>
+          <p className="text-xs text-gray-400 mt-1">{Math.round(bossHP)}%{bossHealOnWrong > 0 ? ` · heals +${bossHealOnWrong}` : ""}</p>
         </Card>
       </div>
 

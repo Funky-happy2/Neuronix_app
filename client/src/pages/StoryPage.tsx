@@ -14,7 +14,7 @@ import {
 import { StoryLevel } from "@/components/StoryLevel";
 import {
   STORIES, isNodeComplete, isChapterUnlocked, totalStoryNodes, storyNodesDone,
-  resolveDialogueText, getChosenOptionId, storyUnlockState,
+  resolveDialogueText, getChosenOptionId, storyUnlockState, nodeActive,
   type Story, type StoryChapter, type StoryNode, type StoryReward,
 } from "@shared/story";
 
@@ -93,7 +93,7 @@ export default function StoryPage() {
         </div>
         <div className="space-y-4">
           {STORIES.map((s) => {
-            const total = totalStoryNodes(s);
+            const total = totalStoryNodes(s, inventory);
             const done = storyNodesDone(s, inventory);
             const complete = done >= total;
             const pct = Math.round((done / total) * 100);
@@ -146,7 +146,7 @@ export default function StoryPage() {
   }
 
   // ── A single story ──────────────────────────────────────────────────────────
-  const totalNodes = totalStoryNodes(story);
+  const totalNodes = totalStoryNodes(story, inventory);
   const doneCount = storyNodesDone(story, inventory);
   const storyComplete = doneCount >= totalNodes;
 
@@ -203,8 +203,10 @@ function ChapterSection({ chapter, inventory, busy, onContinue, onPlay, onReplay
   onChoose: (n: StoryNode, optionId: string) => void;
 }) {
   const unlocked = isChapterUnlocked(chapter, inventory);
-  const allDone = chapter.nodes.every((n) => isNodeComplete(n, inventory));
-  const firstIncomplete = chapter.nodes.findIndex((n) => !isNodeComplete(n, inventory));
+  // Only show nodes on the player's chosen path (a branch they didn't take is hidden).
+  const nodes = chapter.nodes.filter((n) => nodeActive(n, inventory));
+  const allDone = nodes.every((n) => isNodeComplete(n, inventory));
+  const firstIncomplete = nodes.findIndex((n) => !isNodeComplete(n, inventory));
 
   if (!unlocked) {
     return (
@@ -235,7 +237,7 @@ function ChapterSection({ chapter, inventory, busy, onContinue, onPlay, onReplay
         </div>
 
         <div className="p-4 space-y-2.5">
-          {chapter.nodes.map((node, i) => {
+          {nodes.map((node, i) => {
             const complete = isNodeComplete(node, inventory);
             const isActive = i === firstIncomplete;
             const isUpcoming = firstIncomplete !== -1 && i > firstIncomplete;

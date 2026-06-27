@@ -163,7 +163,7 @@ const CORE_DIMENSIONS: DimensionDef[] = [
     tagline: "Three trials. One life-thread.",
     description: "The proving ground. Survive the waves, climb the spire, then face the Wave Warden. Fall once and the whole gauntlet resets.",
     icon: "Swords", color: "hsl(15, 85%, 50%)", gradient: "from-red-600 to-orange-700",
-    unlockXp: 0, keystone: true, badgeId: "gauntlet-champion", rewardXp: 400, rewardCoins: 250,
+    unlockXp: 0, keystone: true, topic: "physics", badgeId: "gauntlet-champion", rewardXp: 400, rewardCoins: 250,
     worlds: [
       W("g-w1", "Opening Salvo", "Endless waves — reach Wave 8.", "Swords", "gauntlet", { winWave: 8, lives: 2 }),
       W("g-w2", "The Long Climb", "Beat the clock — 14 rungs.", "Puzzle", "puzzle", { rungs: 14, timeSec: 58, dropOnWrong: 2 }),
@@ -175,7 +175,7 @@ const CORE_DIMENSIONS: DimensionDef[] = [
     tagline: "A maze with a beast at its heart.",
     description: "Branching floors of the maze, harder every turn, guarded by the Maze Minotaur. One death sends you all the way back.",
     icon: "Map", color: "hsl(265, 70%, 55%)", gradient: "from-violet-600 to-purple-800",
-    unlockXp: 0, requires: ["gauntlet"], badgeId: "labyrinth-master", rewardXp: 450, rewardCoins: 280,
+    unlockXp: 0, requires: ["gauntlet"], topic: "biology", badgeId: "labyrinth-master", rewardXp: 450, rewardCoins: 280,
     worlds: [
       W("l-w1", "Outer Halls", "Roguelike run — 12 steps.", "Map", "roguelike", { steps: 12, hp: 4 }),
       W("l-w2", "Twisting Depths", "Endless waves — reach Wave 9.", "Swords", "gauntlet", { winWave: 9, lives: 2 }),
@@ -187,7 +187,7 @@ const CORE_DIMENSIONS: DimensionDef[] = [
     tagline: "Three ladders. One ticking clock each.",
     description: "Beat-the-clock ascents, the timer tighter every time, ending against the Clock Tyrant. No lives here — only speed.",
     icon: "Puzzle", color: "hsl(190, 85%, 50%)", gradient: "from-cyan-500 to-blue-700",
-    unlockXp: 0, requires: ["roguelike"], badgeId: "nexus-ascendant", rewardXp: 500, rewardCoins: 300,
+    unlockXp: 0, requires: ["roguelike"], topic: "space", badgeId: "nexus-ascendant", rewardXp: 500, rewardCoins: 300,
     worlds: [
       W("n-w1", "First Ascent", "Beat the clock — 14 rungs.", "Puzzle", "puzzle", { rungs: 14, timeSec: 60, dropOnWrong: 2 }),
       W("n-w2", "The Gauntlet Bridge", "Endless waves — reach Wave 9.", "Swords", "gauntlet", { winWave: 9, lives: 2 }),
@@ -199,7 +199,7 @@ const CORE_DIMENSIONS: DimensionDef[] = [
     tagline: "Round after round of champions.",
     description: "Rounds of boss duels, more foes and tougher hides each time, until you face the Arena Champion. One shared health bar per round.",
     icon: "Skull", color: "hsl(340, 80%, 50%)", gradient: "from-rose-700 to-slate-900",
-    unlockXp: 0, requires: ["puzzle"], keystone: true, badgeId: "colosseum-victor", rewardXp: 650, rewardCoins: 400,
+    unlockXp: 0, requires: ["puzzle"], keystone: true, topic: "chemistry", badgeId: "colosseum-victor", rewardXp: 650, rewardCoins: 400,
     worlds: [
       W("c-w1", "Qualifiers", "Boss rush — 3 bosses.", "Skull", "boss-rush", { bosses: 3, bossHp: 5, playerHp: 4 }),
       W("c-w2", "The Maze Match", "Roguelike run — 13 steps.", "Map", "roguelike", { steps: 13, hp: 3 }),

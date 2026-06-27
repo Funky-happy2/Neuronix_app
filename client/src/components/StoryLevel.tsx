@@ -3,10 +3,11 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Heart, Timer, ArrowLeft, CheckCircle, XCircle, RotateCcw, Zap, Flag, Swords, Lock, Users } from "lucide-react";
 import { type BossQ } from "@/lib/bossQuestions";
 import { buildTopicPool } from "@/lib/questionTopics";
+import { bossStage, stageName, STAGE_EMOJI, BOSS_STAGES } from "@/lib/bossStages";
 import type { StoryLevelSpec } from "@shared/story";
 
 const shuffle = <T,>(a: T[]) => [...a].sort(() => Math.random() - 0.5);
@@ -42,12 +43,16 @@ export function StoryLevel({ level, title, gradient, onWin, onExit }: {
   const [rivalPos, setRivalPos] = useState(0);  // chase
   const [allyHp, setAllyHp] = useState(level.type === "escort" ? level.allyHp : 0);  // escort
   const [shake, setShake] = useState<"boss" | "player" | null>(null);
-  const [enraged, setEnraged] = useState(false);
+  const [mutateFlash, setMutateFlash] = useState<string | null>(null);
   const [flash, setFlash] = useState<string>("");
+
+  // In-fight stages: as the boss loses HP it mutates harder (faster timer).
+  const stage = isBoss && maxBossHp > 0 ? bossStage(bossHp / maxBossHp) : 0;
+  const enraged = stage >= 1;
 
   const lockRef = useRef(false);
   const doneRef = useRef(false);
-  const baseTime = Math.max(4, level.timeSec - (enraged ? 2 : 0));
+  const baseTime = Math.max(4, level.timeSec - stage * 2);
 
   const reset = () => {
     poolRef.current = buildTopicPool(level.yearTier, level.topic);
@@ -58,7 +63,7 @@ export function StoryLevel({ level, title, gradient, onWin, onExit }: {
     setChosen(null); setStatus("playing"); setHp(level.hp); setPos(0);
     setBossHp(maxBossHp); setEnemiesLeft(level.type === "swarm" ? level.enemies : 0); setPins(0);
     setRivalPos(0); setAllyHp(level.type === "escort" ? level.allyHp : 0);
-    setEnraged(false); setShake(null); setFlash("");
+    setMutateFlash(null); setShake(null); setFlash("");
     setRunKey((k) => k + 1);
   };
 
@@ -93,7 +98,12 @@ export function StoryLevel({ level, title, gradient, onWin, onExit }: {
       if (ok) {
         const nb = bossHp - 1; setBossHp(nb); setShake("boss"); setFlash("A direct hit!");
         if (nb <= 0) { window.setTimeout(() => finish(true), 700); return; }
-        if (!enraged && nb <= Math.ceil(maxBossHp / 2)) setEnraged(true);
+        // Crossed a stage threshold? The boss mutates harder.
+        const ns = bossStage(nb / Math.max(1, maxBossHp));
+        if (ns > bossStage(bossHp / Math.max(1, maxBossHp))) {
+          setMutateFlash(`${STAGE_EMOJI[ns]} ${level.bossName} ${stageName(ns)}`);
+          window.setTimeout(() => setMutateFlash(null), 1500);
+        }
       } else if (hurt(`${level.bossName} strikes back!`)) return;
     } else if (level.type === "swarm") {
       if (ok) {
@@ -101,12 +111,13 @@ export function StoryLevel({ level, title, gradient, onWin, onExit }: {
         if (ne <= 0) { window.setTimeout(() => finish(true), 700); return; }
       } else if (hurt(`A ${level.enemyName} struck you!`)) return;
     } else if (level.type === "lock") {
+      const unit = level.unit || "tumbler";
       if (ok) {
-        const np = pins + 1; setPins(np); setFlash("A tumbler clicks into place!");
+        const np = pins + 1; setPins(np); setFlash(`Another ${unit} down!`);
         if (np >= level.tumblers) { window.setTimeout(() => finish(true), 700); return; }
       } else {
         setPins((p) => Math.max(0, p - 1));
-        if (hurt("The lock resets a tumbler!")) return;
+        if (hurt(`A ${unit} slips back!`)) return;
       }
     } else if (level.type === "chase") {
       if (ok) {
@@ -127,7 +138,7 @@ export function StoryLevel({ level, title, gradient, onWin, onExit }: {
     }
     window.setTimeout(nextQuestion, 850);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [level, pos, hp, bossHp, enemiesLeft, pins, rivalPos, allyHp, enraged, maxBossHp, nextQuestion]);
+  }, [level, pos, hp, bossHp, enemiesLeft, pins, rivalPos, allyHp, maxBossHp, nextQuestion]);
 
   // Timer — resets each question; tightens when the boss enrages.
   const [timeLeft, setTimeLeft] = useState(baseTime);
@@ -233,7 +244,7 @@ export function StoryLevel({ level, title, gradient, onWin, onExit }: {
             >{level.bossEmoji}</motion.div>
             <div className="font-black text-white text-lg flex items-center justify-center gap-2">
               {level.bossName}
-              {enraged && <Badge className="bg-red-600 text-white border-0 text-[10px] animate-pulse">ENRAGED</Badge>}
+              <Badge className="bg-black/40 text-white border-0 text-[10px] font-black">{STAGE_EMOJI[stage] || "🟢"} Stage {stage + 1}/{BOSS_STAGES}</Badge>
             </div>
             <div className="flex items-center gap-1 mt-2 max-w-xs mx-auto">
               {Array.from({ length: maxBossHp }).map((_, i) => (
@@ -241,6 +252,14 @@ export function StoryLevel({ level, title, gradient, onWin, onExit }: {
               ))}
             </div>
             {enraged && level.phaseLine && <p className="text-[11px] text-red-200 font-bold mt-1">{level.phaseLine}</p>}
+            <AnimatePresence>
+              {mutateFlash && (
+                <motion.div initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.3 }}
+                  className="mt-2 inline-block px-4 py-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-red-600 text-white font-black text-sm">
+                  {mutateFlash}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
 
@@ -258,22 +277,28 @@ export function StoryLevel({ level, title, gradient, onWin, onExit }: {
           </div>
         )}
 
-        {level.type === "lock" && (
-          <div className="bg-white/10 rounded-2xl p-4 mb-3 text-center">
-            <div className="text-white/90 text-xs font-bold mb-2">{level.lockName} — set every tumbler!</div>
-            <div className="flex items-center gap-1.5 justify-center">
-              {Array.from({ length: level.tumblers }).map((_, i) => (
-                <motion.div key={i}
-                  animate={i < pins ? { scale: [1, 1.3, 1] } : {}}
-                  transition={{ duration: 0.3 }}
-                  className={`w-6 h-9 rounded-md border-2 flex items-center justify-center text-sm ${i < pins ? "bg-yellow-300 border-yellow-200 text-amber-900" : "bg-white/10 border-white/30"}`}>
-                  {i < pins ? "🔑" : ""}
-                </motion.div>
-              ))}
+        {level.type === "lock" && (() => {
+          const unit = level.unit || "tumbler";
+          const unitEmoji = level.unitEmoji || "🔑";
+          // round tiles for organic units (layers/neurons/stars), keyslot for tumblers
+          const rounded = unit !== "tumbler";
+          return (
+            <div className="bg-white/10 rounded-2xl p-4 mb-3 text-center">
+              <div className="text-white/90 text-xs font-bold mb-2">{level.lockName} — clear every {unit}!</div>
+              <div className="flex items-center gap-1.5 justify-center flex-wrap">
+                {Array.from({ length: level.tumblers }).map((_, i) => (
+                  <motion.div key={i}
+                    animate={i < pins ? { scale: [1, 1.3, 1] } : {}}
+                    transition={{ duration: 0.3 }}
+                    className={`${rounded ? "w-9 h-9 rounded-full" : "w-6 h-9 rounded-md"} border-2 flex items-center justify-center text-sm ${i < pins ? "bg-yellow-300 border-yellow-200 text-amber-900" : "bg-white/10 border-white/30"}`}>
+                    {i < pins ? unitEmoji : ""}
+                  </motion.div>
+                ))}
+              </div>
+              <div className="text-white/80 text-xs font-bold mt-2">{pins}/{level.tumblers} {unit}s</div>
             </div>
-            <div className="text-white/80 text-xs font-bold mt-2">{pins}/{level.tumblers} tumblers</div>
-          </div>
-        )}
+          );
+        })()}
 
         {level.type === "chase" && (
           <div className="bg-white/10 rounded-2xl p-4 mb-3 space-y-3">

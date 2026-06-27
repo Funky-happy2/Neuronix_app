@@ -18,6 +18,7 @@ import {
 import { BOSS_BATTLES } from "@/lib/gameData";
 import { type BossQ } from "@/lib/bossQuestions";
 import { buildTopicPool } from "@/lib/questionTopics";
+import { bossStage, stageName, STAGE_EMOJI, BOSS_STAGES } from "@/lib/bossStages";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -450,6 +451,7 @@ function ColosseumGame({ yearLevel, params, onComplete, topic }: WorldGameProps)
   const [playerHp, setPlayerHp] = useState(playerHpMax);
   const [qKey, setQKey] = useState(0);
   const [done, setDone] = useState(false);
+  const [mutateFlash, setMutateFlash] = useState<string | null>(null);
   const doneRef = useRef(false);
   const lockRef = useRef(false);
   const defeatedRef = useRef(0);
@@ -468,8 +470,10 @@ function ColosseumGame({ yearLevel, params, onComplete, topic }: WorldGameProps)
     onComplete(won, defeatedRef.current * 100);
   }, [onComplete]);
 
-  // The boss attacks if you're too slow — a real clock, tighter for tougher bosses.
-  const bossTime = Math.max(6, 12 - bossIdx) + Math.max(0, 6 - yearLevel);
+  // As a boss loses HP it mutates into a tougher stage (see lib/bossStages).
+  const stage = bossStage(bossHp / Math.max(1, bossHpMax));
+  // The boss attacks if you're too slow — tighter for tougher bosses AND stages.
+  const bossTime = Math.max(5, 12 - bossIdx - stage * 2) + Math.max(0, 6 - yearLevel);
 
   const onAnswer = (correct: boolean) => {
     if (doneRef.current || lockRef.current) return;
@@ -483,11 +487,17 @@ function ColosseumGame({ yearLevel, params, onComplete, topic }: WorldGameProps)
         window.setTimeout(() => {
           setBossIdx((b) => b + 1);
           setBossHp(bossHpMax);
+          setMutateFlash(null);
           setQKey((k) => k + 1);
         }, 600);
         return;
       }
       setBossHp(nb);
+      const ns = bossStage(nb / Math.max(1, bossHpMax));
+      if (ns > stage) {
+        setMutateFlash(`${STAGE_EMOJI[ns]} ${bossName} ${stageName(ns)}`);
+        window.setTimeout(() => setMutateFlash(null), 1500);
+      }
     } else {
       const np = playerHp - 1;
       setPlayerHp(np);
@@ -511,9 +521,15 @@ function ColosseumGame({ yearLevel, params, onComplete, topic }: WorldGameProps)
         </div>
       </div>
       <Card className={`p-4 mb-4 ${isFinalFight ? "border-amber-400/70 bg-gradient-to-br from-amber-950/50 to-rose-950/50 shadow-[0_0_24px_rgba(251,191,36,0.25)]" : "border-rose-500/40 bg-gradient-to-br from-rose-950/40 to-slate-900/40"}`}>
-        <div className="flex items-center justify-between mb-2">
-          <span className="font-black text-lg flex items-center gap-1.5">{isFinalFight && <Crown className="w-5 h-5 text-amber-300" />}{bossName}</span>
-          <Badge variant="secondary" className={`text-[10px] ${isFinalFight ? "bg-amber-400/30 text-amber-200" : ""}`}>{bossTitle}</Badge>
+        <div className="flex items-center justify-between mb-2 gap-2">
+          <motion.span className="font-black text-lg flex items-center gap-1.5"
+            animate={mutateFlash ? { x: [0, -6, 6, -4, 0] } : {}} transition={{ duration: 0.4 }}>
+            {isFinalFight && <Crown className="w-5 h-5 text-amber-300" />}{bossName}
+          </motion.span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Badge className="bg-black/40 text-white border-0 text-[10px] font-black">{STAGE_EMOJI[stage] || "🟢"} {stage + 1}/{BOSS_STAGES}</Badge>
+            <Badge variant="secondary" className={`text-[10px] ${isFinalFight ? "bg-amber-400/30 text-amber-200" : ""}`}>{bossTitle}</Badge>
+          </div>
         </div>
         <div className="flex items-center gap-1">
           <span className={`text-xs font-bold mr-1 ${isFinalFight ? "text-amber-300" : "text-rose-400"}`}>Boss HP</span>
@@ -521,6 +537,12 @@ function ColosseumGame({ yearLevel, params, onComplete, topic }: WorldGameProps)
             <div key={i} className={`h-2.5 flex-1 rounded-full ${i < bossHp ? (isFinalFight ? "bg-amber-400" : "bg-rose-500") : "bg-muted"}`} />
           ))}
         </div>
+        <AnimatePresence>
+          {mutateFlash && (
+            <motion.div initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.3 }}
+              className="mt-2 text-center"><span className="inline-block px-3 py-1 rounded-lg bg-gradient-to-r from-orange-500 to-red-600 text-white font-black text-xs">{mutateFlash}</span></motion.div>
+          )}
+        </AnimatePresence>
       </Card>
       <QuestionCard key={qKey} q={q} onAnswer={onAnswer} accent="rose" />
     </div>
